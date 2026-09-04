@@ -10,6 +10,13 @@ namespace WildEarth.Voxel
 
         private readonly Queue<FluidPendingUpdate> pendingUpdates;
         private readonly HashSet<FluidUpdateKey> pendingKeys;
+
+        private readonly Queue<FluidPendingUpdate> deferredUpdates;
+        private readonly Dictionary<
+            ChunkCoordinate,
+            HashSet<FluidUpdateKey>
+        > deferredKeys;
+
         private readonly HashSet<ChunkCoordinate> activeChunks;
 
         private float tickAccumulator;
@@ -17,11 +24,21 @@ namespace WildEarth.Voxel
         public int PendingCount =>
             pendingUpdates.Count;
 
+        public int DeferredCount =>
+            deferredUpdates.Count;
+
         public int ActiveChunkCount =>
             activeChunks.Count;
 
         public bool HasPendingUpdates =>
             pendingUpdates.Count > 0;
+
+        public bool HasDeferredUpdates =>
+            deferredUpdates.Count > 0;
+
+        public bool HasPendingOrDeferredUpdates =>
+            pendingUpdates.Count > 0 ||
+            deferredUpdates.Count > 0;
 
         public FluidScheduler(
             FluidUpdateSystem updateSystem,
@@ -40,6 +57,15 @@ namespace WildEarth.Voxel
 
             pendingKeys =
                 new HashSet<FluidUpdateKey>();
+
+            deferredUpdates =
+                new Queue<FluidPendingUpdate>();
+
+            deferredKeys =
+                new Dictionary<
+                    ChunkCoordinate,
+                    HashSet<FluidUpdateKey>
+                >();
 
             activeChunks =
                 new HashSet<ChunkCoordinate>();
@@ -201,10 +227,72 @@ namespace WildEarth.Voxel
             );
         }
 
+        public bool HasDeferredUpdate(
+            FluidPendingUpdate update)
+        {
+            if (!deferredKeys.TryGetValue(
+                    update.Chunk,
+                    out HashSet<FluidUpdateKey> keys))
+            {
+                return false;
+            }
+
+            return keys.Contains(
+                new FluidUpdateKey(update)
+            );
+        }
+
+        public void NotifyChunkLoaded(
+            ChunkCoordinate coordinate)
+        {
+            if (deferredUpdates.Count == 0)
+                return;
+
+            Queue<FluidPendingUpdate> remaining =
+                new Queue<FluidPendingUpdate>(
+                    deferredUpdates.Count
+                );
+
+            while (
+                deferredUpdates.Count > 0)
+            {
+                FluidPendingUpdate update =
+                    deferredUpdates.Dequeue();
+
+                if (update.Chunk == coordinate)
+                {
+                    RemoveDeferredKey(update);
+
+                    /*
+                     * Volvemos a introducir el update en
+                     * la cola normal. Enqueue() volverá a
+                     * aplicar la deduplicación normal.
+                     */
+                    Enqueue(update);
+
+                    continue;
+                }
+
+                remaining.Enqueue(update);
+            }
+
+            while (
+                remaining.Count > 0)
+            {
+                deferredUpdates.Enqueue(
+                    remaining.Dequeue()
+                );
+            }
+        }
+
         public void Clear()
         {
             pendingUpdates.Clear();
             pendingKeys.Clear();
+
+            deferredUpdates.Clear();
+            deferredKeys.Clear();
+
             activeChunks.Clear();
 
             tickAccumulator = 0f;
@@ -213,14 +301,109 @@ namespace WildEarth.Voxel
         public void ClearChunk(
             ChunkCoordinate coordinate)
         {
-            if (pendingUpdates.Count == 0)
+            ClearPendingChunk(coordinate);
+            ClearDeferredChunk(coordinate);
+
+            activeChunks.Remove(
+                coordinate
+            );
+        }
+
+        private void ProcessUpdate(
+            FluidPendingUpdate update)
+        {
+            updateSystem.TryApply(
+                update.ToChange(),
+                out FluidChangeResult result
+            );
+
+            if (!result.TargetChunkLoaded)
             {
-                activeChunks.Remove(
-                    coordinate
-                );
+                DeferUpdate(update);
 
                 return;
             }
+
+            if (!result.Applied)
+                return;
+
+            ActivateChunk(
+                update.Chunk
+            );
+
+            ActivateChunk(
+                result.Change.TargetChunk
+            );
+        }
+
+        private void DeferUpdate(
+            FluidPendingUpdate update)
+        {
+            FluidUpdateKey key =
+                new FluidUpdateKey(update);
+
+            if (!TryAddDeferredKey(
+                    update.Chunk,
+                    key))
+            {
+                return;
+            }
+
+            deferredUpdates.Enqueue(
+                update
+            );
+        }
+
+        private bool TryAddDeferredKey(
+            ChunkCoordinate coordinate,
+            FluidUpdateKey key)
+        {
+            if (!deferredKeys.TryGetValue(
+                    coordinate,
+                    out HashSet<FluidUpdateKey> keys))
+            {
+                keys =
+                    new HashSet<FluidUpdateKey>();
+
+                deferredKeys.Add(
+                    coordinate,
+                    keys
+                );
+            }
+
+            return keys.Add(key);
+        }
+
+        private void RemoveDeferredKey(
+            FluidPendingUpdate update)
+        {
+            ChunkCoordinate coordinate =
+                update.Chunk;
+
+            if (!deferredKeys.TryGetValue(
+                    coordinate,
+                    out HashSet<FluidUpdateKey> keys))
+            {
+                return;
+            }
+
+            keys.Remove(
+                new FluidUpdateKey(update)
+            );
+
+            if (keys.Count == 0)
+            {
+                deferredKeys.Remove(
+                    coordinate
+                );
+            }
+        }
+
+        private void ClearPendingChunk(
+            ChunkCoordinate coordinate)
+        {
+            if (pendingUpdates.Count == 0)
+                return;
 
             Queue<FluidPendingUpdate> remaining =
                 new Queue<FluidPendingUpdate>(
@@ -252,29 +435,50 @@ namespace WildEarth.Voxel
                     remaining.Dequeue()
                 );
             }
-
-            activeChunks.Remove(
-                coordinate
-            );
         }
 
-        private void ProcessUpdate(
-            FluidPendingUpdate update)
+        private void ClearDeferredChunk(
+            ChunkCoordinate coordinate)
         {
-            updateSystem.TryApply(
-                update.ToChange(),
-                out FluidChangeResult result
-            );
+            if (deferredUpdates.Count == 0)
+            {
+                deferredKeys.Remove(
+                    coordinate
+                );
 
-            if (!result.Applied)
                 return;
+            }
 
-            ActivateChunk(
-                update.Chunk
-            );
+            Queue<FluidPendingUpdate> remaining =
+                new Queue<FluidPendingUpdate>(
+                    deferredUpdates.Count
+                );
 
-            ActivateChunk(
-                result.Change.TargetChunk
+            while (
+                deferredUpdates.Count > 0)
+            {
+                FluidPendingUpdate update =
+                    deferredUpdates.Dequeue();
+
+                if (update.Chunk == coordinate)
+                {
+                    RemoveDeferredKey(update);
+                    continue;
+                }
+
+                remaining.Enqueue(update);
+            }
+
+            while (
+                remaining.Count > 0)
+            {
+                deferredUpdates.Enqueue(
+                    remaining.Dequeue()
+                );
+            }
+
+            deferredKeys.Remove(
+                coordinate
             );
         }
 

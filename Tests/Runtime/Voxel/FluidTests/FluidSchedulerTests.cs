@@ -1487,5 +1487,458 @@ namespace WildEarth.Voxel.Tests
                 value
             );
         }
+
+[Test]
+public void PendingFluidUpdateForUnloadedChunkIsDeferred()
+{
+    ChunkCoordinate unloadedCoordinate =
+        new ChunkCoordinate(
+            10,
+            0,
+            10
+        );
+
+    FluidPendingUpdate update =
+        new FluidPendingUpdate(
+            unloadedCoordinate,
+            0,
+            8,
+            8,
+            FluidState.Source(
+                FluidType.Water
+            )
+        );
+
+    bool enqueued =
+        scheduler.Enqueue(
+            update
+        );
+
+    Assert.That(
+        enqueued,
+        Is.True
+    );
+
+    int processed =
+        scheduler.ProcessTick();
+
+    Assert.That(
+        processed,
+        Is.GreaterThan(0)
+    );
+
+    Assert.That(
+        scheduler.DeferredCount,
+        Is.EqualTo(1)
+    );
+}
+
+[Test]
+public void ClearRemovesDeferredUpdates()
+{
+    ChunkCoordinate unloadedCoordinate =
+        new ChunkCoordinate(
+            10,
+            0,
+            10
+        );
+
+    FluidPendingUpdate update =
+        new FluidPendingUpdate(
+            unloadedCoordinate,
+            0,
+            8,
+            8,
+            FluidState.Source(
+                FluidType.Water
+            )
+        );
+
+    Assert.IsTrue(
+        scheduler.Enqueue(update)
+    );
+
+    scheduler.ProcessTick();
+
+    Assert.AreEqual(
+        1,
+        scheduler.DeferredCount
+    );
+
+    scheduler.Clear();
+
+    Assert.AreEqual(
+        0,
+        scheduler.DeferredCount
+    );
+
+    Assert.IsFalse(
+        scheduler.HasDeferredUpdates
+    );
+
+    Assert.IsFalse(
+        scheduler.HasPendingOrDeferredUpdates
+    );
+}
+
+[Test]
+public void ClearChunkRemovesDeferredUpdatesForThatChunk()
+{
+    ChunkCoordinate unloadedCoordinate =
+        new ChunkCoordinate(
+            10,
+            0,
+            10
+        );
+
+    FluidPendingUpdate update =
+        new FluidPendingUpdate(
+            unloadedCoordinate,
+            0,
+            8,
+            8,
+            FluidState.Source(
+                FluidType.Water
+            )
+        );
+
+    scheduler.Enqueue(update);
+
+    scheduler.ProcessTick();
+
+    Assert.AreEqual(
+        1,
+        scheduler.DeferredCount
+    );
+
+    scheduler.ClearChunk(
+        unloadedCoordinate
+    );
+
+    Assert.AreEqual(
+        0,
+        scheduler.DeferredCount
+    );
+
+    Assert.IsFalse(
+        scheduler.HasDeferredUpdate(update)
+    );
+}
+
+[Test]
+public void DeferredUpdateDoesNotRemainPending()
+{
+    ChunkCoordinate unloadedCoordinate =
+        new ChunkCoordinate(
+            10,
+            0,
+            10
+        );
+
+    FluidPendingUpdate update =
+        new FluidPendingUpdate(
+            unloadedCoordinate,
+            0,
+            8,
+            8,
+            FluidState.Source(
+                FluidType.Water
+            )
+        );
+
+    scheduler.Enqueue(update);
+
+    Assert.AreEqual(
+        1,
+        scheduler.PendingCount
+    );
+
+    scheduler.ProcessTick();
+
+    Assert.AreEqual(
+        0,
+        scheduler.PendingCount
+    );
+
+    Assert.AreEqual(
+        1,
+        scheduler.DeferredCount
+    );
+}
+
+[Test]
+public void DeferredUpdatesRespectUpdateBudget()
+{
+    FluidSimulationSettings settings =
+        FluidSimulationSettings.Default;
+
+    settings.MaxUpdatesPerTick = 2;
+
+    FluidScheduler limitedScheduler =
+        new FluidScheduler(
+            updateSystem,
+            settings
+        );
+
+    try
+    {
+        ChunkCoordinate firstCoordinate =
+            new ChunkCoordinate(
+                10,
+                0,
+                10
+            );
+
+        ChunkCoordinate secondCoordinate =
+            new ChunkCoordinate(
+                11,
+                0,
+                10
+            );
+
+        ChunkCoordinate thirdCoordinate =
+            new ChunkCoordinate(
+                12,
+                0,
+                10
+            );
+
+        limitedScheduler.Enqueue(
+            new FluidPendingUpdate(
+                firstCoordinate,
+                0,
+                8,
+                8,
+                FluidState.Source(
+                    FluidType.Water
+                )
+            )
+        );
+
+        limitedScheduler.Enqueue(
+            new FluidPendingUpdate(
+                secondCoordinate,
+                0,
+                8,
+                8,
+                FluidState.Source(
+                    FluidType.Water
+                )
+            )
+        );
+
+        limitedScheduler.Enqueue(
+            new FluidPendingUpdate(
+                thirdCoordinate,
+                0,
+                8,
+                8,
+                FluidState.Source(
+                    FluidType.Water
+                )
+            )
+        );
+
+        int processed =
+            limitedScheduler.ProcessTick();
+
+        Assert.AreEqual(
+            2,
+            processed
+        );
+
+        Assert.AreEqual(
+            2,
+            limitedScheduler.DeferredCount
+        );
+
+        Assert.AreEqual(
+            1,
+            limitedScheduler.PendingCount
+        );
     }
+    finally
+    {
+        limitedScheduler.Clear();
+    }
+}
+
+[Test]
+public void NotifyChunkLoadedMovesDeferredUpdateToPending()
+{
+    ChunkCoordinate unloadedCoordinate =
+        new ChunkCoordinate(
+            10,
+            0,
+            10
+        );
+
+    FluidPendingUpdate update =
+        new FluidPendingUpdate(
+            unloadedCoordinate,
+            0,
+            8,
+            8,
+            FluidState.Source(
+                FluidType.Water
+            )
+        );
+
+    scheduler.Enqueue(update);
+
+    scheduler.ProcessTick();
+
+    Assert.AreEqual(
+        1,
+        scheduler.DeferredCount
+    );
+
+    Chunk loadedChunk =
+        chunkStorage.Create(
+            unloadedCoordinate
+        );
+
+    Assert.IsNotNull(
+        loadedChunk
+    );
+
+    scheduler.NotifyChunkLoaded(
+        unloadedCoordinate
+    );
+
+    Assert.AreEqual(
+        0,
+        scheduler.DeferredCount
+    );
+
+    Assert.AreEqual(
+        1,
+        scheduler.PendingCount
+    );
+}
+
+[Test]
+public void DeferredUpdateIsAppliedAfterChunkLoads()
+{
+    ChunkCoordinate unloadedCoordinate =
+        new ChunkCoordinate(
+            10,
+            0,
+            10
+        );
+
+    FluidPendingUpdate update =
+        new FluidPendingUpdate(
+            unloadedCoordinate,
+            0,
+            8,
+            8,
+            FluidState.Source(
+                FluidType.Water
+            )
+        );
+
+    scheduler.Enqueue(update);
+
+    scheduler.ProcessTick();
+
+    Assert.AreEqual(
+        1,
+        scheduler.DeferredCount
+    );
+
+    Chunk loadedChunk =
+        chunkStorage.Create(
+            unloadedCoordinate
+        );
+
+    scheduler.NotifyChunkLoaded(
+        unloadedCoordinate
+    );
+
+    Assert.AreEqual(
+        1,
+        scheduler.PendingCount
+    );
+
+    scheduler.ProcessTick();
+
+    Voxel voxel =
+        ChunkDataAccess.GetVoxel(
+            loadedChunk.Data,
+            0,
+            8,
+            8
+        );
+
+    Assert.AreEqual(
+        WaterBlockId,
+        voxel.BlockId
+    );
+
+    Assert.AreEqual(
+        FluidState.MaxLevel,
+        voxel.State
+    );
+
+    Assert.AreEqual(
+        0,
+        scheduler.DeferredCount
+    );
+
+    Assert.AreEqual(
+        0,
+        scheduler.PendingCount
+    );
+}
+
+[Test]
+public void DeferredUpdatesAreDeduplicated()
+{
+    ChunkCoordinate unloadedCoordinate =
+        new ChunkCoordinate(
+            10,
+            0,
+            10
+        );
+
+    FluidPendingUpdate update =
+        new FluidPendingUpdate(
+            unloadedCoordinate,
+            0,
+            8,
+            8,
+            FluidState.Source(
+                FluidType.Water
+            )
+        );
+
+    Assert.IsTrue(
+        scheduler.Enqueue(update)
+    );
+
+    scheduler.ProcessTick();
+
+    Assert.AreEqual(
+        1,
+        scheduler.DeferredCount
+    );
+
+    Assert.IsTrue(
+        scheduler.Enqueue(update)
+    );
+
+    scheduler.ProcessTick();
+
+    Assert.AreEqual(
+        1,
+        scheduler.DeferredCount
+    );
+
+    Assert.IsTrue(
+        scheduler.HasDeferredUpdate(update)
+    );
+}
+    }
+
 }
