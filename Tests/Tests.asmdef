@@ -1,0 +1,21 @@
+{
+    "name": "WildEarth.Tests",
+    "rootNamespace": "WildEarth.Tests",
+    "references": [
+        "WildEarth.Core",
+        "WildEarth.Voxel"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

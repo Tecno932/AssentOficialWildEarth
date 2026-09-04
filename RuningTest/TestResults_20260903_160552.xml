@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="44" result="Failed(Child)" total="44" passed="42" failed="2" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-03 19:05:31Z" end-time="2026-09-03 19:05:34Z" duration="2,5106816">
+  <test-suite type="TestSuite" id="1075" name="Oficial WildEarth" fullname="Oficial WildEarth" runstate="Runnable" testcasecount="44" result="Failed" site="Child" start-time="2026-09-03 19:05:31Z" end-time="2026-09-03 19:05:34Z" duration="2.510682" total="44" passed="42" failed="2" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1134" name="WildEarth.Tests.dll" fullname="C:/Users/tecno/Oficial WildEarth/Library/ScriptAssemblies/WildEarth.Tests.dll" runstate="Runnable" testcasecount="44" result="Failed" site="Child" start-time="2026-09-03 19:05:31Z" end-time="2026-09-03 19:05:34Z" duration="2.489995" total="44" passed="42" failed="2" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="10752" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1135" name="WildEarth" fullname="WildEarth" runstate="Runnable" testcasecount="44" result="Failed" site="Child" start-time="2026-09-03 19:05:31Z" end-time="2026-09-03 19:05:34Z" duration="2.483321" total="44" passed="42" failed="2" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1136" name="Tests" fullname="WildEarth.Tests" runstate="Runnable" testcasecount="34" result="Failed" site="Child" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:34Z" duration="2.396485" total="34" passed="32" failed="2" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="1137" name="Voxel" fullname="WildEarth.Tests.Voxel" runstate="Runnable" testcasecount="34" result="Failed" site="Child" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:34Z" duration="2.390476" total="34" passed="32" failed="2" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestFixture" id="1079" name="BiomeGenerationTests" fullname="WildEarth.Tests.Voxel.BiomeGenerationTests" classname="WildEarth.Tests.Voxel.BiomeGenerationTests" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:32Z" duration="0.137818" total="2" passed="1" failed="1" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-case id="1080" name="BiomeJob_FillsBiomeData" fullname="WildEarth.Tests.Voxel.BiomeGenerationTests.BiomeJob_FillsBiomeData" methodname="BiomeJob_FillsBiomeData" classname="WildEarth.Tests.Voxel.BiomeGenerationTests" runstate="Runnable" seed="764390098" result="Passed" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:32Z" duration="0.095857" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1081" name="BiomeJob_IsDeterministic" fullname="WildEarth.Tests.Voxel.BiomeGenerationTests.BiomeJob_IsDeterministic" methodname="BiomeJob_IsDeterministic" classname="WildEarth.Tests.Voxel.BiomeGenerationTests" runstate="Runnable" seed="1465892475" result="Failed" label="Error" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:32Z" duration="0.009613" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <failure>
+                  <message><![CDATA[System.InvalidOperationException : The previously scheduled job BiomeGenerationJob writes to the Unity.Collections.NativeArray`1[WildEarth.Voxel.BiomeId] BiomeGenerationJob.Output. You must call JobHandle.Complete() on the job BiomeGenerationJob, before you can deallocate the Unity.Collections.NativeArray`1[WildEarth.Voxel.BiomeId] safely.
+TearDown : System.InvalidOperationException : The previously scheduled job BiomeGenerationJob writes to the Unity.Collections.NativeArray`1[WildEarth.Voxel.BiomeRuntimeData] BiomeGenerationJob.BiomeDatabase. You must call JobHandle.Complete() on the job BiomeGenerationJob, before you can deallocate the Unity.Collections.NativeArray`1[WildEarth.Voxel.BiomeRuntimeData] safely.]]></message>
+                  <stack-trace><![CDATA[  at (wrapper managed-to-native) Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.CheckDeallocateAndThrow_Injected(Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle&)
+  at Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.CheckDeallocateAndThrow (Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle handle) [0x00000] in <d5ea965f39d74501b56f4006ef80da34>:0 
+  at Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.DisposeHandle (Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle& safety) [0x00000] in <d5ea965f39d74501b56f4006ef80da34>:0 
+  at Unity.Collections.NativeArray`1[T].Dispose () [0x0005b] in <d5ea965f39d74501b56f4006ef80da34>:0 
+  at WildEarth.Tests.Voxel.BiomeGenerationTests.BiomeJob_IsDeterministic () [0x00103] in C:\Users\tecno\Oficial WildEarth\Assets\_Project\Tests\Runtime\Voxel\BiomeGenerationTests.cs:221 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <c5ae8a4eeb824526b5df2932bc2395e0>:0 
+--TearDown
+  at (wrapper managed-to-native) Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.CheckDeallocateAndThrow_Injected(Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle&)
+  at Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.CheckDeallocateAndThrow (Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle handle) [0x00000] in <d5ea965f39d74501b56f4006ef80da34>:0 
+  at Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.DisposeHandle (Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle& safety) [0x00000] in <d5ea965f39d74501b56f4006ef80da34>:0 
+  at Unity.Collections.NativeArray`1[T].Dispose () [0x0005b] in <d5ea965f39d74501b56f4006ef80da34>:0 
+  at WildEarth.Tests.Voxel.BiomeGenerationTests.TearDown () [0x00025] in C:\Users\tecno\Oficial WildEarth\Assets\_Project\Tests\Runtime\Voxel\BiomeGenerationTests.cs:84 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <c5ae8a4eeb824526b5df2932bc2395e0>:0 ]]></stack-trace>
+                </failure>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1082" name="CaveGenerationTests" fullname="WildEarth.Tests.Voxel.CaveGenerationTests" classname="WildEarth.Tests.Voxel.CaveGenerationTests" runstate="Runnable" testcasecount="5" result="Failed" site="Child" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:32Z" duration="0.088539" total="5" passed="4" failed="1" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-case id="1086" name="CaveJob_CanCreateAir" fullname="WildEarth.Tests.Voxel.CaveGenerationTests.CaveJob_CanCreateAir" methodname="CaveJob_CanCreateAir" classname="WildEarth.Tests.Voxel.CaveGenerationTests" runstate="Runnable" seed="1393028196" result="Passed" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:32Z" duration="0.010197" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1083" name="CaveJob_Disabled_DoesNotModifyVoxels" fullname="WildEarth.Tests.Voxel.CaveGenerationTests.CaveJob_Disabled_DoesNotModifyVoxels" methodname="CaveJob_Disabled_DoesNotModifyVoxels" classname="WildEarth.Tests.Voxel.CaveGenerationTests" runstate="Runnable" seed="1270644116" result="Passed" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:32Z" duration="0.016418" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1087" name="CaveJob_DoesNotCarveProtectedBlocks" fullname="WildEarth.Tests.Voxel.CaveGenerationTests.CaveJob_DoesNotCarveProtectedBlocks" methodname="CaveJob_DoesNotCarveProtectedBlocks" classname="WildEarth.Tests.Voxel.CaveGenerationTests" runstate="Runnable" seed="54046032" result="Passed" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:32Z" duration="0.012583" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1085" name="CaveJob_IsDeterministic" fullname="WildEarth.Tests.Voxel.CaveGenerationTests.CaveJob_IsDeterministic" methodname="CaveJob_IsDeterministic" classname="WildEarth.Tests.Voxel.CaveGenerationTests" runstate="Runnable" seed="980854451" result="Failed" label="Error" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:32Z" duration="0.002657" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <failure>
+                  <message><![CDATA[System.InvalidOperationException : The previously scheduled job CaveGenerationJob writes to the Unity.Collections.NativeArray`1[WildEarth.Voxel.Voxel] CaveGenerationJob.Voxels. You must call JobHandle.Complete() on the job CaveGenerationJob, before you can deallocate the Unity.Collections.NativeArray`1[WildEarth.Voxel.Voxel] safely.
+TearDown : System.InvalidOperationException : The previously scheduled job CaveGenerationJob writes to the Unity.Collections.NativeArray`1[WildEarth.Voxel.BlockRuntimeData] CaveGenerationJob.BlockDatabase. You must call JobHandle.Complete() on the job CaveGenerationJob, before you can deallocate the Unity.Collections.NativeArray`1[WildEarth.Voxel.BlockRuntimeData] safely.]]></message>
+                  <stack-trace><![CDATA[  at (wrapper managed-to-native) Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.CheckDeallocateAndThrow_Injected(Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle&)
+  at Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.CheckDeallocateAndThrow (Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle handle) [0x00000] in <d5ea965f39d74501b56f4006ef80da34>:0 
+  at Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.DisposeHandle (Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle& safety) [0x00000] in <d5ea965f39d74501b56f4006ef80da34>:0 
+  at Unity.Collections.NativeArray`1[T].Dispose () [0x0005b] in <d5ea965f39d74501b56f4006ef80da34>:0 
+  at WildEarth.Tests.Voxel.CaveGenerationTests.CaveJob_IsDeterministic () [0x00141] in C:\Users\tecno\Oficial WildEarth\Assets\_Project\Tests\Runtime\Voxel\CaveGenerationTests.cs:223 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <c5ae8a4eeb824526b5df2932bc2395e0>:0 
+--TearDown
+  at (wrapper managed-to-native) Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.CheckDeallocateAndThrow_Injected(Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle&)
+  at Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.CheckDeallocateAndThrow (Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle handle) [0x00000] in <d5ea965f39d74501b56f4006ef80da34>:0 
+  at Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.DisposeHandle (Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle& safety) [0x00000] in <d5ea965f39d74501b56f4006ef80da34>:0 
+  at Unity.Collections.NativeArray`1[T].Dispose () [0x0005b] in <d5ea965f39d74501b56f4006ef80da34>:0 
+  at WildEarth.Tests.Voxel.CaveGenerationTests.TearDown () [0x00025] in C:\Users\tecno\Oficial WildEarth\Assets\_Project\Tests\Runtime\Voxel\CaveGenerationTests.cs:62 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <c5ae8a4eeb824526b5df2932bc2395e0>:0 ]]></stack-trace>
+                </failure>
+              </test-case>
+              <test-case id="1084" name="CaveJob_WithImpossibleThreshold_DoesNotModifyVoxels" fullname="WildEarth.Tests.Voxel.CaveGenerationTests.CaveJob_WithImpossibleThreshold_DoesNotModifyVoxels" methodname="CaveJob_WithImpossibleThreshold_DoesNotModifyVoxels" classname="WildEarth.Tests.Voxel.CaveGenerationTests" runstate="Runnable" seed="1887118057" result="Passed" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:32Z" duration="0.032555" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1088" name="ChunkBiomeDataTests" fullname="WildEarth.Tests.Voxel.ChunkBiomeDataTests" classname="WildEarth.Tests.Voxel.ChunkBiomeDataTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:32Z" duration="0.022229" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1089" name="Data_IsCreated" fullname="WildEarth.Tests.Voxel.ChunkBiomeDataTests.Data_IsCreated" methodname="Data_IsCreated" classname="WildEarth.Tests.Voxel.ChunkBiomeDataTests" runstate="Runnable" seed="262208505" result="Passed" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:32Z" duration="0.001936" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1090" name="DefaultBiome_IsPlains" fullname="WildEarth.Tests.Voxel.ChunkBiomeDataTests.DefaultBiome_IsPlains" methodname="DefaultBiome_IsPlains" classname="WildEarth.Tests.Voxel.ChunkBiomeDataTests" runstate="Runnable" seed="1350628806" result="Passed" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:32Z" duration="0.005920" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1092" name="OutOfBounds_ReturnsPlains" fullname="WildEarth.Tests.Voxel.ChunkBiomeDataTests.OutOfBounds_ReturnsPlains" methodname="OutOfBounds_ReturnsPlains" classname="WildEarth.Tests.Voxel.ChunkBiomeDataTests" runstate="Runnable" seed="1563485789" result="Passed" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:32Z" duration="0.000783" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1091" name="SetAndGet_ReturnsSameBiome" fullname="WildEarth.Tests.Voxel.ChunkBiomeDataTests.SetAndGet_ReturnsSameBiome" methodname="SetAndGet_ReturnsSameBiome" classname="WildEarth.Tests.Voxel.ChunkBiomeDataTests" runstate="Runnable" seed="66142407" result="Passed" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:32Z" duration="0.000879" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1093" name="ChunkGenerationTests" fullname="WildEarth.Tests.Voxel.ChunkGenerationTests" classname="WildEarth.Tests.Voxel.ChunkGenerationTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:33Z" duration="0.819657" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1094" name="GeneratedChunk_IsMarkedGenerated" fullname="WildEarth.Tests.Voxel.ChunkGenerationTests.GeneratedChunk_IsMarkedGenerated" methodname="GeneratedChunk_IsMarkedGenerated" classname="WildEarth.Tests.Voxel.ChunkGenerationTests" runstate="Runnable" seed="1434972031" result="Passed" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:32Z" duration="0.285418" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Compilation was requested for method `Unity.Jobs.IJobExtensions+JobStruct`1[[WildEarth.Voxel.OreGenerationJob, WildEarth.Voxel, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]], UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null::Execute(WildEarth.Voxel.OreGenerationJob&, WildEarth.Voxel, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|System.IntPtr, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089|Unity.Jobs.LowLevel.Unsafe.JobRanges&, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null|System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089)` but it is not a known Burst entry point. This may be because the [BurstCompile] method is defined in a generic class, and the generic class is not instantiated with concrete types anywhere in your code.
+]]></output>
+              </test-case>
+              <test-case id="1095" name="GenerationProducesNonAirBlocks" fullname="WildEarth.Tests.Voxel.ChunkGenerationTests.GenerationProducesNonAirBlocks" methodname="GenerationProducesNonAirBlocks" classname="WildEarth.Tests.Voxel.ChunkGenerationTests" runstate="Runnable" seed="768081858" result="Passed" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:32Z" duration="0.239680" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1096" name="SameSeedProducesSameChunk" fullname="WildEarth.Tests.Voxel.ChunkGenerationTests.SameSeedProducesSameChunk" methodname="SameSeedProducesSameChunk" classname="WildEarth.Tests.Voxel.ChunkGenerationTests" runstate="Runnable" seed="970767861" result="Passed" start-time="2026-09-03 19:05:32Z" end-time="2026-09-03 19:05:33Z" duration="0.282601" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1097" name="ChunkStorageTests" fullname="WildEarth.Tests.Voxel.ChunkStorageTests" classname="WildEarth.Tests.Voxel.ChunkStorageTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-09-03 19:05:33Z" end-time="2026-09-03 19:05:33Z" duration="0.023424" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1098" name="CreateChunk_AddsChunkToStorage" fullname="WildEarth.Tests.Voxel.ChunkStorageTests.CreateChunk_AddsChunkToStorage" methodname="CreateChunk_AddsChunkToStorage" classname="WildEarth.Tests.Voxel.ChunkStorageTests" runstate="Runnable" seed="1166400517" result="Passed" start-time="2026-09-03 19:05:33Z" end-time="2026-09-03 19:05:33Z" duration="0.002354" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1100" name="CreateChunk_HasVoxelAndBiomeData" fullname="WildEarth.Tests.Voxel.ChunkStorageTests.CreateChunk_HasVoxelAndBiomeData" methodname="CreateChunk_HasVoxelAndBiomeData" classname="WildEarth.Tests.Voxel.ChunkStorageTests" runstate="Runnable" seed="1549742307" result="Passed" start-time="2026-09-03 19:05:33Z" end-time="2026-09-03 19:05:33Z" duration="0.000869" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1099" name="CreateChunk_StartsInLoadingState" fullname="WildEarth.Tests.Voxel.ChunkStorageTests.CreateChunk_StartsInLoadingState" methodname="CreateChunk_StartsInLoadingState" classname="WildEarth.Tests.Voxel.ChunkStorageTests" runstate="Runnable" seed="630497425" result="Passed" start-time="2026-09-03 19:05:33Z" end-time="2026-09-03 19:05:33Z" duration="0.000792" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1102" name="ExistingChunk_IsReturnedInsteadOfDuplicated" fullname="WildEarth.Tests.Voxel.ChunkStorageTests.ExistingChunk_IsReturnedInsteadOfDuplicated" methodname="ExistingChunk_IsReturnedInsteadOfDuplicated" classname="WildEarth.Tests.Voxel.ChunkStorageTests" runstate="Runnable" seed="1427130552" result="Passed" start-time="2026-09-03 19:05:33Z" end-time="2026-09-03 19:05:33Z" duration="0.003058" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1101" name="RemoveChunk_ReturnsBuffersToPools" fullname="WildEarth.Tests.Voxel.ChunkStorageTests.RemoveChunk_ReturnsBuffersToPools" methodname="RemoveChunk_ReturnsBuffersToPools" classname="WildEarth.Tests.Voxel.ChunkStorageTests" runstate="Runnable" seed="1097562581" result="Passed" start-time="2026-09-03 19:05:33Z" end-time="2026-09-03 19:05:33Z" duration="0.001480" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1103" name="OreGenerationTests" fullname="WildEarth.Tests.Voxel.OreGenerationTests" classname="WildEarth.Tests.Voxel.OreGenerationTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-09-03 19:05:33Z" end-time="2026-09-03 19:05:34Z" duration="0.975554" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1109" name="ChunkCoordinateAffectsGenerationPosition" fullname="WildEarth.Tests.Voxel.OreGenerationTests.ChunkCoordinateAffectsGenerationPosition" methodname="ChunkCoordinateAffectsGenerationPosition" classname="WildEarth.Tests.Voxel.OreGenerationTests" runstate="Runnable" seed="435837816" result="Passed" start-time="2026-09-03 19:05:33Z" end-time="2026-09-03 19:05:33Z" duration="0.265765" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1106" name="DifferentSeedProducesDifferentResult" fullname="WildEarth.Tests.Voxel.OreGenerationTests.DifferentSeedProducesDifferentResult" methodname="DifferentSeedProducesDifferentResult" classname="WildEarth.Tests.Voxel.OreGenerationTests" runstate="Runnable" seed="1345167865" result="Passed" start-time="2026-09-03 19:05:33Z" end-time="2026-09-03 19:05:33Z" duration="0.259463" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1104" name="DisabledDoesNothing" fullname="WildEarth.Tests.Voxel.OreGenerationTests.DisabledDoesNothing" methodname="DisabledDoesNothing" classname="WildEarth.Tests.Voxel.OreGenerationTests" runstate="Runnable" seed="429136456" result="Passed" start-time="2026-09-03 19:05:33Z" end-time="2026-09-03 19:05:33Z" duration="0.013959" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1107" name="OnlyHostBlocksAreReplaced" fullname="WildEarth.Tests.Voxel.OreGenerationTests.OnlyHostBlocksAreReplaced" methodname="OnlyHostBlocksAreReplaced" classname="WildEarth.Tests.Voxel.OreGenerationTests" runstate="Runnable" seed="672327834" result="Passed" start-time="2026-09-03 19:05:33Z" end-time="2026-09-03 19:05:33Z" duration="0.093148" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1108" name="OreNeverGeneratesOutsideYRange" fullname="WildEarth.Tests.Voxel.OreGenerationTests.OreNeverGeneratesOutsideYRange" methodname="OreNeverGeneratesOutsideYRange" classname="WildEarth.Tests.Voxel.OreGenerationTests" runstate="Runnable" seed="854282164" result="Passed" start-time="2026-09-03 19:05:33Z" end-time="2026-09-03 19:05:33Z" duration="0.016281" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1105" name="SameSeedProducesSameResult" fullname="WildEarth.Tests.Voxel.OreGenerationTests.SameSeedProducesSameResult" methodname="SameSeedProducesSameResult" classname="WildEarth.Tests.Voxel.OreGenerationTests" runstate="Runnable" seed="625491327" result="Passed" start-time="2026-09-03 19:05:33Z" end-time="2026-09-03 19:05:34Z" duration="0.304958" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1110" name="TerrainNoiseTests" fullname="WildEarth.Tests.Voxel.TerrainNoiseTests" classname="WildEarth.Tests.Voxel.TerrainNoiseTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.051352" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1112" name="DifferentSeeds_ProduceDifferentNoise" fullname="WildEarth.Tests.Voxel.TerrainNoiseTests.DifferentSeeds_ProduceDifferentNoise" methodname="DifferentSeeds_ProduceDifferentNoise" classname="WildEarth.Tests.Voxel.TerrainNoiseTests" runstate="Runnable" seed="225479477" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.006006" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1114" name="Fractal_IsDeterministic" fullname="WildEarth.Tests.Voxel.TerrainNoiseTests.Fractal_IsDeterministic" methodname="Fractal_IsDeterministic" classname="WildEarth.Tests.Voxel.TerrainNoiseTests" runstate="Runnable" seed="846316897" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.000658" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1111" name="Sample_IsDeterministic" fullname="WildEarth.Tests.Voxel.TerrainNoiseTests.Sample_IsDeterministic" methodname="Sample_IsDeterministic" classname="WildEarth.Tests.Voxel.TerrainNoiseTests" runstate="Runnable" seed="34298612" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.000383" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1113" name="Sample01_IsInsideExpectedRange" fullname="WildEarth.Tests.Voxel.TerrainNoiseTests.Sample01_IsInsideExpectedRange" methodname="Sample01_IsInsideExpectedRange" classname="WildEarth.Tests.Voxel.TerrainNoiseTests" runstate="Runnable" seed="1630304547" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.001141" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1115" name="VoxelWorldTests" fullname="WildEarth.Tests.Voxel.VoxelWorldTests" classname="WildEarth.Tests.Voxel.VoxelWorldTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.261884" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1117" name="LoadChunk_CreatesChunk" fullname="WildEarth.Tests.Voxel.VoxelWorldTests.LoadChunk_CreatesChunk" methodname="LoadChunk_CreatesChunk" classname="WildEarth.Tests.Voxel.VoxelWorldTests" runstate="Runnable" seed="1289279713" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.001915" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1118" name="LoadSameChunk_ReturnsSameInstance" fullname="WildEarth.Tests.Voxel.VoxelWorldTests.LoadSameChunk_ReturnsSameInstance" methodname="LoadSameChunk_ReturnsSameInstance" classname="WildEarth.Tests.Voxel.VoxelWorldTests" runstate="Runnable" seed="112622468" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.001814" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1119" name="UnloadChunk_RemovesChunk" fullname="WildEarth.Tests.Voxel.VoxelWorldTests.UnloadChunk_RemovesChunk" methodname="UnloadChunk_RemovesChunk" classname="WildEarth.Tests.Voxel.VoxelWorldTests" runstate="Runnable" seed="1049019717" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.001346" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1120" name="UnloadGeneratedChunk_CompletesGenerationBeforeRemoval" fullname="WildEarth.Tests.Voxel.VoxelWorldTests.UnloadGeneratedChunk_CompletesGenerationBeforeRemoval" methodname="UnloadGeneratedChunk_CompletesGenerationBeforeRemoval" classname="WildEarth.Tests.Voxel.VoxelWorldTests" runstate="Runnable" seed="1821233065" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.241741" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1116" name="World_StartsInitialized" fullname="WildEarth.Tests.Voxel.VoxelWorldTests.World_StartsInitialized" methodname="World_StartsInitialized" classname="WildEarth.Tests.Voxel.VoxelWorldTests" runstate="Runnable" seed="1005240793" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.000632" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+        <test-suite type="TestSuite" id="1138" name="Voxel" fullname="WildEarth.Voxel" runstate="Runnable" testcasecount="10" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.079991" total="10" passed="10" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1139" name="Tests" fullname="WildEarth.Voxel.Tests" runstate="Runnable" testcasecount="10" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.067873" total="10" passed="10" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestFixture" id="1121" name="BiomeRegistryAssetTests" fullname="WildEarth.Voxel.Tests.BiomeRegistryAssetTests" classname="WildEarth.Voxel.Tests.BiomeRegistryAssetTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.017489" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1122" name="Asset_ContainsDefinitions" fullname="WildEarth.Voxel.Tests.BiomeRegistryAssetTests.Asset_ContainsDefinitions" methodname="Asset_ContainsDefinitions" classname="WildEarth.Voxel.Tests.BiomeRegistryAssetTests" runstate="Runnable" seed="164903117" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.008462" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1123" name="Registry_CanBeCreatedFromAsset" fullname="WildEarth.Voxel.Tests.BiomeRegistryAssetTests.Registry_CanBeCreatedFromAsset" methodname="Registry_CanBeCreatedFromAsset" classname="WildEarth.Voxel.Tests.BiomeRegistryAssetTests" runstate="Runnable" seed="1253284654" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.001386" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1124" name="BiomeRuntimeDatabaseTests" fullname="WildEarth.Voxel.Tests.BiomeRuntimeDatabaseTests" classname="WildEarth.Voxel.Tests.BiomeRuntimeDatabaseTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.019305" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1125" name="Registry_CreatesRuntimeData" fullname="WildEarth.Voxel.Tests.BiomeRuntimeDatabaseTests.Registry_CreatesRuntimeData" methodname="Registry_CreatesRuntimeData" classname="WildEarth.Voxel.Tests.BiomeRuntimeDatabaseTests" runstate="Runnable" seed="334673846" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.003541" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1126" name="RuntimeDatabase_CreatesNativeData" fullname="WildEarth.Voxel.Tests.BiomeRuntimeDatabaseTests.RuntimeDatabase_CreatesNativeData" methodname="RuntimeDatabase_CreatesNativeData" classname="WildEarth.Voxel.Tests.BiomeRuntimeDatabaseTests" runstate="Runnable" seed="603032171" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.001688" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1128" name="Selector_ReturnsForestForWetClimate" fullname="WildEarth.Voxel.Tests.BiomeRuntimeDatabaseTests.Selector_ReturnsForestForWetClimate" methodname="Selector_ReturnsForestForWetClimate" classname="WildEarth.Voxel.Tests.BiomeRuntimeDatabaseTests" runstate="Runnable" seed="187987019" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.001447" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1127" name="Selector_ReturnsPlainsForPlainsClimate" fullname="WildEarth.Voxel.Tests.BiomeRuntimeDatabaseTests.Selector_ReturnsPlainsForPlainsClimate" methodname="Selector_ReturnsPlainsForPlainsClimate" classname="WildEarth.Voxel.Tests.BiomeRuntimeDatabaseTests" runstate="Runnable" seed="595011740" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.001025" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1129" name="BiomeSelectorTests" fullname="WildEarth.Voxel.Tests.BiomeSelectorTests" classname="WildEarth.Voxel.Tests.BiomeSelectorTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.016963" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1133" name="Selector_ColdClimate_ReturnsTundra" fullname="WildEarth.Voxel.Tests.BiomeSelectorTests.Selector_ColdClimate_ReturnsTundra" methodname="Selector_ColdClimate_ReturnsTundra" classname="WildEarth.Voxel.Tests.BiomeSelectorTests" runstate="Runnable" seed="1878538195" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.002165" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1132" name="Selector_HotDryClimate_ReturnsDesert" fullname="WildEarth.Voxel.Tests.BiomeSelectorTests.Selector_HotDryClimate_ReturnsDesert" methodname="Selector_HotDryClimate_ReturnsDesert" classname="WildEarth.Voxel.Tests.BiomeSelectorTests" runstate="Runnable" seed="676493799" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.000794" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1130" name="Selector_PlainsClimate_ReturnsPlains" fullname="WildEarth.Voxel.Tests.BiomeSelectorTests.Selector_PlainsClimate_ReturnsPlains" methodname="Selector_PlainsClimate_ReturnsPlains" classname="WildEarth.Voxel.Tests.BiomeSelectorTests" runstate="Runnable" seed="1643432849" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.000601" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1131" name="Selector_WetClimate_ReturnsForest" fullname="WildEarth.Voxel.Tests.BiomeSelectorTests.Selector_WetClimate_ReturnsForest" methodname="Selector_WetClimate_ReturnsForest" classname="WildEarth.Voxel.Tests.BiomeSelectorTests" runstate="Runnable" seed="2086601390" result="Passed" start-time="2026-09-03 19:05:34Z" end-time="2026-09-03 19:05:34Z" duration="0.000549" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Saving results to: C:/Users/tecno/AppData/LocalLow/DefaultCompany/Oficial WildEarth\TestResults.xml
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

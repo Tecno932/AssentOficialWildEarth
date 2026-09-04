@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11606521aae24d24baaa5ae1b478ee5a, type: 3}
+  m_Name: Forest
+  m_EditorClassIdentifier: WildEarth.Voxel::WildEarth.Voxel.BiomeDefinition
+  id: 1
+  biomeName: Forest
+  temperatureMin: 0.35
+  temperatureMax: 0.8
+  moistureMin: 0.6
+  moistureMax: 1
+  terrainHeightMultiplier: 1.05
+  terrainHeightOffset: 2
+  surfaceBlockId: 3
+  subSurfaceBlockId: 2
+  deepBlockId: 1
+  subSurfaceDepth: 3

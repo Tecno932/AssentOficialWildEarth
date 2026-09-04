@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11606521aae24d24baaa5ae1b478ee5a, type: 3}
+  m_Name: Desert
+  m_EditorClassIdentifier: WildEarth.Voxel::WildEarth.Voxel.BiomeDefinition
+  id: 2
+  biomeName: Desert
+  temperatureMin: 0.7
+  temperatureMax: 1
+  moistureMin: 0
+  moistureMax: 0.35
+  terrainHeightMultiplier: 0.9
+  terrainHeightOffset: 0
+  surfaceBlockId: 2
+  subSurfaceBlockId: 2
+  deepBlockId: 1
+  subSurfaceDepth: 3

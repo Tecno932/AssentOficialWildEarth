@@ -1,0 +1,16 @@
+{
+    "name": "WildEarth.Voxel",
+    "rootNamespace": "WildEarth.Voxel",
+    "references": [
+        "WildEarth.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
