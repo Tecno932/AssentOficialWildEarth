@@ -49,7 +49,8 @@ namespace WildEarth.Voxel.Tests
 
             fluidDatabase =
                 new FluidRuntimeDatabase(
-                    registry
+                    registry,
+                    Allocator.Persistent
                 );
 
             dataPool =
@@ -97,7 +98,8 @@ namespace WildEarth.Voxel.Tests
             coordinator =
                 new FluidSimulationCoordinator(
                     storage,
-                    scheduler
+                    scheduler,
+                    FluidSimulationCoordinatorSettings.Default
                 );
         }
 
@@ -444,6 +446,204 @@ namespace WildEarth.Voxel.Tests
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             return definition;
+        }
+
+        [Test]
+        public void MaxConcurrentSimulationsIsRespected()
+        {
+            FluidSimulationCoordinatorSettings settings =
+                new FluidSimulationCoordinatorSettings
+                {
+                    MaxConcurrentSimulations = 2
+                };
+
+            FluidSimulationCoordinator limitedCoordinator =
+                new FluidSimulationCoordinator(
+                    storage,
+                    scheduler,
+                    settings
+                );
+
+            Chunk secondChunk =
+                storage.Create(
+                    new ChunkCoordinate(
+                        1,
+                        0,
+                        0
+                    )
+                );
+
+            Chunk thirdChunk =
+                storage.Create(
+                    new ChunkCoordinate(
+                        2,
+                        0,
+                        0
+                    )
+                );
+
+            Assert.That(
+                limitedCoordinator.TrySchedule(
+                    chunk.Coordinate,
+                    fluidDatabase,
+                    FluidSimulationSettings.Default
+                ),
+                Is.True
+            );
+
+            Assert.That(
+                limitedCoordinator.TrySchedule(
+                    secondChunk.Coordinate,
+                    fluidDatabase,
+                    FluidSimulationSettings.Default
+                ),
+                Is.True
+            );
+
+            Assert.That(
+                limitedCoordinator.RunningCount,
+                Is.EqualTo(2)
+            );
+
+            Assert.That(
+                limitedCoordinator.TrySchedule(
+                    thirdChunk.Coordinate,
+                    fluidDatabase,
+                    FluidSimulationSettings.Default
+                ),
+                Is.False
+            );
+
+            Assert.That(
+                limitedCoordinator.RunningCount,
+                Is.EqualTo(2)
+            );
+
+            limitedCoordinator.Dispose();
+        }
+
+        [Test]
+        public void CompletingSimulationAllowsAnotherSimulation()
+        {
+            FluidSimulationCoordinatorSettings settings =
+                new FluidSimulationCoordinatorSettings
+                {
+                    MaxConcurrentSimulations = 1
+                };
+
+            FluidSimulationCoordinator limitedCoordinator =
+                new FluidSimulationCoordinator(
+                    storage,
+                    scheduler,
+                    settings
+                );
+
+            Chunk secondChunk =
+                storage.Create(
+                    new ChunkCoordinate(
+                        1,
+                        0,
+                        0
+                    )
+                );
+
+            Assert.That(
+                limitedCoordinator.TrySchedule(
+                    chunk.Coordinate,
+                    fluidDatabase,
+                    FluidSimulationSettings.Default
+                ),
+                Is.True
+            );
+
+            Assert.That(
+                limitedCoordinator.TrySchedule(
+                    secondChunk.Coordinate,
+                    fluidDatabase,
+                    FluidSimulationSettings.Default
+                ),
+                Is.False
+            );
+
+            int added =
+                limitedCoordinator.CompleteAndEnqueue(
+                    chunk.Coordinate
+                );
+
+            Assert.That(
+                added,
+                Is.GreaterThanOrEqualTo(0)
+            );
+
+            Assert.That(
+                limitedCoordinator.RunningCount,
+                Is.EqualTo(0)
+            );
+
+            Assert.That(
+                limitedCoordinator.TrySchedule(
+                    secondChunk.Coordinate,
+                    fluidDatabase,
+                    FluidSimulationSettings.Default
+                ),
+                Is.True
+            );
+
+            Assert.That(
+                limitedCoordinator.RunningCount,
+                Is.EqualTo(1)
+            );
+
+            limitedCoordinator.Dispose();
+        }
+
+        [Test]
+        public void SameChunkCannotConsumeMultipleSimulationSlots()
+        {
+            FluidSimulationCoordinatorSettings settings =
+                new FluidSimulationCoordinatorSettings
+                {
+                    MaxConcurrentSimulations = 4
+                };
+
+            FluidSimulationCoordinator limitedCoordinator =
+                new FluidSimulationCoordinator(
+                    storage,
+                    scheduler,
+                    settings
+                );
+
+            Assert.That(
+                limitedCoordinator.TrySchedule(
+                    chunk.Coordinate,
+                    fluidDatabase,
+                    FluidSimulationSettings.Default
+                ),
+                Is.True
+            );
+
+            Assert.That(
+                limitedCoordinator.TrySchedule(
+                    chunk.Coordinate,
+                    fluidDatabase,
+                    FluidSimulationSettings.Default
+                ),
+                Is.False
+            );
+
+            Assert.That(
+                limitedCoordinator.RunningCount,
+                Is.EqualTo(1)
+            );
+
+            Assert.That(
+                limitedCoordinator.IsRunning(
+                    chunk.Coordinate
+                ),
+                Is.True
+            );
+
+            limitedCoordinator.Dispose();
         }
     }
 }

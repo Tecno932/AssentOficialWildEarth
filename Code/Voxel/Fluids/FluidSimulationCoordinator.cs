@@ -7,6 +7,7 @@ namespace WildEarth.Voxel
     {
         private readonly ChunkStorage chunkStorage;
         private readonly FluidScheduler scheduler;
+        private readonly FluidSimulationCoordinatorSettings settings;
 
         private readonly Dictionary<
             ChunkCoordinate,
@@ -18,12 +19,20 @@ namespace WildEarth.Voxel
         public int RunningCount =>
             runners.Count;
 
+        public int MaxConcurrentSimulations =>
+            settings.MaxConcurrentSimulations;
+
         public bool HasRunningSimulations =>
             runners.Count > 0;
 
+        public bool CanSchedule =>
+            runners.Count <
+            settings.MaxConcurrentSimulations;
+
         public FluidSimulationCoordinator(
             ChunkStorage chunkStorage,
-            FluidScheduler scheduler)
+            FluidScheduler scheduler,
+            FluidSimulationCoordinatorSettings settings)
         {
             this.chunkStorage =
                 chunkStorage ??
@@ -36,6 +45,16 @@ namespace WildEarth.Voxel
                 throw new ArgumentNullException(
                     nameof(scheduler)
                 );
+
+            if (settings.MaxConcurrentSimulations < 1)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(settings),
+                    "MaxConcurrentSimulations debe ser mayor que cero."
+                );
+            }
+
+            this.settings = settings;
 
             runners =
                 new Dictionary<
@@ -59,11 +78,14 @@ namespace WildEarth.Voxel
         public bool TrySchedule(
             ChunkCoordinate coordinate,
             FluidRuntimeDatabase fluidDatabase,
-            FluidSimulationSettings settings)
+            FluidSimulationSettings simulationSettings)
         {
             ThrowIfDisposed();
 
             if (runners.ContainsKey(coordinate))
+                return false;
+
+            if (!CanSchedule)
                 return false;
 
             if (!chunkStorage.TryGet(
@@ -79,7 +101,7 @@ namespace WildEarth.Voxel
             FluidSimulationRunner runner =
                 new FluidSimulationRunner(
                     fluidDatabase,
-                    settings
+                    simulationSettings
                 );
 
             try
@@ -132,16 +154,27 @@ namespace WildEarth.Voxel
                 return 0;
             }
 
-            int added =
-                runner.EnqueueResults(
-                    scheduler
+            try
+            {
+                int added =
+                    runner.EnqueueResults(
+                        scheduler
+                    );
+
+                RemoveRunner(
+                    coordinate
                 );
 
-            RemoveRunner(
-                coordinate
-            );
+                return added;
+            }
+            catch
+            {
+                RemoveRunner(
+                    coordinate
+                );
 
-            return added;
+                throw;
+            }
         }
 
         public int CompleteAll()
