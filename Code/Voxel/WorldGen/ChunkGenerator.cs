@@ -11,20 +11,28 @@ namespace WildEarth.Voxel
         private readonly BiomeRuntimeDatabase biomeDatabase;
         private readonly BlockRuntimeDatabase blockDatabase;
         private readonly OreRuntimeDatabase oreDatabase;
+        private readonly FluidRuntimeDatabase fluidDatabase;
 
         private readonly List<GenerationTask> activeTasks =
             new List<GenerationTask>();
+
+        private readonly List<Chunk> completedChunks =
+            new List<Chunk>();
 
         private bool disposed;
 
         public int ActiveJobCount =>
             activeTasks.Count;
 
+        public IReadOnlyList<Chunk> CompletedChunks =>
+            completedChunks;
+
         public ChunkGenerator(
             ChunkGenerationSettings settings,
             BiomeRuntimeDatabase biomeDatabase,
             BlockRuntimeDatabase blockDatabase,
-            OreRuntimeDatabase oreDatabase)
+            OreRuntimeDatabase oreDatabase,
+            FluidRuntimeDatabase fluidDatabase)
         {
             this.settings = settings;
 
@@ -51,7 +59,8 @@ namespace WildEarth.Voxel
                     settings,
                     biomeDatabase,
                     blockDatabase,
-                    oreDatabase
+                    oreDatabase,
+                    fluidDatabase
                 );
         }
 
@@ -145,6 +154,10 @@ namespace WildEarth.Voxel
 
                 task.Chunk.MarkGenerated();
 
+                completedChunks.Add(
+                    task.Chunk
+                );
+
                 activeTasks.RemoveAt(i);
 
                 return;
@@ -154,6 +167,8 @@ namespace WildEarth.Voxel
         public void Update()
         {
             ThrowIfDisposed();
+
+            completedChunks.Clear();
 
             for (int i = activeTasks.Count - 1; i >= 0; i--)
             {
@@ -166,6 +181,10 @@ namespace WildEarth.Voxel
                 task.Handle.Complete();
 
                 task.Chunk.MarkGenerated();
+
+                completedChunks.Add(
+                    task.Chunk
+                );
 
                 activeTasks.RemoveAt(i);
             }

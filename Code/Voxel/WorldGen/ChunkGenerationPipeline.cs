@@ -1,5 +1,6 @@
 using System;
 using Unity.Jobs;
+using Unity.Collections;
 
 namespace WildEarth.Voxel
 {
@@ -9,12 +10,14 @@ namespace WildEarth.Voxel
         private readonly BiomeRuntimeDatabase biomeDatabase;
         private readonly BlockRuntimeDatabase blockDatabase;
         private readonly OreRuntimeDatabase oreDatabase;
+        private readonly FluidRuntimeDatabase fluidDatabase;
 
         public ChunkGenerationPipeline(
             ChunkGenerationSettings settings,
             BiomeRuntimeDatabase biomeDatabase,
             BlockRuntimeDatabase blockDatabase,
-            OreRuntimeDatabase oreDatabase)
+            OreRuntimeDatabase oreDatabase,
+            FluidRuntimeDatabase fluidDatabase)
         {
             this.settings = settings;
 
@@ -34,6 +37,12 @@ namespace WildEarth.Voxel
                 oreDatabase ??
                 throw new ArgumentNullException(
                     nameof(oreDatabase)
+                );
+
+            this.fluidDatabase =
+                fluidDatabase ??
+                throw new ArgumentNullException(
+                    nameof(fluidDatabase)
                 );
         }
 
@@ -68,6 +77,13 @@ namespace WildEarth.Voxel
                     chunk.Coordinate.ToInt3()
                 );
 
+            NativeArray<int> surfaceHeights =
+                new NativeArray<int>(
+                    VoxelConstants.ChunkSize *
+                    VoxelConstants.ChunkSize,
+                    Unity.Collections.Allocator.TempJob
+                );
+
             JobHandle biomeHandle =
                 ScheduleBiome(
                     chunk,
@@ -79,6 +95,7 @@ namespace WildEarth.Voxel
                 ScheduleTerrain(
                     chunk,
                     context,
+                    surfaceHeights,
                     biomeHandle
                 );
 
@@ -89,14 +106,24 @@ namespace WildEarth.Voxel
                     terrainHandle
                 );
 
+            JobHandle fluidHandle =
+                ScheduleFluids(
+                    chunk,
+                    context,
+                    surfaceHeights,
+                    caveHandle
+                );
+
             JobHandle oreHandle =
                 ScheduleOres(
                     chunk,
                     context,
-                    caveHandle
+                    fluidHandle
                 );
 
-            return oreHandle;
+            return surfaceHeights.Dispose(
+                oreHandle
+            );
         }
 
         private JobHandle ScheduleBiome(
@@ -174,6 +201,7 @@ namespace WildEarth.Voxel
         private JobHandle ScheduleTerrain(
             Chunk chunk,
             ChunkGenerationContext context,
+            NativeArray<int> surfaceHeights,
             JobHandle dependency)
         {
             TerrainGenerationJob job =
@@ -189,7 +217,45 @@ namespace WildEarth.Voxel
                         chunk.BiomeData.Biomes,
 
                     BiomeDatabase =
-                        biomeDatabase.AsNativeArray()
+                        biomeDatabase.AsNativeArray(),
+
+                    SurfaceHeights =
+                        surfaceHeights
+                };
+
+            return job.Schedule(
+                dependency
+            );
+        }
+
+        private JobHandle ScheduleFluids(
+            Chunk chunk,
+            ChunkGenerationContext context,
+            NativeArray<int> surfaceHeights,
+            JobHandle dependency)
+        {
+            FluidGenerationJob job =
+                new FluidGenerationJob
+                {
+                    Settings =
+                        settings.Fluids,
+
+                    TerrainSettings =
+                        settings.Terrain,
+
+                    Voxels =
+                        chunk.Data.Voxels,
+
+                    SurfaceHeights =
+                        surfaceHeights,
+
+                    Water =
+                        fluidDatabase.Get(
+                            FluidType.Water
+                        ),
+
+                    WorldOriginY =
+                        context.WorldOrigin.y
                 };
 
             return job.Schedule(

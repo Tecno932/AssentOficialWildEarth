@@ -6,11 +6,13 @@ namespace WildEarth.Voxel
     public struct ChunkGenerationSettings
     {
         public int Seed;
+
         public TerrainGenerationSettings Terrain;
         public BiomeGenerationSettings Biome;
         public CaveGenerationSettings Caves;
         public OreGenerationSettings Ores;
-        
+        public FluidGenerationSettings Fluids;
+
         public static ChunkGenerationSettings Default =>
             new ChunkGenerationSettings
             {
@@ -26,7 +28,10 @@ namespace WildEarth.Voxel
                     CaveGenerationSettings.Default,
 
                 Ores =
-                    OreGenerationSettings.Default
+                    OreGenerationSettings.Default,
+
+                Fluids =
+                    FluidGenerationSettings.Default
             };
     }
 }

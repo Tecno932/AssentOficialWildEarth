@@ -16,6 +16,8 @@ namespace WildEarth.Voxel
         public NativeArray<BiomeId> Biomes;
         public NativeArray<BiomeRuntimeData> BiomeDatabase;
 
+        public NativeArray<int> SurfaceHeights;
+
         public void Execute()
         {
             int chunkSize =
@@ -48,6 +50,13 @@ namespace WildEarth.Voxel
                             worldZ,
                             biome
                         );
+
+                    int surfaceIndex =
+                        x +
+                        z * chunkSize;
+
+                    SurfaceHeights[surfaceIndex] =
+                        terrainHeight;
 
                     for (int y = 0; y < chunkSize; y++)
                     {
@@ -143,18 +152,6 @@ namespace WildEarth.Voxel
                     worldZ
                 );
 
-            /*
-             * 1. Continentalness
-             *
-             * Controls the large-scale shape
-             * of the world.
-             *
-             * Low values:
-             *   oceans / lowlands
-             *
-             * High values:
-             *   inland / elevated regions
-             */
             float continentalness =
                 TerrainNoise.Sample01(
                     position,
@@ -162,15 +159,9 @@ namespace WildEarth.Voxel
                     Context.Seed + 1000
                 );
 
-            /*
-             * Convert 0..1 into -1..1.
-             */
             float continentalShape =
                 continentalness * 2f - 1f;
 
-            /*
-             * 2. Base terrain
-             */
             float height =
                 Settings.BaseHeight;
 
@@ -178,12 +169,6 @@ namespace WildEarth.Voxel
                 continentalShape *
                 Settings.ContinentalAmplitude;
 
-            /*
-             * 3. Erosion
-             *
-             * Erosion reduces/increases the
-             * roughness of terrain.
-             */
             float erosion =
                 TerrainNoise.Fractal01(
                     position,
@@ -201,12 +186,6 @@ namespace WildEarth.Voxel
                 erosionShape *
                 Settings.ErosionAmplitude;
 
-            /*
-             * 4. Peaks and valleys
-             *
-             * Creates larger geological
-             * formations.
-             */
             float peaks =
                 TerrainNoise.Fractal01(
                     position,
@@ -217,11 +196,6 @@ namespace WildEarth.Voxel
                     seed: Context.Seed + 3000
                 );
 
-            /*
-             * Remap peaks so the center is
-             * relatively flat while high
-             * values create stronger peaks.
-             */
             float peaksShape =
                 math.pow(
                     peaks,
@@ -232,9 +206,6 @@ namespace WildEarth.Voxel
                 peaksShape *
                 Settings.PeaksAmplitude;
 
-            /*
-             * 5. Fine detail
-             */
             float detail =
                 TerrainNoise.Sample(
                     position,
@@ -246,9 +217,6 @@ namespace WildEarth.Voxel
                 detail *
                 Settings.DetailAmplitude;
 
-            /*
-             * 6. Biome influence
-             */
             height =
                 Settings.BaseHeight +
                 (
@@ -264,10 +232,6 @@ namespace WildEarth.Voxel
             height +=
                 biome.TerrainHeightOffset;
 
-            /*
-             * Keep terrain inside the
-             * valid world range.
-             */
             height =
                 math.clamp(
                     height,

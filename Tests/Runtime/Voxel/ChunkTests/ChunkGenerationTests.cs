@@ -10,6 +10,7 @@ namespace WildEarth.Tests.Voxel
         private BiomeRegistryAsset biomeRegistryAsset;
         private BlockRegistry blockRegistry;
         private OreRegistryAsset oreRegistryAsset;
+        private FluidRegistryAsset fluidRegistryAsset;
 
         [SetUp]
         public void SetUp()
@@ -17,7 +18,7 @@ namespace WildEarth.Tests.Voxel
             biomeRegistryAsset =
                 AssetDatabase.LoadAssetAtPath<BiomeRegistryAsset>(
                     "Assets/_Project/Data/Biomes/BiomeRegistry.asset"
-            );
+                );
 
             Assert.That(
                 biomeRegistryAsset,
@@ -28,7 +29,7 @@ namespace WildEarth.Tests.Voxel
             blockRegistry =
                 AssetDatabase.LoadAssetAtPath<BlockRegistry>(
                     "Assets/_Project/Data/Blocks/BlockRegistry.asset"
-            );
+                );
 
             oreRegistryAsset =
                 AssetDatabase.LoadAssetAtPath<OreRegistryAsset>(
@@ -41,13 +42,31 @@ namespace WildEarth.Tests.Voxel
                 "No se encontró OreRegistry.asset."
             );
 
+            fluidRegistryAsset =
+                AssetDatabase.LoadAssetAtPath<FluidRegistryAsset>(
+                    "Assets/_Project/Data/Fluids/FluidRegistry.asset"
+                );
+
+            Assert.That(
+                fluidRegistryAsset,
+                Is.Not.Null,
+                "No se encontró FluidRegistry.asset."
+            );
+
+            Assert.That(
+                blockRegistry,
+                Is.Not.Null,
+                "No se encontró BlockRegistry.asset."
+            );
+
             world =
                 new VoxelWorld(
                     VoxelWorldSettings.Default,
                     ChunkGenerationSettings.Default,
                     biomeRegistryAsset,
                     blockRegistry,
-                    oreRegistryAsset
+                    oreRegistryAsset,
+                    fluidRegistryAsset
                 );
 
             world.Initialize();
@@ -58,8 +77,11 @@ namespace WildEarth.Tests.Voxel
         {
             world?.Dispose();
             world = null;
+
             biomeRegistryAsset = null;
+            blockRegistry = null;
             oreRegistryAsset = null;
+            fluidRegistryAsset = null;
         }
 
         [Test]
@@ -130,7 +152,8 @@ namespace WildEarth.Tests.Voxel
                     settings,
                     biomeRegistryAsset,
                     blockRegistry,
-                    oreRegistryAsset
+                    oreRegistryAsset,
+                    fluidRegistryAsset
                 );
 
             VoxelWorld worldB =
@@ -139,7 +162,8 @@ namespace WildEarth.Tests.Voxel
                     settings,
                     biomeRegistryAsset,
                     blockRegistry,
-                    oreRegistryAsset
+                    oreRegistryAsset,
+                    fluidRegistryAsset
                 );
 
             try

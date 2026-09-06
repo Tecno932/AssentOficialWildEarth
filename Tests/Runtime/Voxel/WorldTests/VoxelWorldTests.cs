@@ -10,6 +10,7 @@ namespace WildEarth.Tests.Voxel
         private BiomeRegistryAsset biomeRegistryAsset;
         private BlockRegistry blockRegistry;
         private OreRegistryAsset oreRegistryAsset;
+        private FluidRegistryAsset fluidRegistryAsset;
 
         [SetUp]
         public void SetUp()
@@ -41,6 +42,17 @@ namespace WildEarth.Tests.Voxel
                 "No se encontró OreRegistry.asset."
             );
 
+            fluidRegistryAsset =
+                AssetDatabase.LoadAssetAtPath<FluidRegistryAsset>(
+                    "Assets/_Project/Data/Fluids/FluidRegistry.asset"
+                );
+
+            Assert.That(
+                fluidRegistryAsset,
+                Is.Not.Null,
+                "No se encontró FluidRegistry.asset."
+            );
+
             Assert.That(
                 blockRegistry,
                 Is.Not.Null,
@@ -60,7 +72,8 @@ namespace WildEarth.Tests.Voxel
                     ChunkGenerationSettings.Default,
                     biomeRegistryAsset,
                     blockRegistry,
-                    oreRegistryAsset
+                    oreRegistryAsset,
+                    fluidRegistryAsset
                 );
 
             world.Initialize();
@@ -74,8 +87,8 @@ namespace WildEarth.Tests.Voxel
 
             biomeRegistryAsset = null;
             blockRegistry = null;
-            
             oreRegistryAsset = null;
+            fluidRegistryAsset = null;
         }
 
         [Test]

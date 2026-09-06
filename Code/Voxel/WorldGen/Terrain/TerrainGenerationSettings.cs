@@ -6,6 +6,7 @@ namespace WildEarth.Voxel
     public struct TerrainGenerationSettings
     {
         public int BaseHeight;
+        public int SeaLevel;
         public int TerrainAmplitude;
 
         public float ContinentalFrequency;
@@ -30,6 +31,7 @@ namespace WildEarth.Voxel
             new TerrainGenerationSettings
             {
                 BaseHeight = 64,
+                SeaLevel = 40,
                 TerrainAmplitude = 24,
 
                 ContinentalFrequency = 0.0012f,
