@@ -1,6 +1,6 @@
 using System;
-using Unity.Jobs;
 using Unity.Collections;
+using Unity.Jobs;
 
 namespace WildEarth.Voxel
 {
@@ -81,7 +81,7 @@ namespace WildEarth.Voxel
                 new NativeArray<int>(
                     VoxelConstants.ChunkSize *
                     VoxelConstants.ChunkSize,
-                    Unity.Collections.Allocator.TempJob
+                    Allocator.TempJob
                 );
 
             JobHandle biomeHandle =
@@ -149,55 +149,6 @@ namespace WildEarth.Voxel
             );
         }
 
-        private JobHandle ScheduleCaves(
-            Chunk chunk,
-            ChunkGenerationContext context,
-            JobHandle dependency)
-        {
-            CaveGenerationJob job =
-                new CaveGenerationJob
-                {
-                    Context = context,
-                    Settings = settings.Caves,
-
-                    Voxels =
-                        chunk.Data.Voxels,
-
-                    BlockDatabase =
-                        blockDatabase.AsNativeArray()
-                };
-
-            return job.Schedule(
-                dependency
-            );
-        }
-
-        private JobHandle ScheduleOres(
-            Chunk chunk,
-            ChunkGenerationContext context,
-            JobHandle dependency)
-        {
-            OreGenerationJob job =
-                new OreGenerationJob
-                {
-                    Context = context,
-                    Settings = settings.Ores,
-
-                    Voxels =
-                        chunk.Data.Voxels,
-
-                    OreDatabase =
-                        oreDatabase.AsNativeArray(),
-
-                    HostBlockIds =
-                        oreDatabase.AsHostBlockArray()
-                };
-
-            return job.Schedule(
-                dependency
-            );
-        }
-
         private JobHandle ScheduleTerrain(
             Chunk chunk,
             ChunkGenerationContext context,
@@ -228,44 +179,28 @@ namespace WildEarth.Voxel
             );
         }
 
-public NativeArray<int> DebugCalculateSurfaceHeights(
-    Chunk chunk)
-{
-    if (chunk == null)
-        throw new ArgumentNullException(nameof(chunk));
+        private JobHandle ScheduleCaves(
+            Chunk chunk,
+            ChunkGenerationContext context,
+            JobHandle dependency)
+        {
+            CaveGenerationJob job =
+                new CaveGenerationJob
+                {
+                    Context = context,
+                    Settings = settings.Caves,
 
-    NativeArray<int> surfaceHeights =
-        new NativeArray<int>(
-            VoxelConstants.ChunkSize *
-            VoxelConstants.ChunkSize,
-            Allocator.TempJob
-        );
+                    Voxels =
+                        chunk.Data.Voxels,
 
-    ChunkGenerationContext context =
-        new ChunkGenerationContext(
-            settings.Seed,
-            chunk.Coordinate.ToInt3()
-        );
+                    BlockDatabase =
+                        blockDatabase.AsNativeArray()
+                };
 
-    JobHandle biomeHandle =
-        ScheduleBiome(
-            chunk,
-            context,
-            default
-        );
-
-    JobHandle terrainHandle =
-        ScheduleTerrain(
-            chunk,
-            context,
-            surfaceHeights,
-            biomeHandle
-        );
-
-    terrainHandle.Complete();
-
-    return surfaceHeights;
-}
+            return job.Schedule(
+                dependency
+            );
+        }
 
         private JobHandle ScheduleFluids(
             Chunk chunk,
@@ -295,6 +230,32 @@ public NativeArray<int> DebugCalculateSurfaceHeights(
 
                     WorldOriginY =
                         context.WorldOrigin.y
+                };
+
+            return job.Schedule(
+                dependency
+            );
+        }
+
+        private JobHandle ScheduleOres(
+            Chunk chunk,
+            ChunkGenerationContext context,
+            JobHandle dependency)
+        {
+            OreGenerationJob job =
+                new OreGenerationJob
+                {
+                    Context = context,
+                    Settings = settings.Ores,
+
+                    Voxels =
+                        chunk.Data.Voxels,
+
+                    OreDatabase =
+                        oreDatabase.AsNativeArray(),
+
+                    HostBlockIds =
+                        oreDatabase.AsHostBlockArray()
                 };
 
             return job.Schedule(
