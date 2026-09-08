@@ -427,32 +427,26 @@ namespace WildEarth.Voxel
             return added;
         }
 
-        public int CompleteAll()
-        {
-            ThrowIfDisposed();
+public void CompleteAll()
+{
+    ThrowIfDisposed();
 
-            if (runners.Count == 0)
-                return 0;
+    foreach (
+        FluidSimulationRunner runner
+        in runners.Values)
+    {
+        runner.Complete();
+    }
 
-            List<ChunkCoordinate> coordinates =
-                new List<ChunkCoordinate>(
-                    runners.Keys
-                );
+    foreach (
+        FluidSimulationRunner runner
+        in runners.Values)
+    {
+        runner.Dispose();
+    }
 
-            int added = 0;
-
-            foreach (
-                ChunkCoordinate coordinate
-                in coordinates)
-            {
-                added +=
-                    CompleteAndEnqueue(
-                        coordinate
-                    );
-            }
-
-            return added;
-        }
+    runners.Clear();
+}
 
         public bool Remove(
             ChunkCoordinate coordinate)

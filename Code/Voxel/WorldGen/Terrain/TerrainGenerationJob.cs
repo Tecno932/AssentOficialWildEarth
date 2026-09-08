@@ -14,6 +14,7 @@ namespace WildEarth.Voxel
         public NativeArray<Voxel> Voxels;
 
         public NativeArray<BiomeId> Biomes;
+        [ReadOnly]
         public NativeArray<BiomeRuntimeData> BiomeDatabase;
 
         public NativeArray<int> SurfaceHeights;

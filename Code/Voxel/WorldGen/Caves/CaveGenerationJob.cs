@@ -13,6 +13,7 @@ namespace WildEarth.Voxel
 
         public NativeArray<Voxel> Voxels;
 
+        [ReadOnly]
         public NativeArray<BlockRuntimeData> BlockDatabase;
 
         public void Execute()

@@ -228,6 +228,45 @@ namespace WildEarth.Voxel
             );
         }
 
+public NativeArray<int> DebugCalculateSurfaceHeights(
+    Chunk chunk)
+{
+    if (chunk == null)
+        throw new ArgumentNullException(nameof(chunk));
+
+    NativeArray<int> surfaceHeights =
+        new NativeArray<int>(
+            VoxelConstants.ChunkSize *
+            VoxelConstants.ChunkSize,
+            Allocator.TempJob
+        );
+
+    ChunkGenerationContext context =
+        new ChunkGenerationContext(
+            settings.Seed,
+            chunk.Coordinate.ToInt3()
+        );
+
+    JobHandle biomeHandle =
+        ScheduleBiome(
+            chunk,
+            context,
+            default
+        );
+
+    JobHandle terrainHandle =
+        ScheduleTerrain(
+            chunk,
+            context,
+            surfaceHeights,
+            biomeHandle
+        );
+
+    terrainHandle.Complete();
+
+    return surfaceHeights;
+}
+
         private JobHandle ScheduleFluids(
             Chunk chunk,
             ChunkGenerationContext context,

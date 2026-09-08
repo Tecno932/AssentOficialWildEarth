@@ -11,7 +11,9 @@ namespace WildEarth.Voxel
         public ChunkGenerationContext Context;
         public BiomeGenerationSettings Settings;
 
+        [ReadOnly]
         public NativeArray<BiomeRuntimeData> BiomeDatabase;
+
         public NativeArray<BiomeId> Output;
 
         public void Execute()

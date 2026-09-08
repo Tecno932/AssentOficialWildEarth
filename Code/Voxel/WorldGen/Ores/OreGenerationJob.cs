@@ -13,7 +13,10 @@ namespace WildEarth.Voxel
 
         public NativeArray<Voxel> Voxels;
 
+        [ReadOnly]
         public NativeArray<OreRuntimeData> OreDatabase;
+
+        [ReadOnly]
         public NativeArray<ushort> HostBlockIds;
 
         public void Execute()

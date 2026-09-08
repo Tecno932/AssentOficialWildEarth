@@ -202,6 +202,10 @@ namespace WildEarth.Voxel
                 task.Handle.Complete();
 
                 task.Chunk.MarkGenerated();
+
+                completedChunks.Add(
+                    task.Chunk
+                );
             }
 
             activeTasks.Clear();

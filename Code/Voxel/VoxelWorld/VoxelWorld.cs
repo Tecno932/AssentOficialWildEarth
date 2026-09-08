@@ -227,6 +227,8 @@ namespace WildEarth.Voxel
             ThrowIfNotInitialized();
 
             chunkGenerator.CompleteAll();
+
+            ProcessCompletedChunks();
         }
 
         public Chunk LoadChunk(
