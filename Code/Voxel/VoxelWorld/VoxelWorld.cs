@@ -49,6 +49,9 @@ namespace WildEarth.Voxel
         public BlockRegistry Blocks =>
             blockRegistry;
 
+        public BlockRuntimeDatabase BlockDatabase =>
+            blockDatabase;
+
         public OreRegistry Ores =>
             oreRegistry;
 

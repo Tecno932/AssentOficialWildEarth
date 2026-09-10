@@ -9,6 +9,28 @@ namespace WildEarth.Voxel
         [SerializeField]
         private Material defaultMaterial;
 
+        /*
+         * ============================================================
+         * DEBUG
+         * ============================================================
+         *
+         * Mantener en true mientras diagnosticamos el atlas.
+         *
+         * Una vez solucionado:
+         *
+         * DebugRendering = false;
+         */
+        [SerializeField]
+        private bool debugRendering = true;
+
+        /*
+         * Evita llenar la Console con el mismo diagnóstico
+         * en cada frame.
+         */
+        private bool debugMaterialPrinted;
+        private readonly HashSet<ChunkCoordinate>
+            debuggedChunks = new();
+
         private readonly Dictionary<
             ChunkCoordinate,
             ChunkMeshRenderer
@@ -36,6 +58,25 @@ namespace WildEarth.Voxel
 
             world = voxelWorld;
             meshBuilder = voxelMeshBuilder;
+
+            if (debugRendering)
+            {
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    "VoxelWorldRenderer inicializado."
+                );
+
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    $"GameObject={gameObject.name}"
+                );
+
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    $"DefaultMaterial=" +
+                    DescribeMaterial(defaultMaterial)
+                );
+            }
         }
 
         public void RenderCompletedChunks()
@@ -47,6 +88,16 @@ namespace WildEarth.Voxel
 
             IReadOnlyList<Chunk> completedChunks =
                 world.Generator.CompletedChunks;
+
+            if (debugRendering &&
+                completedChunks.Count > 0)
+            {
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    $"Chunks completados recibidos: " +
+                    $"{completedChunks.Count}"
+                );
+            }
 
             for (int i = 0; i < completedChunks.Count; i++)
             {
@@ -73,6 +124,27 @@ namespace WildEarth.Voxel
                     "VoxelWorldRenderer no está inicializado."
                 );
 
+            if (meshBuilder == null)
+                throw new InvalidOperationException(
+                    "VoxelWorldRenderer no tiene VoxelMeshBuilder."
+                );
+
+            /*
+             * ========================================================
+             * MATERIAL CHECK
+             * ========================================================
+             */
+
+            ValidateDefaultMaterial(
+                chunk
+            );
+
+            /*
+             * ========================================================
+             * BUILD MESH
+             * ========================================================
+             */
+
             ChunkMeshData meshData =
                 meshBuilder.Build(
                     chunk,
@@ -81,17 +153,92 @@ namespace WildEarth.Voxel
 
             try
             {
+                if (meshData == null)
+                {
+                    throw new InvalidOperationException(
+                        "[VoxelRendererDebug] " +
+                        $"VoxelMeshBuilder devolvió null " +
+                        $"para {chunk.Coordinate}."
+                    );
+                }
+
+                if (debugRendering &&
+                    !debuggedChunks.Contains(
+                        chunk.Coordinate))
+                {
+                    Debug.Log(
+                        "[VoxelRendererDebug] " +
+                        $"MeshData construido para " +
+                        $"{chunk.Coordinate}: " +
+                        $"Vertices={meshData.VertexCount}, " +
+                        $"UVs={meshData.UVs.Count}, " +
+                        $"Triangles={meshData.Triangles.Count}"
+                    );
+
+                    Debug.Log(
+                        "[VoxelRendererDebug] " +
+                        $"MeshData UV consistency: " +
+                        $"{meshData.VertexCount == meshData.UVs.Count}"
+                    );
+
+                    DebugLogMeshDataUVs(
+                        meshData
+                    );
+                }
+
+                /*
+                 * ====================================================
+                 * CREATE / GET CHUNK RENDERER
+                 * ====================================================
+                 */
+
                 ChunkMeshRenderer renderer =
                     GetOrCreateRenderer(
                         chunk
                     );
+
+                if (renderer == null)
+                {
+                    throw new InvalidOperationException(
+                        "[VoxelRendererDebug] " +
+                        $"No se pudo crear ChunkMeshRenderer " +
+                        $"para {chunk.Coordinate}."
+                    );
+                }
+
+                /*
+                 * ====================================================
+                 * APPLY
+                 * ====================================================
+                 */
 
                 renderer.Apply(
                     meshData,
                     defaultMaterial
                 );
 
+                /*
+                 * ====================================================
+                 * POST-APPLY DIAGNOSTICS
+                 * ====================================================
+                 */
+
+                if (debugRendering &&
+                    !debuggedChunks.Contains(
+                        chunk.Coordinate))
+                {
+                    DebugLogRendererState(
+                        chunk,
+                        renderer
+                    );
+
+                    debuggedChunks.Add(
+                        chunk.Coordinate
+                    );
+                }
+
                 chunk.ClearNeedsMesh();
+
                 chunk.SetState(
                     ChunkState.Ready
                 );
@@ -122,6 +269,10 @@ namespace WildEarth.Voxel
             renderers.Remove(
                 coordinate
             );
+
+            debuggedChunks.Remove(
+                coordinate
+            );
         }
 
         public void Clear()
@@ -139,6 +290,8 @@ namespace WildEarth.Voxel
             }
 
             renderers.Clear();
+
+            debuggedChunks.Clear();
         }
 
         private ChunkMeshRenderer GetOrCreateRenderer(
@@ -178,6 +331,12 @@ namespace WildEarth.Voxel
                         VoxelConstants.ChunkSize
                 );
 
+            gameObject.transform.localRotation =
+                Quaternion.identity;
+
+            gameObject.transform.localScale =
+                Vector3.one;
+
             ChunkMeshRenderer renderer =
                 gameObject.AddComponent<ChunkMeshRenderer>();
 
@@ -186,7 +345,442 @@ namespace WildEarth.Voxel
                 renderer
             );
 
+            if (debugRendering)
+            {
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    $"Renderer creado para " +
+                    $"{chunk.Coordinate}. " +
+                    $"LocalPosition=" +
+                    $"{gameObject.transform.localPosition} " +
+                    $"WorldPosition=" +
+                    $"{gameObject.transform.position} " +
+                    $"Scale=" +
+                    $"{gameObject.transform.localScale}"
+                );
+            }
+
             return renderer;
+        }
+
+        private void ValidateDefaultMaterial(
+            Chunk chunk)
+        {
+            if (defaultMaterial == null)
+            {
+                throw new InvalidOperationException(
+                    "[VoxelRendererDebug] " +
+                    $"Default Material es NULL. " +
+                    $"No se puede renderizar " +
+                    $"{chunk.Coordinate}."
+                );
+            }
+
+            Shader shader =
+                defaultMaterial.shader;
+
+            if (shader == null)
+            {
+                throw new InvalidOperationException(
+                    "[VoxelRendererDebug] " +
+                    $"El material " +
+                    $"'{defaultMaterial.name}' " +
+                    "no tiene Shader."
+                );
+            }
+
+            if (debugRendering &&
+                !debugMaterialPrinted)
+            {
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    "========== MATERIAL =========="
+                );
+
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    $"Material: " +
+                    $"{defaultMaterial.name}"
+                );
+
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    $"Shader: " +
+                    $"{shader.name}"
+                );
+
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    $"Shader supported: " +
+                    $"{shader.isSupported}"
+                );
+
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    $"Has _BaseMap: " +
+                    $"{defaultMaterial.HasProperty("_BaseMap")}"
+                );
+
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    $"Has _MainTex: " +
+                    $"{defaultMaterial.HasProperty("_MainTex")}"
+                );
+
+                Texture baseMap =
+                    defaultMaterial.HasProperty("_BaseMap")
+                        ? defaultMaterial.GetTexture(
+                            "_BaseMap"
+                        )
+                        : null;
+
+                Texture mainTex =
+                    defaultMaterial.HasProperty("_MainTex")
+                        ? defaultMaterial.GetTexture(
+                            "_MainTex"
+                        )
+                        : null;
+
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    $"_BaseMap: " +
+                    DescribeTexture(baseMap)
+                );
+
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    $"_MainTex: " +
+                    DescribeTexture(mainTex)
+                );
+
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    $"mainTexture: " +
+                    DescribeTexture(
+                        defaultMaterial.mainTexture
+                    )
+                );
+
+                if (baseMap == null &&
+                    mainTex == null &&
+                    defaultMaterial.mainTexture == null)
+                {
+                    Debug.LogError(
+                        "[VoxelRendererDebug] " +
+                        "EL MATERIAL NO TIENE NINGUNA " +
+                        "TEXTURA ASIGNADA."
+                    );
+                }
+
+                debugMaterialPrinted = true;
+
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    "=============================="
+                );
+            }
+        }
+
+        private static void DebugLogMeshDataUVs(
+            ChunkMeshData meshData)
+        {
+            if (meshData.UVs.Count == 0)
+            {
+                Debug.LogError(
+                    "[VoxelRendererDebug] " +
+                    "ChunkMeshData NO contiene UVs."
+                );
+
+                return;
+            }
+
+            int count =
+                Mathf.Min(
+                    meshData.UVs.Count,
+                    12
+                );
+
+            for (int i = 0; i < count; i++)
+            {
+                Vector2 uv =
+                    new Vector2(
+                        meshData.UVs[i].x,
+                        meshData.UVs[i].y
+                    );
+
+                bool valid =
+                    uv.x >= 0f &&
+                    uv.x <= 1f &&
+                    uv.y >= 0f &&
+                    uv.y <= 1f;
+
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    $"UV[{i}]={uv} " +
+                    $"Valid01={valid}"
+                );
+            }
+
+            /*
+             * Busca cualquier UV fuera de 0..1.
+             */
+            for (int i = 0;
+                 i < meshData.UVs.Count;
+                 i++)
+            {
+                float2Like:
+                Vector2 uv =
+                    new Vector2(
+                        meshData.UVs[i].x,
+                        meshData.UVs[i].y
+                    );
+
+                if (uv.x < 0f ||
+                    uv.x > 1f ||
+                    uv.y < 0f ||
+                    uv.y > 1f)
+                {
+                    Debug.LogError(
+                        "[VoxelRendererDebug] " +
+                        $"UV FUERA DE RANGO: " +
+                        $"index={i}, UV={uv}"
+                    );
+
+                    break;
+                }
+            }
+        }
+
+        private static void DebugLogRendererState(
+            Chunk chunk,
+            ChunkMeshRenderer renderer)
+        {
+            Debug.Log(
+                "[VoxelRendererDebug] " +
+                "========== CHUNK RENDER =========="
+            );
+
+            Debug.Log(
+                "[VoxelRendererDebug] " +
+                $"Chunk: {chunk.Coordinate}"
+            );
+
+            GameObject go =
+                renderer.gameObject;
+
+            Debug.Log(
+                "[VoxelRendererDebug] " +
+                $"GameObject: {go.name}"
+            );
+
+            Debug.Log(
+                "[VoxelRendererDebug] " +
+                $"ActiveSelf: {go.activeSelf}"
+            );
+
+            Debug.Log(
+                "[VoxelRendererDebug] " +
+                $"ActiveInHierarchy: " +
+                $"{go.activeInHierarchy}"
+            );
+
+            Debug.Log(
+                "[VoxelRendererDebug] " +
+                $"Renderer enabled: " +
+                $"{renderer.enabled}"
+            );
+
+            MeshFilter meshFilter =
+                renderer.GetComponent<MeshFilter>();
+
+            MeshRenderer meshRenderer =
+                renderer.GetComponent<MeshRenderer>();
+
+            if (meshFilter == null)
+            {
+                Debug.LogError(
+                    "[VoxelRendererDebug] " +
+                    "MeshFilter NO EXISTE."
+                );
+            }
+            else
+            {
+                Mesh mesh =
+                    meshFilter.sharedMesh;
+
+                if (mesh == null)
+                {
+                    Debug.LogError(
+                        "[VoxelRendererDebug] " +
+                        "MeshFilter.sharedMesh es NULL."
+                    );
+                }
+                else
+                {
+                    Debug.Log(
+                        "[VoxelRendererDebug] " +
+                        $"Mesh: {mesh.name}"
+                    );
+
+                    Debug.Log(
+                        "[VoxelRendererDebug] " +
+                        $"Mesh vertices: " +
+                        $"{mesh.vertexCount}"
+                    );
+
+                    Debug.Log(
+                        "[VoxelRendererDebug] " +
+                        $"Mesh triangles: " +
+                        $"{mesh.triangles.Length}"
+                    );
+
+                    Debug.Log(
+                        "[VoxelRendererDebug] " +
+                        $"Mesh UV count: " +
+                        $"{mesh.uv.Length}"
+                    );
+
+                    Debug.Log(
+                        "[VoxelRendererDebug] " +
+                        $"Mesh bounds: " +
+                        $"{mesh.bounds}"
+                    );
+
+                    DebugLogUnityMeshUVs(
+                        mesh
+                    );
+                }
+            }
+
+            if (meshRenderer == null)
+            {
+                Debug.LogError(
+                    "[VoxelRendererDebug] " +
+                    "MeshRenderer NO EXISTE."
+                );
+            }
+            else
+            {
+                Material appliedMaterial =
+                    meshRenderer.sharedMaterial;
+
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    $"MeshRenderer.sharedMaterial: " +
+                    $"{DescribeMaterial(appliedMaterial)}"
+                );
+
+                if (appliedMaterial == null)
+                {
+                    Debug.LogError(
+                        "[VoxelRendererDebug] " +
+                        "MeshRenderer.sharedMaterial " +
+                        "ES NULL."
+                    );
+                }
+                else
+                {
+                    Debug.Log(
+                        "[VoxelRendererDebug] " +
+                        $"Applied shader: " +
+                        $"{appliedMaterial.shader?.name}"
+                    );
+
+                    Debug.Log(
+                        "[VoxelRendererDebug] " +
+                        $"Applied texture: " +
+                        $"{DescribeTexture(appliedMaterial.mainTexture)}"
+                    );
+                }
+            }
+
+            Debug.Log(
+                "[VoxelRendererDebug] " +
+                $"LocalPosition: " +
+                $"{go.transform.localPosition}"
+            );
+
+            Debug.Log(
+                "[VoxelRendererDebug] " +
+                $"WorldPosition: " +
+                $"{go.transform.position}"
+            );
+
+            Debug.Log(
+                "[VoxelRendererDebug] " +
+                $"Rotation: " +
+                $"{go.transform.rotation.eulerAngles}"
+            );
+
+            Debug.Log(
+                "[VoxelRendererDebug] " +
+                $"Scale: " +
+                $"{go.transform.lossyScale}"
+            );
+
+            Debug.Log(
+                "[VoxelRendererDebug] " +
+                "=================================="
+            );
+        }
+
+        private static void DebugLogUnityMeshUVs(
+            Mesh mesh)
+        {
+            Vector2[] uvs =
+                mesh.uv;
+
+            if (uvs == null ||
+                uvs.Length == 0)
+            {
+                Debug.LogError(
+                    "[VoxelRendererDebug] " +
+                    "El Mesh de Unity NO tiene UVs."
+                );
+
+                return;
+            }
+
+            int count =
+                Mathf.Min(
+                    uvs.Length,
+                    12
+                );
+
+            for (int i = 0; i < count; i++)
+            {
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    $"UnityMesh UV[{i}]=" +
+                    $"{uvs[i]}"
+                );
+            }
+        }
+
+        private static string DescribeMaterial(
+            Material material)
+        {
+            if (material == null)
+                return "NULL";
+
+            Shader shader =
+                material.shader;
+
+            return
+                $"'{material.name}' " +
+                $"Shader='{shader?.name ?? "NULL"}'";
+        }
+
+        private static string DescribeTexture(
+            Texture texture)
+        {
+            if (texture == null)
+                return "NULL";
+
+            return
+                $"'{texture.name}' " +
+                $"Type={texture.GetType().Name} " +
+                $"Size={texture.width}x{texture.height}";
         }
 
         private void OnDestroy()

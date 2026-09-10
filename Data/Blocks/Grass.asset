@@ -19,8 +19,8 @@ MonoBehaviour:
   hardness: 1
   lightEmission: 0
   topTexture: 0
-  bottomTexture: 0
-  sideTexture: 0
+  bottomTexture: 5
+  sideTexture: 6
   requiredTool: 4
   requiredToolLevel: 0
   material: {fileID: 0}

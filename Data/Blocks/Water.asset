@@ -18,9 +18,9 @@ MonoBehaviour:
   flags: 50
   hardness: 0
   lightEmission: 0
-  topTexture: 0
-  bottomTexture: 0
-  sideTexture: 0
+  topTexture: 1
+  bottomTexture: 1
+  sideTexture: 1
   requiredTool: 0
   requiredToolLevel: 0
   material: {fileID: 0}
