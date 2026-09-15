@@ -18,11 +18,16 @@ namespace WildEarth.Tests.Voxel
         private ChunkBiomeDataPool biomePool;
         private ChunkStorage storage;
         private VoxelMeshBuilder builder;
+        private VoxelAtlasSettings atlasSettings;
 
         private VoxelWorld world;
 
         private GameObject rendererObject;
         private VoxelWorldRenderer renderer;
+
+        private Material testMaterial;
+
+        private Texture2D testAtlas;
 
         [SetUp]
         public void SetUp()
@@ -46,6 +51,9 @@ namespace WildEarth.Tests.Voxel
                 AssetDatabase.LoadAssetAtPath<FluidRegistryAsset>(
                     "Assets/_Project/Data/Fluids/FluidRegistry.asset"
                 );
+
+            atlasSettings =
+                ScriptableObject.CreateInstance<VoxelAtlasSettings>();
 
             Assert.That(
                 blockRegistry,
@@ -95,7 +103,8 @@ namespace WildEarth.Tests.Voxel
 
             builder =
                 new VoxelMeshBuilder(
-                    blockDatabase
+                    blockDatabase,
+                    atlasSettings
                 );
 
             world =
@@ -118,6 +127,69 @@ namespace WildEarth.Tests.Voxel
             renderer =
                 rendererObject.AddComponent<VoxelWorldRenderer>();
 
+            Shader shader =
+                Shader.Find(
+                    "Universal Render Pipeline/Lit"
+                );
+
+            Assert.That(
+                shader,
+                Is.Not.Null,
+                "No se encontró el shader Universal Render Pipeline/Lit."
+            );
+
+            testAtlas =
+                AssetDatabase.LoadAssetAtPath<Texture2D>(
+                    "Assets/_Project/Art/Textures/atlas.png"
+                );
+
+            Assert.That(
+                testAtlas,
+                Is.Not.Null,
+                "No se encontró el atlas en Assets/_Project/Art/Textures/atlas.png."
+            );
+
+            testMaterial =
+                new Material(shader)
+                {
+                    name = "VoxelWorldRendererTestMaterial"
+                };
+
+            if (testMaterial.HasProperty("_BaseMap"))
+            {
+                testMaterial.SetTexture(
+                    "_BaseMap",
+                    testAtlas
+                );
+            }
+
+            if (testMaterial.HasProperty("_MainTex"))
+            {
+                testMaterial.SetTexture(
+                    "_MainTex",
+                    testAtlas
+                );
+            }
+
+            SerializedObject serializedRenderer =
+                new SerializedObject(renderer);
+
+            SerializedProperty materialProperty =
+                serializedRenderer.FindProperty(
+                    "defaultMaterial"
+                );
+
+            Assert.That(
+                materialProperty,
+                Is.Not.Null,
+                "No se encontró la propiedad defaultMaterial."
+            );
+
+            materialProperty.objectReferenceValue =
+                testMaterial;
+
+            serializedRenderer.ApplyModifiedPropertiesWithoutUndo();
+
             renderer.Initialize(
                 world,
                 builder
@@ -127,6 +199,17 @@ namespace WildEarth.Tests.Voxel
         [TearDown]
         public void TearDown()
         {
+            testAtlas = null;
+
+            if (testMaterial != null)
+            {
+                Object.DestroyImmediate(
+                    testMaterial
+                );
+
+                testMaterial = null;
+            }
+
             if (rendererObject != null)
             {
                 Object.DestroyImmediate(
@@ -135,6 +218,12 @@ namespace WildEarth.Tests.Voxel
 
                 rendererObject = null;
                 renderer = null;
+            }
+
+            if (atlasSettings != null)
+            {
+                Object.DestroyImmediate(atlasSettings);
+                atlasSettings = null;
             }
 
             world?.Dispose();
@@ -352,64 +441,63 @@ namespace WildEarth.Tests.Voxel
             );
         }
 
-[Test]
-public void RenderCompletedChunks_RendersGeneratedChunks()
-{
-    ChunkCoordinate coordinate =
-        new ChunkCoordinate(
-            1,
-            0,
-            0
-        );
+        [Test]
+        public void RenderCompletedChunks_RendersGeneratedChunks()
+        {
+            ChunkCoordinate coordinate =
+                new ChunkCoordinate(
+                    1,
+                    0,
+                    0
+                );
 
-    Chunk chunk =
-        world.LoadChunk(
-            coordinate
-        );
+            Chunk chunk =
+                world.LoadChunk(
+                    coordinate
+                );
 
-    ChunkDataAccess.SetVoxel(
-        chunk.Data,
-        0,
-        0,
-        0,
-        new WildEarth.Voxel.Voxel(
-            1
-        )
-    );
+            ChunkDataAccess.SetVoxel(
+                chunk.Data,
+                0,
+                0,
+                0,
+                new WildEarth.Voxel.Voxel(
+                    1
+                )
+            );
 
-    chunk.MarkGenerated();
-    chunk.MarkNeedsMesh();
+            chunk.MarkGenerated();
+            chunk.MarkNeedsMesh();
 
-    renderer.RenderCompletedChunks();
+            renderer.RenderCompletedChunks();
 
-    Assert.That(
-        renderer.RenderedChunkCount,
-        Is.EqualTo(0)
-    );
+            Assert.That(
+                renderer.RenderedChunkCount,
+                Is.EqualTo(0)
+            );
 
-    world.Generator.Schedule(
-        chunk
-    );
+            world.Generator.Schedule(
+                chunk
+            );
 
-    world.CompleteGeneration();
+            world.CompleteGeneration();
 
-    renderer.RenderCompletedChunks();
+            renderer.RenderCompletedChunks();
 
-    Assert.That(
-        renderer.RenderedChunkCount,
-        Is.EqualTo(1)
-    );
+            Assert.That(
+                renderer.RenderedChunkCount,
+                Is.EqualTo(1)
+            );
 
-    Assert.That(
-        chunk.State,
-        Is.EqualTo(ChunkState.Ready)
-    );
+            Assert.That(
+                chunk.State,
+                Is.EqualTo(ChunkState.Ready)
+            );
 
-    Assert.That(
-        chunk.NeedsMesh,
-        Is.False
-    );
-}
-
+            Assert.That(
+                chunk.NeedsMesh,
+                Is.False
+            );
+        }
     }
 }

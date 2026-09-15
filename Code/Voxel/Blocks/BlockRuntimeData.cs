@@ -3,12 +3,6 @@ using Unity.Mathematics;
 
 namespace WildEarth.Voxel
 {
-    /// <summary>
-    /// Datos compactos de un bloque utilizados durante runtime.
-    ///
-    /// No contiene referencias administradas ni objetos de Unity.
-    /// Esto permite utilizar estos datos con Jobs y Burst.
-    /// </summary>
     [Serializable]
     public struct BlockRuntimeData
     {
@@ -26,11 +20,11 @@ namespace WildEarth.Voxel
 
         public byte RequiredToolLevel;
 
-        public int TopTexture;
+        public AtlasTileCoordinate TopTexture;
 
-        public int BottomTexture;
+        public AtlasTileCoordinate BottomTexture;
 
-        public int SideTexture;
+        public AtlasTileCoordinate SideTexture;
 
         public bool IsSolid =>
             (Flags & BlockFlags.Solid) != 0;

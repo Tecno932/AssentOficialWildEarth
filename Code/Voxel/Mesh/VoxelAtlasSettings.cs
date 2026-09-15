@@ -27,6 +27,10 @@ namespace WildEarth.Voxel
         [Min(1)]
         private int cellHeight = 16;
 
+        [Header("Orientation")]
+        [SerializeField]
+        private bool rowZeroIsTop = true;
+
         public int AtlasWidth => atlasWidth;
 
         public int AtlasHeight => atlasHeight;
@@ -35,12 +39,13 @@ namespace WildEarth.Voxel
 
         public int CellHeight => cellHeight;
 
+        public bool RowZeroIsTop => rowZeroIsTop;
+
         public int Columns
         {
             get
             {
                 ValidateConfiguration();
-
                 return atlasWidth / cellWidth;
             }
         }
@@ -50,7 +55,6 @@ namespace WildEarth.Voxel
             get
             {
                 ValidateConfiguration();
-
                 return atlasHeight / cellHeight;
             }
         }
@@ -74,15 +78,15 @@ namespace WildEarth.Voxel
         }
 
         public Vector2 GetTileMinUV(
-            int textureIndex)
+            AtlasTileCoordinate tile)
         {
-            ValidateTextureIndex(textureIndex);
+            ValidateTile(tile);
 
-            int tileX =
-                textureIndex % Columns;
+            int tileX = tile.Column;
 
-            int tileY =
-                textureIndex / Columns;
+            int tileY = rowZeroIsTop
+                ? Rows - 1 - tile.Row
+                : tile.Row;
 
             Vector2 tileSize =
                 GetTileSizeUV();
@@ -94,10 +98,10 @@ namespace WildEarth.Voxel
         }
 
         public Vector2 GetTileMaxUV(
-            int textureIndex)
+            AtlasTileCoordinate tile)
         {
             Vector2 min =
-                GetTileMinUV(textureIndex);
+                GetTileMinUV(tile);
 
             Vector2 size =
                 GetTileSizeUV();
@@ -106,14 +110,14 @@ namespace WildEarth.Voxel
         }
 
         public Vector2 GetUV(
-            int textureIndex,
+            AtlasTileCoordinate tile,
             int corner)
         {
             Vector2 min =
-                GetTileMinUV(textureIndex);
+                GetTileMinUV(tile);
 
             Vector2 max =
-                GetTileMaxUV(textureIndex);
+                GetTileMaxUV(tile);
 
             switch (corner)
             {
@@ -150,19 +154,28 @@ namespace WildEarth.Voxel
             }
         }
 
-        private void ValidateTextureIndex(
-            int textureIndex)
+        private void ValidateTile(
+            AtlasTileCoordinate tile)
         {
             ValidateConfiguration();
 
-            if (textureIndex < 0 ||
-                textureIndex >= TileCount)
+            if (tile.Column < 0 ||
+                tile.Column >= Columns)
             {
                 throw new ArgumentOutOfRangeException(
-                    nameof(textureIndex),
-                    textureIndex,
-                    $"Índice de textura fuera del atlas. " +
-                    $"Rango válido: 0-{TileCount - 1}."
+                    nameof(tile.Column),
+                    tile.Column,
+                    $"Columna fuera del atlas. Rango: 0-{Columns - 1}."
+                );
+            }
+
+            if (tile.Row < 0 ||
+                tile.Row >= Rows)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(tile.Row),
+                    tile.Row,
+                    $"Fila fuera del atlas. Rango: 0-{Rows - 1}."
                 );
             }
         }
@@ -200,16 +213,16 @@ namespace WildEarth.Voxel
             if (atlasWidth % cellWidth != 0)
             {
                 throw new InvalidOperationException(
-                    "VoxelAtlasSettings: Atlas Width debe ser " +
-                    "divisible exactamente por Cell Width."
+                    "VoxelAtlasSettings: Atlas Width debe ser divisible " +
+                    "exactamente por Cell Width."
                 );
             }
 
             if (atlasHeight % cellHeight != 0)
             {
                 throw new InvalidOperationException(
-                    "VoxelAtlasSettings: Atlas Height debe ser " +
-                    "divisible exactamente por Cell Height."
+                    "VoxelAtlasSettings: Atlas Height debe ser divisible " +
+                    "exactamente por Cell Height."
                 );
             }
         }

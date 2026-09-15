@@ -78,42 +78,117 @@ namespace WildEarth.Voxel
             }
         }
 
-        private void BuildRuntimeData()
+private void BuildRuntimeData()
+{
+    if (definitionLookup == null)
+    {
+        BuildLookup();
+    }
+
+    int maxId = 0;
+
+    foreach (BlockDefinition definition in definitions)
+    {
+        if (definition == null)
         {
-            if (definitionLookup == null)
-            {
-                BuildLookup();
-            }
-
-            ushort maxId = 0;
-
-            foreach (BlockDefinition definition in definitions)
-            {
-                if (definition == null)
-                {
-                    continue;
-                }
-
-                maxId = Math.Max(
-                    maxId,
-                    definition.Id
-                );
-            }
-
-            runtimeData =
-                new BlockRuntimeData[maxId + 1];
-
-            foreach (BlockDefinition definition in definitions)
-            {
-                if (definition == null)
-                {
-                    continue;
-                }
-
-                runtimeData[definition.Id] =
-                    definition.ToRuntimeData();
-            }
+            continue;
         }
+
+        int id = definition.Id;
+
+        if (id < 0)
+        {
+            throw new InvalidOperationException(
+                $"BlockRegistry: ID inválido {id}."
+            );
+        }
+
+        if (id > maxId)
+        {
+            maxId = id;
+        }
+    }
+
+    runtimeData =
+        new BlockRuntimeData[maxId + 1];
+
+    /*
+     * ID 0 está reservado para Air.
+     *
+     * No necesitamos una definición de Air,
+     * pero el índice 0 debe existir.
+     */
+    runtimeData[BlockIds.Air] =
+        default;
+
+    foreach (BlockDefinition definition in definitions)
+    {
+        if (definition == null)
+        {
+            continue;
+        }
+
+        ushort id =
+            definition.Id;
+
+        if (id == BlockIds.Air)
+        {
+            continue;
+        }
+
+        BlockRuntimeData data =
+            definition.ToRuntimeData();
+
+        if (data.Id != id)
+        {
+            throw new InvalidOperationException(
+                $"BlockRegistry: inconsistencia de ID. " +
+                $"Definition='{definition.name}', " +
+                $"DefinitionId={id}, " +
+                $"RuntimeId={data.Id}."
+            );
+        }
+
+        if (id >= runtimeData.Length)
+        {
+            throw new InvalidOperationException(
+                $"BlockRegistry: ID {id} fuera del " +
+                $"runtimeData de longitud {runtimeData.Length}."
+            );
+        }
+
+        if (runtimeData[id].Id != 0)
+        {
+            throw new InvalidOperationException(
+                $"BlockRegistry: ID duplicado {id}."
+            );
+        }
+
+        runtimeData[id] =
+            data;
+    }
+
+    /*
+     * Validación final:
+     *
+     * Cada ID distinto de Air debe existir
+     * exactamente en su posición.
+     */
+    for (int i = 1; i < runtimeData.Length; i++)
+    {
+        BlockRuntimeData data =
+            runtimeData[i];
+
+        if (data.Id != i)
+        {
+            throw new InvalidOperationException(
+                $"BlockRegistry: falta una definición " +
+                $"para el ID {i}, o el runtime data " +
+                $"está desalineado."
+            );
+        }
+    }
+}
 
         public BlockDefinition GetDefinition(
             ushort blockId)

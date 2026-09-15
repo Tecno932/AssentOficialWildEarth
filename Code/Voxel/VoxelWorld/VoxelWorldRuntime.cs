@@ -12,12 +12,15 @@ namespace WildEarth.Voxel
         private BlockRegistry blockRegistry;
 
         [SerializeField]
+        private VoxelAtlasSettings atlasSettings;
+
+        [SerializeField]
         private OreRegistryAsset oreRegistryAsset;
 
         [SerializeField]
         private FluidRegistryAsset fluidRegistryAsset;
-
         [SerializeField]
+
         private VoxelWorldRenderer worldRenderer;
 
         private VoxelWorld world;
@@ -66,7 +69,8 @@ namespace WildEarth.Voxel
 
             meshBuilder =
                 new VoxelMeshBuilder(
-                    world.BlockDatabase
+                    world.BlockDatabase,
+                    atlasSettings
                 );
 
             worldRenderer.Initialize(

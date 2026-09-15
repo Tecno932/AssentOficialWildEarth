@@ -481,75 +481,105 @@ namespace WildEarth.Voxel
             }
         }
 
-        private static void DebugLogMeshDataUVs(
-            ChunkMeshData meshData)
+private static void DebugLogMeshDataUVs(
+    ChunkMeshData meshData)
+{
+    if (meshData.UVs.Count == 0)
+    {
+        /*
+         * Un ChunkMeshData vacío es válido.
+         *
+         * Si no existen vértices tampoco deben existir UVs.
+         * No debe registrarse como Error porque los chunks
+         * completamente vacíos producen exactamente este estado.
+         */
+        if (meshData.VertexCount == 0 &&
+            meshData.Triangles.Count == 0)
         {
-            if (meshData.UVs.Count == 0)
-            {
-                Debug.LogError(
-                    "[VoxelRendererDebug] " +
-                    "ChunkMeshData NO contiene UVs."
-                );
+            Debug.Log(
+                "[VoxelRendererDebug] " +
+                "ChunkMeshData vacío: " +
+                "no contiene vértices, triángulos ni UVs."
+            );
 
-                return;
-            }
-
-            int count =
-                Mathf.Min(
-                    meshData.UVs.Count,
-                    12
-                );
-
-            for (int i = 0; i < count; i++)
-            {
-                Vector2 uv =
-                    new Vector2(
-                        meshData.UVs[i].x,
-                        meshData.UVs[i].y
-                    );
-
-                bool valid =
-                    uv.x >= 0f &&
-                    uv.x <= 1f &&
-                    uv.y >= 0f &&
-                    uv.y <= 1f;
-
-                Debug.Log(
-                    "[VoxelRendererDebug] " +
-                    $"UV[{i}]={uv} " +
-                    $"Valid01={valid}"
-                );
-            }
-
-            /*
-             * Busca cualquier UV fuera de 0..1.
-             */
-            for (int i = 0;
-                 i < meshData.UVs.Count;
-                 i++)
-            {
-                float2Like:
-                Vector2 uv =
-                    new Vector2(
-                        meshData.UVs[i].x,
-                        meshData.UVs[i].y
-                    );
-
-                if (uv.x < 0f ||
-                    uv.x > 1f ||
-                    uv.y < 0f ||
-                    uv.y > 1f)
-                {
-                    Debug.LogError(
-                        "[VoxelRendererDebug] " +
-                        $"UV FUERA DE RANGO: " +
-                        $"index={i}, UV={uv}"
-                    );
-
-                    break;
-                }
-            }
+            return;
         }
+
+        Debug.LogError(
+            "[VoxelRendererDebug] " +
+            "ChunkMeshData tiene vértices/triángulos " +
+            "pero NO contiene UVs."
+        );
+
+        return;
+    }
+
+    if (meshData.VertexCount !=
+        meshData.UVs.Count)
+    {
+        Debug.LogError(
+            "[VoxelRendererDebug] " +
+            $"Cantidad de UVs inconsistente: " +
+            $"Vertices={meshData.VertexCount}, " +
+            $"UVs={meshData.UVs.Count}."
+        );
+    }
+
+    int count =
+        Mathf.Min(
+            meshData.UVs.Count,
+            12
+        );
+
+    for (int i = 0; i < count; i++)
+    {
+        Vector2 uv =
+            new Vector2(
+                meshData.UVs[i].x,
+                meshData.UVs[i].y
+            );
+
+        bool valid =
+            uv.x >= 0f &&
+            uv.x <= 1f &&
+            uv.y >= 0f &&
+            uv.y <= 1f;
+
+        Debug.Log(
+            "[VoxelRendererDebug] " +
+            $"UV[{i}]={uv} " +
+            $"Valid01={valid}"
+        );
+    }
+
+    /*
+     * Busca cualquier UV fuera de 0..1.
+     */
+    for (int i = 0;
+         i < meshData.UVs.Count;
+         i++)
+    {
+        Vector2 uv =
+            new Vector2(
+                meshData.UVs[i].x,
+                meshData.UVs[i].y
+            );
+
+        if (uv.x < 0f ||
+            uv.x > 1f ||
+            uv.y < 0f ||
+            uv.y > 1f)
+        {
+            Debug.LogError(
+                "[VoxelRendererDebug] " +
+                $"UV FUERA DE RANGO: " +
+                $"index={i}, UV={uv}"
+            );
+
+            break;
+        }
+    }
+}
 
         private static void DebugLogRendererState(
             Chunk chunk,
@@ -727,18 +757,60 @@ namespace WildEarth.Voxel
         private static void DebugLogUnityMeshUVs(
             Mesh mesh)
         {
+            if (mesh == null)
+            {
+                Debug.LogError(
+                    "[VoxelRendererDebug] " +
+                    "El Mesh de Unity es NULL."
+                );
+
+                return;
+            }
+
             Vector2[] uvs =
                 mesh.uv;
 
+            /*
+            * Un mesh vacío es válido.
+            *
+            * Si no tiene vértices, no necesita UVs.
+            */
+            if (mesh.vertexCount == 0 &&
+                mesh.triangles.Length == 0 &&
+                (uvs == null || uvs.Length == 0))
+            {
+                Debug.Log(
+                    "[VoxelRendererDebug] " +
+                    "Unity Mesh vacío: " +
+                    "no contiene vértices, triángulos ni UVs."
+                );
+
+                return;
+            }
+
+            /*
+            * Un mesh con geometría sí debe tener UVs.
+            */
             if (uvs == null ||
                 uvs.Length == 0)
             {
                 Debug.LogError(
                     "[VoxelRendererDebug] " +
-                    "El Mesh de Unity NO tiene UVs."
+                    "El Mesh de Unity tiene geometría " +
+                    "pero NO tiene UVs."
                 );
 
                 return;
+            }
+
+            if (mesh.vertexCount != uvs.Length)
+            {
+                Debug.LogError(
+                    "[VoxelRendererDebug] " +
+                    $"Cantidad de UVs inconsistente: " +
+                    $"Vertices={mesh.vertexCount}, " +
+                    $"UVs={uvs.Length}."
+                );
             }
 
             int count =

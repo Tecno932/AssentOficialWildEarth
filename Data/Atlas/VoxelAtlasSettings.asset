@@ -16,3 +16,4 @@ MonoBehaviour:
   atlasHeight: 512
   cellWidth: 16
   cellHeight: 16
+  rowZeroIsTop: 1

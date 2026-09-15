@@ -6,35 +6,27 @@ namespace WildEarth.Voxel
 {
     public sealed class VoxelMeshBuilder
     {
-        private const int AtlasSize = 512;
-        private const int TileSize = 16;
-        private const int AtlasTilesPerAxis =
-            AtlasSize / TileSize;
-
         private readonly BlockRuntimeDatabase blockDatabase;
+        private readonly VoxelAtlasSettings atlasSettings;
 
-        /*
-         * ============================================================
-         * DEBUG
-         * ============================================================
-         *
-         * true:
-         *   imprime información del primer voxel sólido encontrado.
-         *
-         * false:
-         *   funcionamiento normal sin logs.
-         */
         private const bool DebugTextureData = true;
 
         private bool debugPrinted;
 
         public VoxelMeshBuilder(
-            BlockRuntimeDatabase blockDatabase)
+            BlockRuntimeDatabase blockDatabase,
+            VoxelAtlasSettings atlasSettings)
         {
             this.blockDatabase =
                 blockDatabase ??
                 throw new ArgumentNullException(
                     nameof(blockDatabase)
+                );
+
+            this.atlasSettings =
+                atlasSettings ??
+                throw new ArgumentNullException(
+                    nameof(atlasSettings)
                 );
         }
 
@@ -43,18 +35,10 @@ namespace WildEarth.Voxel
             ChunkStorage storage)
         {
             if (chunk == null)
-            {
-                throw new ArgumentNullException(
-                    nameof(chunk)
-                );
-            }
+                throw new ArgumentNullException(nameof(chunk));
 
             if (storage == null)
-            {
-                throw new ArgumentNullException(
-                    nameof(storage)
-                );
-            }
+                throw new ArgumentNullException(nameof(storage));
 
             if (!chunk.Data.IsCreated)
             {
@@ -92,60 +76,410 @@ namespace WildEarth.Voxel
 
                         solidVoxelCount++;
 
-                        BlockRuntimeData block =
-                            blockDatabase.Get(
-                                voxel.BlockId
+                        if (!blockDatabase.TryGet(
+                                voxel.BlockId,
+                                out BlockRuntimeData block))
+                        {
+                            throw new InvalidOperationException(
+                                $"VoxelMeshBuilder encontró un BlockId inválido. " +
+                                $"Chunk={chunk.Coordinate}, " +
+                                $"Voxel=({x},{y},{z}), " +
+                                $"BlockId={voxel.BlockId}, " +
+                                $"BlockDatabaseLength={blockDatabase.Length}."
                             );
+                        }
 
-                        if (DebugTextureData &&
-                            !debugPrinted)
+                        if (DebugTextureData && !debugPrinted)
                         {
                             Debug.Log(
                                 "[VoxelTextureDebug] " +
-                                $"Chunk={chunk.Coordinate} " +
-                                $"Voxel=({x},{y},{z}) " +
-                                $"BlockId={voxel.BlockId} " +
-                                $"MeshType={block.MeshType} " +
-                                $"TopTexture={block.TopTexture} " +
-                                $"BottomTexture={block.BottomTexture} " +
-                                $"SideTexture={block.SideTexture}"
+                                "========== VOXEL TEXTURE DEBUG =========="
+                            );
+
+                            // --------------------------------------------------
+                            // VOXEL
+                            // --------------------------------------------------
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                "========== VOXEL =========="
                             );
 
                             Debug.Log(
                                 "[VoxelTextureDebug] " +
-                                $"Top UVs: " +
-                                $"A={GetAtlasUV(block.TopTexture, 0)} " +
-                                $"B={GetAtlasUV(block.TopTexture, 1)} " +
-                                $"C={GetAtlasUV(block.TopTexture, 2)} " +
-                                $"D={GetAtlasUV(block.TopTexture, 3)}"
+                                $"Chunk={chunk.Coordinate}"
                             );
 
                             Debug.Log(
                                 "[VoxelTextureDebug] " +
-                                $"Bottom UVs: " +
-                                $"A={GetAtlasUV(block.BottomTexture, 0)} " +
-                                $"B={GetAtlasUV(block.BottomTexture, 1)} " +
-                                $"C={GetAtlasUV(block.BottomTexture, 2)} " +
-                                $"D={GetAtlasUV(block.BottomTexture, 3)}"
+                                $"Voxel=({x},{y},{z})"
                             );
 
                             Debug.Log(
                                 "[VoxelTextureDebug] " +
-                                $"Side UVs: " +
-                                $"A={GetAtlasUV(block.SideTexture, 0)} " +
-                                $"B={GetAtlasUV(block.SideTexture, 1)} " +
-                                $"C={GetAtlasUV(block.SideTexture, 2)} " +
-                                $"D={GetAtlasUV(block.SideTexture, 3)}"
+                                $"BlockId={voxel.BlockId}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"BlockIdHex=0x{voxel.BlockId:X4}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"IsAir={voxel.IsAir}"
+                            );
+
+                            // --------------------------------------------------
+                            // BLOCK RUNTIME DATA
+                            // --------------------------------------------------
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                "========== BLOCK =========="
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"BlockId={block.Id}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"MeshType={block.MeshType}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Flags={block.Flags}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"IsSolid={block.IsSolid}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"IsTransparent={block.IsTransparent}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"IsFluid={block.IsFluid}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"IsCollidable={block.IsCollidable}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"OccludesFaces={block.OccludesFaces}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"IsCutout={block.IsCutout}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"IsCaveCarvable={block.IsCaveCarvable}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Hardness={block.Hardness}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"LightEmission={block.LightEmission}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"RequiredTool={block.RequiredTool}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"RequiredToolLevel={block.RequiredToolLevel}"
+                            );
+
+                            // --------------------------------------------------
+                            // ATLAS CONFIGURATION
+                            // --------------------------------------------------
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                "========== ATLAS =========="
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"AtlasSize=" +
+                                $"{atlasSettings.AtlasWidth}x" +
+                                $"{atlasSettings.AtlasHeight}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"CellSize=" +
+                                $"{atlasSettings.CellWidth}x" +
+                                $"{atlasSettings.CellHeight}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Columns={atlasSettings.Columns}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Rows={atlasSettings.Rows}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"TileCount={atlasSettings.TileCount}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"RowZeroIsTop={atlasSettings.RowZeroIsTop}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"TileSizeUV={atlasSettings.GetTileSizeUV()}"
+                            );
+
+                            // --------------------------------------------------
+                            // TOP TEXTURE
+                            // --------------------------------------------------
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                "========== TOP TEXTURE =========="
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Top Row={block.TopTexture.Row}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Top Column={block.TopTexture.Column}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Top Tile=" +
+                                $"({block.TopTexture.Column}," +
+                                $"{block.TopTexture.Row})"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Top MinUV=" +
+                                $"{atlasSettings.GetTileMinUV(block.TopTexture)}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Top MaxUV=" +
+                                $"{atlasSettings.GetTileMaxUV(block.TopTexture)}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Top UV A=" +
+                                $"{GetAtlasUV(block.TopTexture, 0)}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Top UV B=" +
+                                $"{GetAtlasUV(block.TopTexture, 1)}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Top UV C=" +
+                                $"{GetAtlasUV(block.TopTexture, 2)}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Top UV D=" +
+                                $"{GetAtlasUV(block.TopTexture, 3)}"
+                            );
+
+                            // --------------------------------------------------
+                            // BOTTOM TEXTURE
+                            // --------------------------------------------------
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                "========== BOTTOM TEXTURE =========="
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Bottom Row={block.BottomTexture.Row}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Bottom Column={block.BottomTexture.Column}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Bottom Tile=" +
+                                $"({block.BottomTexture.Column}," +
+                                $"{block.BottomTexture.Row})"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Bottom MinUV=" +
+                                $"{atlasSettings.GetTileMinUV(block.BottomTexture)}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Bottom MaxUV=" +
+                                $"{atlasSettings.GetTileMaxUV(block.BottomTexture)}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Bottom UV A=" +
+                                $"{GetAtlasUV(block.BottomTexture, 0)}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Bottom UV B=" +
+                                $"{GetAtlasUV(block.BottomTexture, 1)}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Bottom UV C=" +
+                                $"{GetAtlasUV(block.BottomTexture, 2)}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Bottom UV D=" +
+                                $"{GetAtlasUV(block.BottomTexture, 3)}"
+                            );
+
+                            // --------------------------------------------------
+                            // SIDE TEXTURE
+                            // --------------------------------------------------
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                "========== SIDE TEXTURE =========="
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Side Row={block.SideTexture.Row}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Side Column={block.SideTexture.Column}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Side Tile=" +
+                                $"({block.SideTexture.Column}," +
+                                $"{block.SideTexture.Row})"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Side MinUV=" +
+                                $"{atlasSettings.GetTileMinUV(block.SideTexture)}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Side MaxUV=" +
+                                $"{atlasSettings.GetTileMaxUV(block.SideTexture)}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Side UV A=" +
+                                $"{GetAtlasUV(block.SideTexture, 0)}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Side UV B=" +
+                                $"{GetAtlasUV(block.SideTexture, 1)}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Side UV C=" +
+                                $"{GetAtlasUV(block.SideTexture, 2)}"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"Side UV D=" +
+                                $"{GetAtlasUV(block.SideTexture, 3)}"
+                            );
+
+                            // --------------------------------------------------
+                            // FINAL SUMMARY
+                            // --------------------------------------------------
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                "========== SUMMARY =========="
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                $"BlockId={voxel.BlockId} | " +
+                                $"MeshType={block.MeshType} | " +
+                                $"Atlas={atlasSettings.AtlasWidth}x" +
+                                $"{atlasSettings.AtlasHeight} | " +
+                                $"Cell={atlasSettings.CellWidth}x" +
+                                $"{atlasSettings.CellHeight} | " +
+                                $"Grid={atlasSettings.Columns}x" +
+                                $"{atlasSettings.Rows} | " +
+                                $"Top=({block.TopTexture.Column}," +
+                                $"{block.TopTexture.Row}) | " +
+                                $"Bottom=({block.BottomTexture.Column}," +
+                                $"{block.BottomTexture.Row}) | " +
+                                $"Side=({block.SideTexture.Column}," +
+                                $"{block.SideTexture.Row})"
+                            );
+
+                            Debug.Log(
+                                "[VoxelTextureDebug] " +
+                                "=========================================="
                             );
 
                             debugPrinted = true;
                         }
 
-                        if (block.MeshType !=
-                            BlockMeshType.Cube)
-                        {
+                        if (block.MeshType != BlockMeshType.Cube)
                             continue;
-                        }
 
                         BuildCube(
                             mesh,
@@ -170,16 +504,6 @@ namespace WildEarth.Voxel
                     $"UVs={mesh.UVs.Count} " +
                     $"Triangles={mesh.Triangles.Count}"
                 );
-
-                if (mesh.VertexCount != mesh.UVs.Count)
-                {
-                    Debug.LogError(
-                        "[VoxelTextureDebug] ERROR: " +
-                        $"VertexCount ({mesh.VertexCount}) " +
-                        "!= UVCount " +
-                        $"({mesh.UVs.Count})"
-                    );
-                }
             }
 
             return mesh;
@@ -369,12 +693,12 @@ namespace WildEarth.Voxel
             return !neighborBlock.OccludesFaces;
         }
 
-        private static void AddBottomFace(
+        private void AddBottomFace(
             ChunkMeshData mesh,
             int x,
             int y,
             int z,
-            int textureIndex)
+            AtlasTileCoordinate texture)
         {
             mesh.AddQuad(
                 new float3(x, y, z),
@@ -382,19 +706,19 @@ namespace WildEarth.Voxel
                 new float3(x + 1, y, z + 1),
                 new float3(x, y, z + 1),
 
-                GetAtlasUV(textureIndex, 0),
-                GetAtlasUV(textureIndex, 1),
-                GetAtlasUV(textureIndex, 2),
-                GetAtlasUV(textureIndex, 3)
+                GetAtlasUV(texture, 0),
+                GetAtlasUV(texture, 1),
+                GetAtlasUV(texture, 2),
+                GetAtlasUV(texture, 3)
             );
         }
 
-        private static void AddTopFace(
+        private void AddTopFace(
             ChunkMeshData mesh,
             int x,
             int y,
             int z,
-            int textureIndex)
+            AtlasTileCoordinate texture)
         {
             mesh.AddQuad(
                 new float3(x, y + 1, z + 1),
@@ -402,19 +726,19 @@ namespace WildEarth.Voxel
                 new float3(x + 1, y + 1, z),
                 new float3(x, y + 1, z),
 
-                GetAtlasUV(textureIndex, 0),
-                GetAtlasUV(textureIndex, 1),
-                GetAtlasUV(textureIndex, 2),
-                GetAtlasUV(textureIndex, 3)
+                GetAtlasUV(texture, 0),
+                GetAtlasUV(texture, 1),
+                GetAtlasUV(texture, 2),
+                GetAtlasUV(texture, 3)
             );
         }
 
-        private static void AddNorthFace(
+        private void AddNorthFace(
             ChunkMeshData mesh,
             int x,
             int y,
             int z,
-            int textureIndex)
+            AtlasTileCoordinate texture)
         {
             mesh.AddQuad(
                 new float3(x, y, z + 1),
@@ -422,19 +746,19 @@ namespace WildEarth.Voxel
                 new float3(x + 1, y + 1, z + 1),
                 new float3(x, y + 1, z + 1),
 
-                GetAtlasUV(textureIndex, 0),
-                GetAtlasUV(textureIndex, 1),
-                GetAtlasUV(textureIndex, 2),
-                GetAtlasUV(textureIndex, 3)
+                GetAtlasUV(texture, 0),
+                GetAtlasUV(texture, 1),
+                GetAtlasUV(texture, 2),
+                GetAtlasUV(texture, 3)
             );
         }
 
-        private static void AddSouthFace(
+        private void AddSouthFace(
             ChunkMeshData mesh,
             int x,
             int y,
             int z,
-            int textureIndex)
+            AtlasTileCoordinate texture)
         {
             mesh.AddQuad(
                 new float3(x + 1, y, z),
@@ -442,19 +766,19 @@ namespace WildEarth.Voxel
                 new float3(x, y + 1, z),
                 new float3(x + 1, y + 1, z),
 
-                GetAtlasUV(textureIndex, 0),
-                GetAtlasUV(textureIndex, 1),
-                GetAtlasUV(textureIndex, 2),
-                GetAtlasUV(textureIndex, 3)
+                GetAtlasUV(texture, 0),
+                GetAtlasUV(texture, 1),
+                GetAtlasUV(texture, 2),
+                GetAtlasUV(texture, 3)
             );
         }
 
-        private static void AddEastFace(
+        private void AddEastFace(
             ChunkMeshData mesh,
             int x,
             int y,
             int z,
-            int textureIndex)
+            AtlasTileCoordinate texture)
         {
             mesh.AddQuad(
                 new float3(x + 1, y, z + 1),
@@ -462,19 +786,19 @@ namespace WildEarth.Voxel
                 new float3(x + 1, y + 1, z),
                 new float3(x + 1, y + 1, z + 1),
 
-                GetAtlasUV(textureIndex, 0),
-                GetAtlasUV(textureIndex, 1),
-                GetAtlasUV(textureIndex, 2),
-                GetAtlasUV(textureIndex, 3)
+                GetAtlasUV(texture, 0),
+                GetAtlasUV(texture, 1),
+                GetAtlasUV(texture, 2),
+                GetAtlasUV(texture, 3)
             );
         }
 
-        private static void AddWestFace(
+        private void AddWestFace(
             ChunkMeshData mesh,
             int x,
             int y,
             int z,
-            int textureIndex)
+            AtlasTileCoordinate texture)
         {
             mesh.AddQuad(
                 new float3(x, y, z),
@@ -482,84 +806,27 @@ namespace WildEarth.Voxel
                 new float3(x, y + 1, z + 1),
                 new float3(x, y + 1, z),
 
-                GetAtlasUV(textureIndex, 0),
-                GetAtlasUV(textureIndex, 1),
-                GetAtlasUV(textureIndex, 2),
-                GetAtlasUV(textureIndex, 3)
+                GetAtlasUV(texture, 0),
+                GetAtlasUV(texture, 1),
+                GetAtlasUV(texture, 2),
+                GetAtlasUV(texture, 3)
             );
         }
 
-        private static float2 GetAtlasUV(
-            int textureIndex,
+        private float2 GetAtlasUV(
+            AtlasTileCoordinate texture,
             int corner)
         {
-            if (textureIndex < 0 ||
-                textureIndex >=
-                AtlasTilesPerAxis *
-                AtlasTilesPerAxis)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(textureIndex),
-                    textureIndex,
-                    "Índice de textura fuera del atlas."
+            Vector2 uv =
+                atlasSettings.GetUV(
+                    texture,
+                    corner
                 );
-            }
 
-            int tileX =
-                textureIndex %
-                AtlasTilesPerAxis;
-
-            int tileY =
-                textureIndex /
-                AtlasTilesPerAxis;
-
-            float tileSize =
-                1f /
-                AtlasTilesPerAxis;
-
-            float uMin =
-                tileX * tileSize;
-
-            float uMax =
-                (tileX + 1) * tileSize;
-
-            float vMin =
-                tileY * tileSize;
-
-            float vMax =
-                (tileY + 1) * tileSize;
-
-            switch (corner)
-            {
-                case 0:
-                    return new float2(
-                        uMin,
-                        vMin
-                    );
-
-                case 1:
-                    return new float2(
-                        uMax,
-                        vMin
-                    );
-
-                case 2:
-                    return new float2(
-                        uMax,
-                        vMax
-                    );
-
-                case 3:
-                    return new float2(
-                        uMin,
-                        vMax
-                    );
-
-                default:
-                    throw new ArgumentOutOfRangeException(
-                        nameof(corner)
-                    );
-            }
+            return new float2(
+                uv.x,
+                uv.y
+            );
         }
     }
 }

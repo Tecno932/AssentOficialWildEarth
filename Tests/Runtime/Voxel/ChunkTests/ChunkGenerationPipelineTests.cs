@@ -365,136 +365,136 @@ namespace WildEarth.Tests.Voxel
         Assert.That(water, Is.GreaterThanOrEqualTo(1));
     }
 
-[Test]
-public void FluidGenerationJob_Directly_GeneratesWater()
-{
-    FluidGenerationSettings fluidSettings =
-        FluidGenerationSettings.Default;
-
-    TerrainGenerationSettings terrainSettings =
-        TerrainGenerationSettings.Default;
-
-    VoxelWorld world =
-        CreateWorld(
-            ChunkGenerationSettings.Default
-        );
-
-    try
+    [Test]
+    public void FluidGenerationJob_Directly_GeneratesWater()
     {
-        world.Initialize();
+        FluidGenerationSettings fluidSettings =
+            FluidGenerationSettings.Default;
 
-        FluidRuntimeData water =
-            world.Fluids.GetRuntimeData(
-                FluidType.Water
-            );
+        TerrainGenerationSettings terrainSettings =
+            TerrainGenerationSettings.Default;
 
-        NativeArray<VoxelData> voxels =
-            new NativeArray<VoxelData>(
-                VoxelConstants.VoxelsPerChunk,
-                Allocator.TempJob
-            );
-
-        NativeArray<int> surfaceHeights =
-            new NativeArray<int>(
-                VoxelConstants.ChunkSize *
-                VoxelConstants.ChunkSize,
-                Allocator.TempJob
+        VoxelWorld world =
+            CreateWorld(
+                ChunkGenerationSettings.Default
             );
 
         try
         {
-            for (int i = 0;
-                 i < surfaceHeights.Length;
-                 i++)
+            world.Initialize();
+
+            FluidRuntimeData water =
+                world.Fluids.GetRuntimeData(
+                    FluidType.Water
+                );
+
+            NativeArray<VoxelData> voxels =
+                new NativeArray<VoxelData>(
+                    VoxelConstants.VoxelsPerChunk,
+                    Allocator.TempJob
+                );
+
+            NativeArray<int> surfaceHeights =
+                new NativeArray<int>(
+                    VoxelConstants.ChunkSize *
+                    VoxelConstants.ChunkSize,
+                    Allocator.TempJob
+                );
+
+            try
             {
-                surfaceHeights[i] = 15;
-            }
-
-            FluidGenerationJob job =
-                new FluidGenerationJob
+                for (int i = 0;
+                    i < surfaceHeights.Length;
+                    i++)
                 {
-                    Settings =
-                        fluidSettings,
-
-                    TerrainSettings =
-                        terrainSettings,
-
-                    Voxels =
-                        voxels,
-
-                    SurfaceHeights =
-                        surfaceHeights,
-
-                    Water =
-                        water,
-
-                    WorldOriginY = 16
-                };
-
-            JobHandle handle =
-                job.Schedule();
-
-            handle.Complete();
-
-            int waterCount = 0;
-            int firstWaterIndex = -1;
-
-            for (int i = 0;
-                 i < voxels.Length;
-                 i++)
-            {
-                if (voxels[i].BlockId !=
-                    water.BlockId)
-                {
-                    continue;
+                    surfaceHeights[i] = 15;
                 }
 
-                waterCount++;
+                FluidGenerationJob job =
+                    new FluidGenerationJob
+                    {
+                        Settings =
+                            fluidSettings,
 
-                if (firstWaterIndex < 0)
+                        TerrainSettings =
+                            terrainSettings,
+
+                        Voxels =
+                            voxels,
+
+                        SurfaceHeights =
+                            surfaceHeights,
+
+                        Water =
+                            water,
+
+                        WorldOriginY = 16
+                    };
+
+                JobHandle handle =
+                    job.Schedule();
+
+                handle.Complete();
+
+                int waterCount = 0;
+                int firstWaterIndex = -1;
+
+                for (int i = 0;
+                    i < voxels.Length;
+                    i++)
                 {
-                    firstWaterIndex = i;
+                    if (voxels[i].BlockId !=
+                        water.BlockId)
+                    {
+                        continue;
+                    }
+
+                    waterCount++;
+
+                    if (firstWaterIndex < 0)
+                    {
+                        firstWaterIndex = i;
+                    }
+                }
+
+                Debug.Log(
+                    "[Direct Fluid Debug] " +
+                    $"Enabled={fluidSettings.Enabled}, " +
+                    $"GenerateWater={fluidSettings.GenerateWater}, " +
+                    $"SeaLevel={terrainSettings.SeaLevel}, " +
+                    $"WaterBlockId={water.BlockId}, " +
+                    $"WaterMaxLevel={water.MaxLevel}, " +
+                    $"WorldOriginY=16, " +
+                    $"SurfaceHeight=15, " +
+                    $"WaterVoxels={waterCount}, " +
+                    $"FirstWaterIndex={firstWaterIndex}"
+                );
+
+                Assert.Greater(
+                    waterCount,
+                    0,
+                    "FluidGenerationJob no generó agua " +
+                    "cuando se ejecutó directamente."
+                );
+            }
+            finally
+            {
+                if (voxels.IsCreated)
+                {
+                    voxels.Dispose();
+                }
+
+                if (surfaceHeights.IsCreated)
+                {
+                    surfaceHeights.Dispose();
                 }
             }
-
-            Debug.Log(
-                "[Direct Fluid Debug] " +
-                $"Enabled={fluidSettings.Enabled}, " +
-                $"GenerateWater={fluidSettings.GenerateWater}, " +
-                $"SeaLevel={terrainSettings.SeaLevel}, " +
-                $"WaterBlockId={water.BlockId}, " +
-                $"WaterMaxLevel={water.MaxLevel}, " +
-                $"WorldOriginY=16, " +
-                $"SurfaceHeight=15, " +
-                $"WaterVoxels={waterCount}, " +
-                $"FirstWaterIndex={firstWaterIndex}"
-            );
-
-            Assert.Greater(
-                waterCount,
-                0,
-                "FluidGenerationJob no generó agua " +
-                "cuando se ejecutó directamente."
-            );
         }
         finally
         {
-            if (voxels.IsCreated)
-            {
-                voxels.Dispose();
-            }
-
-            if (surfaceHeights.IsCreated)
-            {
-                surfaceHeights.Dispose();
-            }
+            world.Dispose();
         }
     }
-    finally
-    {
-        world.Dispose();
-    }
-}
 
 [Test]
 public void Pipeline_FluidsEnabled_WithCavesDisabled_GeneratesWater()

@@ -14,6 +14,7 @@ namespace WildEarth.Tests.Voxel
         private ChunkBiomeDataPool biomePool;
         private ChunkStorage storage;
         private VoxelMeshBuilder builder;
+        private VoxelAtlasSettings atlasSettings;
 
         [SetUp]
         public void SetUp()
@@ -23,13 +24,22 @@ namespace WildEarth.Tests.Voxel
                     "Assets/_Project/Data/Blocks/BlockRegistry.asset"
                 );
 
-            Assert.That(
-                registry,
-                Is.Not.Null,
-                "No se encontró BlockRegistry.asset."
-            );
+                Assert.That(
+                    registry,
+                    Is.Not.Null,
+                    "No se encontró BlockRegistry.asset."
+                );
 
-            blockDatabase =
+                atlasSettings =
+                    ScriptableObject.CreateInstance<VoxelAtlasSettings>();
+
+                Assert.That(
+                    atlasSettings,
+                    Is.Not.Null,
+                    "No se pudo crear VoxelAtlasSettings."
+                );
+
+                blockDatabase =
                 new BlockRuntimeDatabase(
                     registry,
                     Allocator.Persistent
@@ -57,7 +67,8 @@ namespace WildEarth.Tests.Voxel
 
             builder =
                 new VoxelMeshBuilder(
-                    blockDatabase
+                    blockDatabase,
+                    atlasSettings
                 );
         }
 
@@ -74,6 +85,12 @@ namespace WildEarth.Tests.Voxel
             dataPool = null;
             biomePool = null;
             builder = null;
+
+            if (atlasSettings != null)
+            {
+                Object.DestroyImmediate(atlasSettings);
+                atlasSettings = null;
+            }
         }
 
         [Test]

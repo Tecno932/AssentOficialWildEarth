@@ -18,9 +18,15 @@ MonoBehaviour:
   flags: 321
   hardness: 4
   lightEmission: 0
-  topTexture: 1
-  bottomTexture: 1
-  sideTexture: 1
+  topTexture:
+    Column: 2
+    Row: 2
+  bottomTexture:
+    Column: 2
+    Row: 2
+  sideTexture:
+    Column: 2
+    Row: 2
   requiredTool: 2
   requiredToolLevel: 1
   material: {fileID: 0}

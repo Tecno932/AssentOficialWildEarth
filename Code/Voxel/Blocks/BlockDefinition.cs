@@ -27,7 +27,6 @@ namespace WildEarth.Voxel
         Collidable = 1 << 6,
         Flammable = 1 << 7,
         OccludesFaces = 1 << 8,
-
         CaveCarvable = 1 << 9
     }
 
@@ -40,6 +39,24 @@ namespace WildEarth.Voxel
         Shovel = 4,
         Hoe = 5,
         Sword = 6
+    }
+
+    [Serializable]
+    public struct AtlasTileCoordinate
+    {
+        [Min(0)]
+        public int Column;
+
+        [Min(0)]
+        public int Row;
+
+        public AtlasTileCoordinate(
+            int column,
+            int row)
+        {
+            Column = column;
+            Row = row;
+        }
     }
 
     [CreateAssetMenu(
@@ -60,9 +77,10 @@ namespace WildEarth.Voxel
         private BlockMeshType meshType = BlockMeshType.Cube;
 
         [SerializeField]
-        private BlockFlags flags = BlockFlags.Solid |
-                                    BlockFlags.Collidable |
-                                    BlockFlags.OccludesFaces;
+        private BlockFlags flags =
+            BlockFlags.Solid |
+            BlockFlags.Collidable |
+            BlockFlags.OccludesFaces;
 
         [Header("Physical Properties")]
         [SerializeField]
@@ -75,13 +93,13 @@ namespace WildEarth.Voxel
 
         [Header("Texture Atlas")]
         [SerializeField]
-        private int topTexture;
+        private AtlasTileCoordinate topTexture;
 
         [SerializeField]
-        private int bottomTexture;
+        private AtlasTileCoordinate bottomTexture;
 
         [SerializeField]
-        private int sideTexture;
+        private AtlasTileCoordinate sideTexture;
 
         [Header("Breaking")]
         [SerializeField]
@@ -106,11 +124,11 @@ namespace WildEarth.Voxel
 
         public byte LightEmission => lightEmission;
 
-        public int TopTexture => topTexture;
+        public AtlasTileCoordinate TopTexture => topTexture;
 
-        public int BottomTexture => bottomTexture;
+        public AtlasTileCoordinate BottomTexture => bottomTexture;
 
-        public int SideTexture => sideTexture;
+        public AtlasTileCoordinate SideTexture => sideTexture;
 
         public ToolType RequiredTool => requiredTool;
 
@@ -172,6 +190,24 @@ namespace WildEarth.Voxel
             {
                 flags |= BlockFlags.Collidable;
             }
+
+            if (topTexture.Column < 0)
+                topTexture.Column = 0;
+
+            if (topTexture.Row < 0)
+                topTexture.Row = 0;
+
+            if (bottomTexture.Column < 0)
+                bottomTexture.Column = 0;
+
+            if (bottomTexture.Row < 0)
+                bottomTexture.Row = 0;
+
+            if (sideTexture.Column < 0)
+                sideTexture.Column = 0;
+
+            if (sideTexture.Row < 0)
+                sideTexture.Row = 0;
         }
 
 #endif
