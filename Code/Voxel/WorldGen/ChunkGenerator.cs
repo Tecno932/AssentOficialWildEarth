@@ -6,6 +6,8 @@ namespace WildEarth.Voxel
 {
     public sealed class ChunkGenerator : IDisposable, IChunkGenerator
     {
+        private const int MaxConcurrentGenerationJobs = 8;
+
         private readonly ChunkGenerationSettings settings;
         private readonly ChunkGenerationPipeline pipeline;
         private readonly BiomeRuntimeDatabase biomeDatabase;
@@ -15,6 +17,9 @@ namespace WildEarth.Voxel
 
         private readonly List<GenerationTask> activeTasks =
             new List<GenerationTask>();
+
+        private readonly Queue<GenerationRequest> pendingRequests =
+            new Queue<GenerationRequest>();
 
         private readonly List<Chunk> completedChunks =
             new List<Chunk>();
@@ -70,19 +75,7 @@ namespace WildEarth.Voxel
         {
             ThrowIfDisposed();
 
-            if (chunk == null)
-            {
-                throw new ArgumentNullException(
-                    nameof(chunk)
-                );
-            }
-
-            if (!chunk.Data.IsCreated)
-            {
-                throw new InvalidOperationException(
-                    $"El chunk {chunk.Coordinate} no tiene datos válidos."
-                );
-            }
+            ValidateChunk(chunk);
 
             if (IsGenerating(chunk))
             {
@@ -91,24 +84,33 @@ namespace WildEarth.Voxel
                 );
             }
 
-            chunk.SetState(
-                ChunkState.Generating
-            );
+            if (IsPending(chunk))
+            {
+                throw new InvalidOperationException(
+                    $"El chunk {chunk.Coordinate} ya está en cola de generación."
+                );
+            }
 
-            JobHandle handle =
-                pipeline.Schedule(
-                    chunk,
-                    dependency
+            if (activeTasks.Count >= MaxConcurrentGenerationJobs)
+            {
+                chunk.SetState(
+                    ChunkState.Generating
                 );
 
-            activeTasks.Add(
-                new GenerationTask(
-                    chunk,
-                    handle
-                )
-            );
+                pendingRequests.Enqueue(
+                    new GenerationRequest(
+                        chunk,
+                        dependency
+                    )
+                );
 
-            return handle;
+                return default;
+            }
+
+            return ScheduleImmediate(
+                chunk,
+                dependency
+            );
         }
 
         public bool IsGenerating(
@@ -160,8 +162,12 @@ namespace WildEarth.Voxel
 
                 activeTasks.RemoveAt(i);
 
+                SchedulePendingRequests();
+
                 return;
             }
+
+            RemovePendingRequest(chunk);
         }
 
         public void Update()
@@ -188,27 +194,35 @@ namespace WildEarth.Voxel
 
                 activeTasks.RemoveAt(i);
             }
+
+            SchedulePendingRequests();
         }
 
         public void CompleteAll()
         {
             ThrowIfDisposed();
 
-            for (int i = 0; i < activeTasks.Count; i++)
+            while (activeTasks.Count > 0 ||
+                   pendingRequests.Count > 0)
             {
-                GenerationTask task =
-                    activeTasks[i];
+                for (int i = activeTasks.Count - 1; i >= 0; i--)
+                {
+                    GenerationTask task =
+                        activeTasks[i];
 
-                task.Handle.Complete();
+                    task.Handle.Complete();
 
-                task.Chunk.MarkGenerated();
+                    task.Chunk.MarkGenerated();
 
-                completedChunks.Add(
-                    task.Chunk
-                );
+                    completedChunks.Add(
+                        task.Chunk
+                    );
+
+                    activeTasks.RemoveAt(i);
+                }
+
+                SchedulePendingRequests();
             }
-
-            activeTasks.Clear();
         }
 
         public void Dispose()
@@ -218,7 +232,120 @@ namespace WildEarth.Voxel
 
             CompleteAll();
 
+            pendingRequests.Clear();
+
             disposed = true;
+        }
+
+        private JobHandle ScheduleImmediate(
+            Chunk chunk,
+            JobHandle dependency)
+        {
+            chunk.SetState(
+                ChunkState.Generating
+            );
+
+            JobHandle handle =
+                pipeline.Schedule(
+                    chunk,
+                    dependency
+                );
+
+            activeTasks.Add(
+                new GenerationTask(
+                    chunk,
+                    handle
+                )
+            );
+
+            return handle;
+        }
+
+        private void SchedulePendingRequests()
+        {
+            while (
+                activeTasks.Count <
+                    MaxConcurrentGenerationJobs &&
+                pendingRequests.Count > 0)
+            {
+                GenerationRequest request =
+                    pendingRequests.Dequeue();
+
+                if (request.Chunk == null)
+                    continue;
+
+                if (!request.Chunk.Data.IsCreated)
+                    continue;
+
+                if (IsGenerating(request.Chunk))
+                    continue;
+
+                ScheduleImmediate(
+                    request.Chunk,
+                    request.Dependency
+                );
+            }
+        }
+
+        private bool IsPending(
+            Chunk chunk)
+        {
+            foreach (
+                GenerationRequest request
+                in pendingRequests)
+            {
+                if (ReferenceEquals(
+                        request.Chunk,
+                        chunk))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void RemovePendingRequest(
+            Chunk chunk)
+        {
+            if (pendingRequests.Count == 0)
+                return;
+
+            int count =
+                pendingRequests.Count;
+
+            for (int i = 0; i < count; i++)
+            {
+                GenerationRequest request =
+                    pendingRequests.Dequeue();
+
+                if (!ReferenceEquals(
+                        request.Chunk,
+                        chunk))
+                {
+                    pendingRequests.Enqueue(
+                        request
+                    );
+                }
+            }
+        }
+
+        private void ValidateChunk(
+            Chunk chunk)
+        {
+            if (chunk == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(chunk)
+                );
+            }
+
+            if (!chunk.Data.IsCreated)
+            {
+                throw new InvalidOperationException(
+                    $"El chunk {chunk.Coordinate} no tiene datos válidos."
+                );
+            }
         }
 
         private void ThrowIfDisposed()
@@ -228,6 +355,20 @@ namespace WildEarth.Voxel
                 throw new ObjectDisposedException(
                     nameof(ChunkGenerator)
                 );
+            }
+        }
+
+        private readonly struct GenerationRequest
+        {
+            public readonly Chunk Chunk;
+            public readonly JobHandle Dependency;
+
+            public GenerationRequest(
+                Chunk chunk,
+                JobHandle dependency)
+            {
+                Chunk = chunk;
+                Dependency = dependency;
             }
         }
 

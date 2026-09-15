@@ -77,11 +77,19 @@ namespace WildEarth.Voxel
                     chunk.Coordinate.ToInt3()
                 );
 
+            /*
+             * Esta memoria vive hasta que termina toda la cadena
+             * de generación.
+             *
+             * Persistent es intencional:
+             * la generación puede permanecer activa más de
+             * los 4 frames permitidos por Allocator.TempJob.
+             */
             NativeArray<int> surfaceHeights =
                 new NativeArray<int>(
                     VoxelConstants.ChunkSize *
                     VoxelConstants.ChunkSize,
-                    Allocator.TempJob
+                    Allocator.Persistent
                 );
 
             JobHandle biomeHandle =
@@ -121,6 +129,10 @@ namespace WildEarth.Voxel
                     fluidHandle
                 );
 
+            /*
+             * La memoria se libera automáticamente cuando
+             * termina toda la cadena de generación.
+             */
             return surfaceHeights.Dispose(
                 oreHandle
             );

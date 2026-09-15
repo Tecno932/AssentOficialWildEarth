@@ -8,12 +8,36 @@ namespace WildEarth.Voxel
     [BurstCompile]
     public struct TerrainGenerationJob : IJob
     {
+        /*
+         * Estratigrafía base:
+         *
+         *   Surface:
+         *       1 Grass
+         *
+         *   SubSurface:
+         *       4 Dirt
+         *
+         *   Deep:
+         *       Stone
+         *
+         * Ejemplo con superficie Y = 64:
+         *
+         *   Y = 64  Grass
+         *   Y = 63  Dirt
+         *   Y = 62  Dirt
+         *   Y = 61  Dirt
+         *   Y = 60  Dirt
+         *   Y <= 59 Stone
+         */
+
+        private const int SurfaceDepth = 1;
         public ChunkGenerationContext Context;
         public TerrainGenerationSettings Settings;
 
         public NativeArray<Voxel> Voxels;
 
         public NativeArray<BiomeId> Biomes;
+
         [ReadOnly]
         public NativeArray<BiomeRuntimeData> BiomeDatabase;
 
@@ -40,10 +64,12 @@ namespace WildEarth.Voxel
                         );
 
                     int worldX =
-                        Context.WorldOrigin.x + x;
+                        Context.WorldOrigin.x +
+                        x;
 
                     int worldZ =
-                        Context.WorldOrigin.z + z;
+                        Context.WorldOrigin.z +
+                        z;
 
                     int terrainHeight =
                         CalculateTerrainHeight(
@@ -62,7 +88,8 @@ namespace WildEarth.Voxel
                     for (int y = 0; y < chunkSize; y++)
                     {
                         int worldY =
-                            Context.WorldOrigin.y + y;
+                            Context.WorldOrigin.y +
+                            y;
 
                         ushort blockId =
                             ResolveBlock(
@@ -255,8 +282,7 @@ namespace WildEarth.Voxel
                 return biome.SurfaceBlockId;
 
             int depth =
-                terrainHeight -
-                worldY;
+                terrainHeight - worldY;
 
             if (depth <= biome.SubSurfaceDepth)
                 return biome.SubSurfaceBlockId;

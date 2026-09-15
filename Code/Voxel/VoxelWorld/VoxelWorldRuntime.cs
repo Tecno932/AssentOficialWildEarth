@@ -19,12 +19,19 @@ namespace WildEarth.Voxel
 
         [SerializeField]
         private FluidRegistryAsset fluidRegistryAsset;
-        [SerializeField]
 
+        [SerializeField]
         private VoxelWorldRenderer worldRenderer;
+
+        [Header("World Streaming Test")]
+        [SerializeField]
+        [Min(0)]
+        private int renderDistance = 2;
 
         private VoxelWorld world;
         private VoxelMeshBuilder meshBuilder;
+
+        private bool debugVoxelCountsLogged;
 
         public VoxelWorld World =>
             world;
@@ -39,6 +46,11 @@ namespace WildEarth.Voxel
             if (blockRegistry == null)
                 throw new InvalidOperationException(
                     "VoxelWorldRuntime: falta BlockRegistry."
+                );
+
+            if (atlasSettings == null)
+                throw new InvalidOperationException(
+                    "VoxelWorldRuntime: falta VoxelAtlasSettings."
                 );
 
             if (oreRegistryAsset == null)
@@ -78,20 +90,88 @@ namespace WildEarth.Voxel
                 meshBuilder
             );
 
-            world.LoadAndGenerateChunk(
-                new ChunkCoordinate(0, 0, 0)
+            GenerateInitialRing();
+        }
+
+        private void GenerateInitialRing()
+        {
+            int chunksPerColumn =
+                VoxelConstants.WorldHeight /
+                VoxelConstants.ChunkSize;
+
+            int horizontalChunkCount =
+                renderDistance * 2 + 1;
+
+            int totalColumns =
+                horizontalChunkCount *
+                horizontalChunkCount;
+
+            int totalChunks =
+                totalColumns *
+                chunksPerColumn;
+
+            for (int z = -renderDistance;
+                z <= renderDistance;
+                z++)
+            {
+                for (int x = -renderDistance;
+                    x <= renderDistance;
+                    x++)
+                {
+                    for (int y = 0;
+                        y < chunksPerColumn;
+                        y++)
+                    {
+                        ChunkCoordinate coordinate =
+                            new ChunkCoordinate(
+                                x,
+                                y,
+                                z
+                            );
+
+                        world.LoadAndGenerateChunk(
+                            coordinate
+                        );
+                    }
+                }
+            }
+
+            Debug.Log(
+                $"[VoxelWorldRuntime] " +
+                $"Columnas solicitadas: {totalColumns}, " +
+                $"chunks solicitados: {totalChunks}"
             );
         }
 
-        private void Update()
+private void Update()
+{
+    if (world == null)
+        return;
+
+    world.Update();
+
+    worldRenderer.RenderCompletedChunks();
+
+    if (!debugVoxelCountsLogged)
+    {
+        ChunkCoordinate debugCoordinate =
+            new ChunkCoordinate(0, 3, 0);
+
+        if (world.TryGetChunk(
+                debugCoordinate,
+                out Chunk chunk) &&
+            chunk != null &&
+            (chunk.State == ChunkState.Generated ||
+            chunk.State == ChunkState.Ready))
         {
-            if (world == null)
-                return;
+            world.DebugLogChunkBlockCounts(
+                debugCoordinate
+            );
 
-            world.Update();
-
-            worldRenderer.RenderCompletedChunks();
+            debugVoxelCountsLogged = true;
         }
+    }
+}
 
         private void OnDestroy()
         {

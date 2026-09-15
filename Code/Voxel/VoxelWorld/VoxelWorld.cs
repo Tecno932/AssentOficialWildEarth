@@ -335,18 +335,174 @@ namespace WildEarth.Voxel
                 chunkGenerator.CompletedChunks;
 
             for (int i = 0;
-                 i < completedChunks.Count;
-                 i++)
+                i < completedChunks.Count;
+                i++)
             {
                 Chunk chunk =
                     completedChunks[i];
+
+                if (chunk == null)
+                    continue;
 
                 fluidSimulationCoordinator
                     .RequestChunkSimulation(
                         chunk.Coordinate,
                         fluidDatabase
                     );
+
+                MarkNeighborChunksForRemesh(
+                    chunk
+                );
             }
+        }
+
+        private void MarkNeighborChunksForRemesh(
+            Chunk completedChunk)
+        {
+            ChunkCoordinate coordinate =
+                completedChunk.Coordinate;
+
+            TryMarkNeighborForRemesh(
+                new ChunkCoordinate(
+                    coordinate.X - 1,
+                    coordinate.Y,
+                    coordinate.Z
+                )
+            );
+
+            TryMarkNeighborForRemesh(
+                new ChunkCoordinate(
+                    coordinate.X + 1,
+                    coordinate.Y,
+                    coordinate.Z
+                )
+            );
+
+            TryMarkNeighborForRemesh(
+                new ChunkCoordinate(
+                    coordinate.X,
+                    coordinate.Y - 1,
+                    coordinate.Z
+                )
+            );
+
+            TryMarkNeighborForRemesh(
+                new ChunkCoordinate(
+                    coordinate.X,
+                    coordinate.Y + 1,
+                    coordinate.Z
+                )
+            );
+
+            TryMarkNeighborForRemesh(
+                new ChunkCoordinate(
+                    coordinate.X,
+                    coordinate.Y,
+                    coordinate.Z - 1
+                )
+            );
+
+            TryMarkNeighborForRemesh(
+                new ChunkCoordinate(
+                    coordinate.X,
+                    coordinate.Y,
+                    coordinate.Z + 1
+                )
+            );
+        }
+
+        private void TryMarkNeighborForRemesh(
+            ChunkCoordinate coordinate)
+        {
+            if (!chunkStorage.TryGet(
+                    coordinate,
+                    out Chunk neighbor))
+            {
+                return;
+            }
+
+            if (neighbor == null)
+                return;
+
+            if (neighbor.State != ChunkState.Generated &&
+                neighbor.State != ChunkState.Ready)
+            {
+                return;
+            }
+
+            neighbor.MarkNeedsMesh();
+        }
+
+        public void DebugLogChunkBlockCounts(
+            ChunkCoordinate coordinate)
+        {
+            ThrowIfNotInitialized();
+
+            if (!chunkStorage.TryGet(
+                    coordinate,
+                    out Chunk chunk))
+            {
+                Debug.Log(
+                    $"[VoxelDebug] Chunk {coordinate} no existe."
+                );
+
+                return;
+            }
+
+            if (chunk == null ||
+                !chunk.Data.IsCreated)
+            {
+                Debug.Log(
+                    $"[VoxelDebug] Chunk {coordinate} no tiene datos."
+                );
+
+                return;
+            }
+
+            int air = 0;
+            int stone = 0;
+            int dirt = 0;
+            int grass = 0;
+            int other = 0;
+
+            NativeArray<Voxel> voxels =
+                chunk.Data.Voxels;
+
+            for (int i = 0; i < voxels.Length; i++)
+            {
+                switch (voxels[i].BlockId)
+                {
+                    case 0:
+                        air++;
+                        break;
+
+                    case 1:
+                        stone++;
+                        break;
+
+                    case 2:
+                        dirt++;
+                        break;
+
+                    case 3:
+                        grass++;
+                        break;
+
+                    default:
+                        other++;
+                        break;
+                }
+            }
+
+            Debug.Log(
+                $"[VoxelDebug] Chunk {coordinate} | " +
+                $"State={chunk.State} | " +
+                $"Air={air} | " +
+                $"Stone={stone} | " +
+                $"Dirt={dirt} | " +
+                $"Grass={grass} | " +
+                $"Other={other}"
+            );
         }
 
         private void ThrowIfDisposed()
