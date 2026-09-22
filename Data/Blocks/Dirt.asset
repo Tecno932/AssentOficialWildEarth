@@ -19,13 +19,13 @@ MonoBehaviour:
   hardness: 1
   lightEmission: 0
   topTexture:
-    Column: 0
+    Column: 1
     Row: 0
   bottomTexture:
-    Column: 0
+    Column: 1
     Row: 0
   sideTexture:
-    Column: 0
+    Column: 1
     Row: 0
   requiredTool: 4
   requiredToolLevel: 0

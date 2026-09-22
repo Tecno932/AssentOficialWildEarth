@@ -53,6 +53,23 @@ namespace WildEarth.Voxel
                 return false;
             }
 
+            if (targetChunk == null ||
+                !targetChunk.Data.IsCreated ||
+                (targetChunk.State != ChunkState.Generated &&
+                targetChunk.State != ChunkState.Ready))
+            {
+                result =
+                    new FluidChangeResult(
+                        change,
+                        false,
+                        false,
+                        false,
+                        false
+                    );
+
+                return false;
+            }
+
             if (!change.IsValid)
             {
                 result =

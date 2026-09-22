@@ -4,10 +4,12 @@ namespace WildEarth.Voxel
 {
     [RequireComponent(typeof(MeshFilter))]
     [RequireComponent(typeof(MeshRenderer))]
+    [RequireComponent(typeof(MeshCollider))]
     public sealed class ChunkMeshRenderer : MonoBehaviour
     {
         private MeshFilter meshFilter;
         private MeshRenderer meshRenderer;
+        private MeshCollider meshCollider;
         private Mesh mesh;
 
         public Mesh Mesh => mesh;
@@ -16,6 +18,7 @@ namespace WildEarth.Voxel
         {
             meshFilter = GetComponent<MeshFilter>();
             meshRenderer = GetComponent<MeshRenderer>();
+            meshCollider = GetComponent<MeshCollider>();
 
             mesh = new Mesh
             {
@@ -25,6 +28,7 @@ namespace WildEarth.Voxel
             mesh.MarkDynamic();
 
             meshFilter.sharedMesh = mesh;
+            meshCollider.sharedMesh = mesh;
         }
 
         public void Apply(
@@ -68,10 +72,12 @@ namespace WildEarth.Voxel
                 }
 
                 mesh.SetVertices(vertices);
+
                 mesh.SetTriangles(
                     meshData.Triangles,
                     0
                 );
+
                 mesh.SetUVs(
                     0,
                     uvs
@@ -82,12 +88,18 @@ namespace WildEarth.Voxel
             }
 
             meshRenderer.sharedMaterial = material;
+
+            meshCollider.sharedMesh = null;
+            meshCollider.sharedMesh = mesh;
         }
 
         public void Clear()
         {
             EnsureMesh();
+
             mesh.Clear();
+
+            meshCollider.sharedMesh = null;
         }
 
         private void EnsureMesh()
@@ -97,6 +109,9 @@ namespace WildEarth.Voxel
 
             if (meshRenderer == null)
                 meshRenderer = GetComponent<MeshRenderer>();
+
+            if (meshCollider == null)
+                meshCollider = GetComponent<MeshCollider>();
 
             if (mesh != null)
                 return;
@@ -109,10 +124,14 @@ namespace WildEarth.Voxel
             mesh.MarkDynamic();
 
             meshFilter.sharedMesh = mesh;
+            meshCollider.sharedMesh = mesh;
         }
 
         private void OnDestroy()
         {
+            if (meshCollider != null)
+                meshCollider.sharedMesh = null;
+
             if (mesh == null)
                 return;
 

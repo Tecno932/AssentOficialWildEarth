@@ -357,10 +357,6 @@ namespace WildEarth.Voxel
                 worldZ -
                 Context.WorldOrigin.z;
 
-            /*
-             * La posición pertenece a otro chunk.
-             * Este Job únicamente modifica el chunk actual.
-             */
             if (!VoxelIndex.IsValidLocalCoordinate(
                     localX,
                     localY,
@@ -379,10 +375,6 @@ namespace WildEarth.Voxel
             Voxel voxel =
                 Voxels[index];
 
-            /*
-             * Solo reemplazamos bloques que estén definidos
-             * como roca huésped para este mineral.
-             */
             if (!IsHostBlock(
                     ore,
                     voxel.BlockId))

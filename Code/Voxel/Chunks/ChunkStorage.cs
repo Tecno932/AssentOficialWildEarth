@@ -139,6 +139,28 @@ namespace WildEarth.Voxel
             return true;
         }
 
+        public void GetCoordinates(
+            List<ChunkCoordinate> results)
+        {
+            if (results == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(results)
+                );
+            }
+
+            results.Clear();
+
+            foreach (
+                ChunkCoordinate coordinate
+                in chunks.Keys)
+            {
+                results.Add(
+                    coordinate
+                );
+            }
+        }
+
         public void Clear()
         {
             foreach (Chunk chunk in chunks.Values)

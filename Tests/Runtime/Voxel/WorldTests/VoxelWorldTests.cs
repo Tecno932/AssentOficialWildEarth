@@ -457,6 +457,186 @@ public sealed class VoxelWorldTests
             );
         }
 
+[Test]
+public void TrySetVoxel_ChangesBlockAndMarksChunkDirty()
+{
+    ChunkCoordinate coordinate =
+        new ChunkCoordinate(0, 0, 0);
+
+    Chunk chunk =
+        world.LoadAndGenerateChunk(coordinate);
+
+    world.CompleteGeneration();
+
+    Assert.That(
+        chunk.State,
+        Is.EqualTo(ChunkState.Generated)
+            .Or.EqualTo(ChunkState.Ready)
+    );
+
+    int worldX = 1;
+    int worldY = 1;
+    int worldZ = 1;
+
+    int localIndex =
+        VoxelIndex.ToIndex(
+            worldX,
+            worldY,
+            worldZ
+        );
+
+    VoxelData before =
+        chunk.Data.Voxels[localIndex];
+
+    ushort newBlockId =
+        before.BlockId == 1
+            ? (ushort)2
+            : (ushort)1;
+
+    uint previousRevision =
+        chunk.DataRevision;
+
+    bool changed =
+        world.TrySetVoxel(
+            worldX,
+            worldY,
+            worldZ,
+            newBlockId
+        );
+
+    Assert.That(
+        changed,
+        Is.True
+    );
+
+    Assert.That(
+        chunk.Data.Voxels[localIndex].BlockId,
+        Is.EqualTo(newBlockId)
+    );
+
+    Assert.That(
+        chunk.DataRevision,
+        Is.EqualTo(previousRevision + 1)
+    );
+
+    Assert.That(
+        chunk.IsDirty,
+        Is.True
+    );
+
+    Assert.That(
+        chunk.NeedsMesh,
+        Is.True
+    );
+
+    Assert.That(
+        chunk.NeedsSave,
+        Is.True
+    );
+}
+
+[Test]
+public void TrySetVoxel_SetAirRemovesBlock()
+{
+    ChunkCoordinate coordinate =
+        new ChunkCoordinate(0, 0, 0);
+
+    Chunk chunk =
+        world.LoadAndGenerateChunk(coordinate);
+
+    world.CompleteGeneration();
+
+    bool changed =
+        world.TrySetVoxel(
+            1,
+            1,
+            1,
+            0
+        );
+
+    Assert.That(
+        changed,
+        Is.True
+    );
+
+    int index =
+        VoxelIndex.ToIndex(
+            1,
+            1,
+            1
+        );
+
+    Assert.That(
+        chunk.Data.Voxels[index].BlockId,
+        Is.EqualTo(0)
+    );
+
+    Assert.That(
+        chunk.NeedsMesh,
+        Is.True
+    );
+
+    Assert.That(
+        chunk.NeedsSave,
+        Is.True
+    );
+}
+
+[Test]
+public void TrySetVoxel_ChunkBoundaryMarksNeighborForRemesh()
+{
+    ChunkCoordinate coordinate =
+        new ChunkCoordinate(0, 0, 0);
+
+    ChunkCoordinate neighborCoordinate =
+        new ChunkCoordinate(1, 0, 0);
+
+    Chunk chunk =
+        world.LoadAndGenerateChunk(
+            coordinate
+        );
+
+    Chunk neighbor =
+        world.LoadAndGenerateChunk(
+            neighborCoordinate
+        );
+
+    world.CompleteGeneration();
+
+    neighbor.ClearNeedsMesh();
+
+    Assert.That(
+        neighbor.NeedsMesh,
+        Is.False
+    );
+
+    int boundaryX =
+        VoxelConstants.ChunkSize - 1;
+
+    bool changed =
+        world.TrySetVoxel(
+            boundaryX,
+            1,
+            1,
+            0
+        );
+
+    Assert.That(
+        changed,
+        Is.True
+    );
+
+    Assert.That(
+        chunk.NeedsMesh,
+        Is.True
+    );
+
+    Assert.That(
+        neighbor.NeedsMesh,
+        Is.True
+    );
+}
+
         private void GenerateTestChunks()
         {
             const int searchRadius = 1;

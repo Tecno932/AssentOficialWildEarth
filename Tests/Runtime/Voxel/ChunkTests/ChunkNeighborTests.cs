@@ -51,11 +51,7 @@ namespace WildEarth.Tests.Voxel
         public void North_ReturnsCorrectCoordinate()
         {
             ChunkCoordinate origin =
-                new ChunkCoordinate(
-                    10,
-                    5,
-                    -4
-                );
+                new ChunkCoordinate(10, 5, -4);
 
             ChunkCoordinate result =
                 ChunkNeighborResolver.GetNeighborCoordinate(
@@ -66,11 +62,7 @@ namespace WildEarth.Tests.Voxel
             Assert.That(
                 result,
                 Is.EqualTo(
-                    new ChunkCoordinate(
-                        10,
-                        5,
-                        -3
-                    )
+                    new ChunkCoordinate(10, 5, -3)
                 )
             );
         }
@@ -79,11 +71,7 @@ namespace WildEarth.Tests.Voxel
         public void South_ReturnsCorrectCoordinate()
         {
             ChunkCoordinate origin =
-                new ChunkCoordinate(
-                    10,
-                    5,
-                    -4
-                );
+                new ChunkCoordinate(10, 5, -4);
 
             ChunkCoordinate result =
                 ChunkNeighborResolver.GetNeighborCoordinate(
@@ -94,11 +82,7 @@ namespace WildEarth.Tests.Voxel
             Assert.That(
                 result,
                 Is.EqualTo(
-                    new ChunkCoordinate(
-                        10,
-                        5,
-                        -5
-                    )
+                    new ChunkCoordinate(10, 5, -5)
                 )
             );
         }
@@ -107,11 +91,7 @@ namespace WildEarth.Tests.Voxel
         public void East_ReturnsCorrectCoordinate()
         {
             ChunkCoordinate origin =
-                new ChunkCoordinate(
-                    10,
-                    5,
-                    -4
-                );
+                new ChunkCoordinate(10, 5, -4);
 
             ChunkCoordinate result =
                 ChunkNeighborResolver.GetNeighborCoordinate(
@@ -122,11 +102,7 @@ namespace WildEarth.Tests.Voxel
             Assert.That(
                 result,
                 Is.EqualTo(
-                    new ChunkCoordinate(
-                        11,
-                        5,
-                        -4
-                    )
+                    new ChunkCoordinate(11, 5, -4)
                 )
             );
         }
@@ -135,11 +111,7 @@ namespace WildEarth.Tests.Voxel
         public void West_ReturnsCorrectCoordinate()
         {
             ChunkCoordinate origin =
-                new ChunkCoordinate(
-                    10,
-                    5,
-                    -4
-                );
+                new ChunkCoordinate(10, 5, -4);
 
             ChunkCoordinate result =
                 ChunkNeighborResolver.GetNeighborCoordinate(
@@ -150,11 +122,7 @@ namespace WildEarth.Tests.Voxel
             Assert.That(
                 result,
                 Is.EqualTo(
-                    new ChunkCoordinate(
-                        9,
-                        5,
-                        -4
-                    )
+                    new ChunkCoordinate(9, 5, -4)
                 )
             );
         }
@@ -163,11 +131,7 @@ namespace WildEarth.Tests.Voxel
         public void Above_ReturnsCorrectCoordinate()
         {
             ChunkCoordinate origin =
-                new ChunkCoordinate(
-                    10,
-                    5,
-                    -4
-                );
+                new ChunkCoordinate(10, 5, -4);
 
             ChunkCoordinate result =
                 ChunkNeighborResolver.GetNeighborCoordinate(
@@ -178,11 +142,7 @@ namespace WildEarth.Tests.Voxel
             Assert.That(
                 result,
                 Is.EqualTo(
-                    new ChunkCoordinate(
-                        10,
-                        6,
-                        -4
-                    )
+                    new ChunkCoordinate(10, 6, -4)
                 )
             );
         }
@@ -191,11 +151,7 @@ namespace WildEarth.Tests.Voxel
         public void Below_ReturnsCorrectCoordinate()
         {
             ChunkCoordinate origin =
-                new ChunkCoordinate(
-                    10,
-                    5,
-                    -4
-                );
+                new ChunkCoordinate(10, 5, -4);
 
             ChunkCoordinate result =
                 ChunkNeighborResolver.GetNeighborCoordinate(
@@ -206,11 +162,7 @@ namespace WildEarth.Tests.Voxel
             Assert.That(
                 result,
                 Is.EqualTo(
-                    new ChunkCoordinate(
-                        10,
-                        4,
-                        -4
-                    )
+                    new ChunkCoordinate(10, 4, -4)
                 )
             );
         }
@@ -219,11 +171,7 @@ namespace WildEarth.Tests.Voxel
         public void TryGetNeighbor_ReturnsLoadedNeighbor()
         {
             ChunkCoordinate origin =
-                new ChunkCoordinate(
-                    0,
-                    0,
-                    0
-                );
+                new ChunkCoordinate(0, 0, 0);
 
             ChunkCoordinate north =
                 ChunkNeighborResolver.GetNeighborCoordinate(
@@ -245,31 +193,16 @@ namespace WildEarth.Tests.Voxel
                     out Chunk result
                 );
 
-            Assert.That(
-                found,
-                Is.True
-            );
-
-            Assert.That(
-                result,
-                Is.SameAs(northChunk)
-            );
-
-            Assert.That(
-                result,
-                Is.Not.SameAs(originChunk)
-            );
+            Assert.That(found, Is.True);
+            Assert.That(result, Is.SameAs(northChunk));
+            Assert.That(result, Is.Not.SameAs(originChunk));
         }
 
         [Test]
         public void TryGetNeighbor_ReturnsFalseWhenNotLoaded()
         {
             ChunkCoordinate origin =
-                new ChunkCoordinate(
-                    0,
-                    0,
-                    0
-                );
+                new ChunkCoordinate(0, 0, 0);
 
             storage.Create(origin);
 
@@ -281,29 +214,18 @@ namespace WildEarth.Tests.Voxel
                     out Chunk neighbor
                 );
 
-            Assert.That(
-                found,
-                Is.False
-            );
-
-            Assert.That(
-                neighbor,
-                Is.Null
-            );
+            Assert.That(found, Is.False);
+            Assert.That(neighbor, Is.Null);
         }
 
         [Test]
         public void TryGetVoxel_ReadsCurrentChunk()
         {
             ChunkCoordinate coordinate =
-                new ChunkCoordinate(
-                    0,
-                    0,
-                    0
-                );
+                new ChunkCoordinate(0, 0, 0);
 
             Chunk chunk =
-                storage.Create(coordinate);
+                CreateGeneratedChunk(coordinate);
 
             ChunkDataAccess.SetVoxel(
                 chunk.Data,
@@ -323,38 +245,23 @@ namespace WildEarth.Tests.Voxel
                     out VoxelData voxel
                 );
 
-            Assert.That(
-                resolved,
-                Is.True
-            );
-
-            Assert.That(
-                voxel.BlockId,
-                Is.EqualTo(42)
-            );
+            Assert.That(resolved, Is.True);
+            Assert.That(voxel.BlockId, Is.EqualTo(42));
         }
 
         [Test]
         public void TryGetVoxel_ReadsWestNeighbor()
         {
             ChunkCoordinate origin =
-                new ChunkCoordinate(
-                    0,
-                    0,
-                    0
-                );
+                new ChunkCoordinate(0, 0, 0);
 
             ChunkCoordinate west =
-                new ChunkCoordinate(
-                    -1,
-                    0,
-                    0
-                );
+                new ChunkCoordinate(-1, 0, 0);
 
-            storage.Create(origin);
+            CreateGeneratedChunk(origin);
 
             Chunk westChunk =
-                storage.Create(west);
+                CreateGeneratedChunk(west);
 
             ChunkDataAccess.SetVoxel(
                 westChunk.Data,
@@ -374,38 +281,23 @@ namespace WildEarth.Tests.Voxel
                     out VoxelData voxel
                 );
 
-            Assert.That(
-                resolved,
-                Is.True
-            );
-
-            Assert.That(
-                voxel.BlockId,
-                Is.EqualTo(55)
-            );
+            Assert.That(resolved, Is.True);
+            Assert.That(voxel.BlockId, Is.EqualTo(55));
         }
 
         [Test]
         public void TryGetVoxel_ReadsEastNeighbor()
         {
             ChunkCoordinate origin =
-                new ChunkCoordinate(
-                    0,
-                    0,
-                    0
-                );
+                new ChunkCoordinate(0, 0, 0);
 
             ChunkCoordinate east =
-                new ChunkCoordinate(
-                    1,
-                    0,
-                    0
-                );
+                new ChunkCoordinate(1, 0, 0);
 
-            storage.Create(origin);
+            CreateGeneratedChunk(origin);
 
             Chunk eastChunk =
-                storage.Create(east);
+                CreateGeneratedChunk(east);
 
             ChunkDataAccess.SetVoxel(
                 eastChunk.Data,
@@ -425,38 +317,23 @@ namespace WildEarth.Tests.Voxel
                     out VoxelData voxel
                 );
 
-            Assert.That(
-                resolved,
-                Is.True
-            );
-
-            Assert.That(
-                voxel.BlockId,
-                Is.EqualTo(56)
-            );
+            Assert.That(resolved, Is.True);
+            Assert.That(voxel.BlockId, Is.EqualTo(56));
         }
 
         [Test]
         public void TryGetVoxel_ReadsSouthNeighbor()
         {
             ChunkCoordinate origin =
-                new ChunkCoordinate(
-                    0,
-                    0,
-                    0
-                );
+                new ChunkCoordinate(0, 0, 0);
 
             ChunkCoordinate south =
-                new ChunkCoordinate(
-                    0,
-                    0,
-                    -1
-                );
+                new ChunkCoordinate(0, 0, -1);
 
-            storage.Create(origin);
+            CreateGeneratedChunk(origin);
 
             Chunk southChunk =
-                storage.Create(south);
+                CreateGeneratedChunk(south);
 
             ChunkDataAccess.SetVoxel(
                 southChunk.Data,
@@ -476,38 +353,23 @@ namespace WildEarth.Tests.Voxel
                     out VoxelData voxel
                 );
 
-            Assert.That(
-                resolved,
-                Is.True
-            );
-
-            Assert.That(
-                voxel.BlockId,
-                Is.EqualTo(57)
-            );
+            Assert.That(resolved, Is.True);
+            Assert.That(voxel.BlockId, Is.EqualTo(57));
         }
 
         [Test]
         public void TryGetVoxel_ReadsNorthNeighbor()
         {
             ChunkCoordinate origin =
-                new ChunkCoordinate(
-                    0,
-                    0,
-                    0
-                );
+                new ChunkCoordinate(0, 0, 0);
 
             ChunkCoordinate north =
-                new ChunkCoordinate(
-                    0,
-                    0,
-                    1
-                );
+                new ChunkCoordinate(0, 0, 1);
 
-            storage.Create(origin);
+            CreateGeneratedChunk(origin);
 
             Chunk northChunk =
-                storage.Create(north);
+                CreateGeneratedChunk(north);
 
             ChunkDataAccess.SetVoxel(
                 northChunk.Data,
@@ -527,38 +389,23 @@ namespace WildEarth.Tests.Voxel
                     out VoxelData voxel
                 );
 
-            Assert.That(
-                resolved,
-                Is.True
-            );
-
-            Assert.That(
-                voxel.BlockId,
-                Is.EqualTo(58)
-            );
+            Assert.That(resolved, Is.True);
+            Assert.That(voxel.BlockId, Is.EqualTo(58));
         }
 
         [Test]
         public void TryGetVoxel_ReadsAboveNeighbor()
         {
             ChunkCoordinate origin =
-                new ChunkCoordinate(
-                    0,
-                    0,
-                    0
-                );
+                new ChunkCoordinate(0, 0, 0);
 
             ChunkCoordinate above =
-                new ChunkCoordinate(
-                    0,
-                    1,
-                    0
-                );
+                new ChunkCoordinate(0, 1, 0);
 
-            storage.Create(origin);
+            CreateGeneratedChunk(origin);
 
             Chunk aboveChunk =
-                storage.Create(above);
+                CreateGeneratedChunk(above);
 
             ChunkDataAccess.SetVoxel(
                 aboveChunk.Data,
@@ -578,38 +425,23 @@ namespace WildEarth.Tests.Voxel
                     out VoxelData voxel
                 );
 
-            Assert.That(
-                resolved,
-                Is.True
-            );
-
-            Assert.That(
-                voxel.BlockId,
-                Is.EqualTo(59)
-            );
+            Assert.That(resolved, Is.True);
+            Assert.That(voxel.BlockId, Is.EqualTo(59));
         }
 
         [Test]
         public void TryGetVoxel_ReadsBelowNeighbor()
         {
             ChunkCoordinate origin =
-                new ChunkCoordinate(
-                    0,
-                    0,
-                    0
-                );
+                new ChunkCoordinate(0, 0, 0);
 
             ChunkCoordinate below =
-                new ChunkCoordinate(
-                    0,
-                    -1,
-                    0
-                );
+                new ChunkCoordinate(0, -1, 0);
 
-            storage.Create(origin);
+            CreateGeneratedChunk(origin);
 
             Chunk belowChunk =
-                storage.Create(below);
+                CreateGeneratedChunk(below);
 
             ChunkDataAccess.SetVoxel(
                 belowChunk.Data,
@@ -629,28 +461,17 @@ namespace WildEarth.Tests.Voxel
                     out VoxelData voxel
                 );
 
-            Assert.That(
-                resolved,
-                Is.True
-            );
-
-            Assert.That(
-                voxel.BlockId,
-                Is.EqualTo(60)
-            );
+            Assert.That(resolved, Is.True);
+            Assert.That(voxel.BlockId, Is.EqualTo(60));
         }
 
         [Test]
         public void TryGetVoxel_ReturnsFalseWhenNeighborIsNotLoaded()
         {
             ChunkCoordinate origin =
-                new ChunkCoordinate(
-                    0,
-                    0,
-                    0
-                );
+                new ChunkCoordinate(0, 0, 0);
 
-            storage.Create(origin);
+            CreateGeneratedChunk(origin);
 
             bool resolved =
                 ChunkNeighborAccess.TryGetVoxel(
@@ -662,11 +483,7 @@ namespace WildEarth.Tests.Voxel
                     out VoxelData voxel
                 );
 
-            Assert.That(
-                resolved,
-                Is.False
-            );
-
+            Assert.That(resolved, Is.False);
             Assert.That(
                 voxel.BlockId,
                 Is.EqualTo(BlockIds.Air)
@@ -738,6 +555,17 @@ namespace WildEarth.Tests.Voxel
                 ),
                 Is.True
             );
+        }
+
+        private Chunk CreateGeneratedChunk(
+            ChunkCoordinate coordinate)
+        {
+            Chunk chunk =
+                storage.Create(coordinate);
+
+            chunk.MarkGenerated();
+
+            return chunk;
         }
     }
 }

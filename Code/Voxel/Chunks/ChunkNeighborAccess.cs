@@ -13,60 +13,34 @@ namespace WildEarth.Voxel
             out Voxel voxel)
         {
             if (storage == null)
-                throw new ArgumentNullException(
-                    nameof(storage)
-                );
+                throw new ArgumentNullException(nameof(storage));
 
-            /*
-             * Coordenada dentro del chunk actual.
-             */
-            if (VoxelIndex.IsValidLocalCoordinate(
-                    x,
-                    y,
-                    z))
+            if (VoxelIndex.IsValidLocalCoordinate(x, y, z))
             {
                 if (!storage.TryGet(
                         coordinate,
                         out Chunk chunk))
                 {
-                    voxel =
-                        new Voxel(
-                            BlockIds.Air
-                        );
-
+                    voxel = new Voxel(BlockIds.Air);
                     return false;
                 }
 
-                /*
-                 * El chunk existe, pero sus datos todavía
-                 * pueden estar siendo escritos por Jobs.
-                 *
-                 * Nunca leemos mientras está generándose.
-                 */
                 if (!IsVoxelDataReady(chunk))
                 {
-                    voxel =
-                        new Voxel(
-                            BlockIds.Air
-                        );
-
+                    voxel = new Voxel(BlockIds.Air);
                     return false;
                 }
 
-                voxel =
-                    ChunkDataAccess.GetVoxel(
-                        chunk.Data,
-                        x,
-                        y,
-                        z
-                    );
+                voxel = ChunkDataAccess.GetVoxel(
+                    chunk.Data,
+                    x,
+                    y,
+                    z
+                );
 
                 return true;
             }
 
-            /*
-             * Coordenada fuera del chunk actual.
-             */
             ChunkNeighborDirection direction;
 
             int neighborX = x;
@@ -75,47 +49,35 @@ namespace WildEarth.Voxel
 
             if (x < 0)
             {
-                direction =
-                    ChunkNeighborDirection.West;
-
+                direction = ChunkNeighborDirection.West;
                 neighborX =
                     VoxelConstants.ChunkSize - 1;
             }
             else if (x >= VoxelConstants.ChunkSize)
             {
-                direction =
-                    ChunkNeighborDirection.East;
-
+                direction = ChunkNeighborDirection.East;
                 neighborX = 0;
             }
             else if (y < 0)
             {
-                direction =
-                    ChunkNeighborDirection.Below;
-
+                direction = ChunkNeighborDirection.Below;
                 neighborY =
                     VoxelConstants.ChunkSize - 1;
             }
             else if (y >= VoxelConstants.ChunkSize)
             {
-                direction =
-                    ChunkNeighborDirection.Above;
-
+                direction = ChunkNeighborDirection.Above;
                 neighborY = 0;
             }
             else if (z < 0)
             {
-                direction =
-                    ChunkNeighborDirection.South;
-
+                direction = ChunkNeighborDirection.South;
                 neighborZ =
                     VoxelConstants.ChunkSize - 1;
             }
             else
             {
-                direction =
-                    ChunkNeighborDirection.North;
-
+                direction = ChunkNeighborDirection.North;
                 neighborZ = 0;
             }
 
@@ -125,35 +87,22 @@ namespace WildEarth.Voxel
                     direction,
                     out Chunk neighbor))
             {
-                voxel =
-                    new Voxel(
-                        BlockIds.Air
-                    );
-
+                voxel = new Voxel(BlockIds.Air);
                 return false;
             }
 
-            /*
-             * El vecino existe, pero puede seguir generándose.
-             * En ese caso NO tocamos su NativeArray.
-             */
             if (!IsVoxelDataReady(neighbor))
             {
-                voxel =
-                    new Voxel(
-                        BlockIds.Air
-                    );
-
+                voxel = new Voxel(BlockIds.Air);
                 return false;
             }
 
-            voxel =
-                ChunkDataAccess.GetVoxel(
-                    neighbor.Data,
-                    neighborX,
-                    neighborY,
-                    neighborZ
-                );
+            voxel = ChunkDataAccess.GetVoxel(
+                neighbor.Data,
+                neighborX,
+                neighborY,
+                neighborZ
+            );
 
             return true;
         }
@@ -167,19 +116,16 @@ namespace WildEarth.Voxel
             out bool resolved)
         {
             if (storage == null)
-                throw new ArgumentNullException(
-                    nameof(storage)
-                );
+                throw new ArgumentNullException(nameof(storage));
 
-            resolved =
-                TryGetVoxel(
-                    storage,
-                    coordinate,
-                    x,
-                    y,
-                    z,
-                    out Voxel voxel
-                );
+            resolved = TryGetVoxel(
+                storage,
+                coordinate,
+                x,
+                y,
+                z,
+                out Voxel voxel
+            );
 
             return voxel.BlockId;
         }
@@ -194,21 +140,21 @@ namespace WildEarth.Voxel
             {
                 case ChunkNeighborDirection.North:
                     return z ==
-                           VoxelConstants.ChunkSize - 1;
+                        VoxelConstants.ChunkSize - 1;
 
                 case ChunkNeighborDirection.South:
                     return z == 0;
 
                 case ChunkNeighborDirection.East:
                     return x ==
-                           VoxelConstants.ChunkSize - 1;
+                        VoxelConstants.ChunkSize - 1;
 
                 case ChunkNeighborDirection.West:
                     return x == 0;
 
                 case ChunkNeighborDirection.Above:
                     return y ==
-                           VoxelConstants.ChunkSize - 1;
+                        VoxelConstants.ChunkSize - 1;
 
                 case ChunkNeighborDirection.Below:
                     return y == 0;
@@ -228,10 +174,14 @@ namespace WildEarth.Voxel
             if (chunk == null)
                 return false;
 
-            return chunk.State ==
-                       ChunkState.Generated ||
-                   chunk.State ==
-                       ChunkState.Ready;
+            if (chunk.Data == null ||
+                !chunk.Data.IsCreated)
+            {
+                return false;
+            }
+
+            return chunk.State == ChunkState.Generated ||
+                   chunk.State == ChunkState.Ready;
         }
     }
 }

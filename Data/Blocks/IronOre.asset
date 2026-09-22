@@ -19,14 +19,14 @@ MonoBehaviour:
   hardness: 4
   lightEmission: 0
   topTexture:
-    Column: 2
-    Row: 2
+    Column: 1
+    Row: 5
   bottomTexture:
-    Column: 2
-    Row: 2
+    Column: 1
+    Row: 5
   sideTexture:
-    Column: 2
-    Row: 2
+    Column: 1
+    Row: 5
   requiredTool: 2
   requiredToolLevel: 1
   material: {fileID: 0}

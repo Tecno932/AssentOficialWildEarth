@@ -2,7 +2,8 @@
     "name": "WildEarth.Voxel",
     "rootNamespace": "WildEarth.Voxel",
     "references": [
-        "WildEarth.Core"
+        "WildEarth.Core",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

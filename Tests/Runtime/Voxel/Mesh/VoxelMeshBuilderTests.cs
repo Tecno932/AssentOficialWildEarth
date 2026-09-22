@@ -24,22 +24,22 @@ namespace WildEarth.Tests.Voxel
                     "Assets/_Project/Data/Blocks/BlockRegistry.asset"
                 );
 
-                Assert.That(
-                    registry,
-                    Is.Not.Null,
-                    "No se encontró BlockRegistry.asset."
-                );
+            Assert.That(
+                registry,
+                Is.Not.Null,
+                "No se encontró BlockRegistry.asset."
+            );
 
-                atlasSettings =
-                    ScriptableObject.CreateInstance<VoxelAtlasSettings>();
+            atlasSettings =
+                ScriptableObject.CreateInstance<VoxelAtlasSettings>();
 
-                Assert.That(
-                    atlasSettings,
-                    Is.Not.Null,
-                    "No se pudo crear VoxelAtlasSettings."
-                );
+            Assert.That(
+                atlasSettings,
+                Is.Not.Null,
+                "No se pudo crear VoxelAtlasSettings."
+            );
 
-                blockDatabase =
+            blockDatabase =
                 new BlockRuntimeDatabase(
                     registry,
                     Allocator.Persistent
@@ -93,11 +93,22 @@ namespace WildEarth.Tests.Voxel
             }
         }
 
+        private Chunk CreateGeneratedChunk(
+            ChunkCoordinate coordinate)
+        {
+            Chunk chunk =
+                storage.Create(coordinate);
+
+            chunk.MarkGenerated();
+
+            return chunk;
+        }
+
         [Test]
         public void EmptyChunk_ProducesEmptyMesh()
         {
             Chunk chunk =
-                storage.Create(
+                CreateGeneratedChunk(
                     new ChunkCoordinate(0, 0, 0)
                 );
 
@@ -129,7 +140,7 @@ namespace WildEarth.Tests.Voxel
         public void IsolatedCube_ProducesSixFaces()
         {
             Chunk chunk =
-                storage.Create(
+                CreateGeneratedChunk(
                     new ChunkCoordinate(0, 0, 0)
                 );
 
@@ -169,7 +180,7 @@ namespace WildEarth.Tests.Voxel
         public void TwoAdjacentCubes_HideSharedFace()
         {
             Chunk chunk =
-                storage.Create(
+                CreateGeneratedChunk(
                     new ChunkCoordinate(0, 0, 0)
                 );
 
@@ -217,7 +228,7 @@ namespace WildEarth.Tests.Voxel
         public void UnloadedNeighbor_KeepsBoundaryFaceVisible()
         {
             Chunk chunk =
-                storage.Create(
+                CreateGeneratedChunk(
                     new ChunkCoordinate(0, 0, 0)
                 );
 
@@ -247,12 +258,12 @@ namespace WildEarth.Tests.Voxel
         public void LoadedNeighbor_HidesBoundaryFace()
         {
             Chunk chunk =
-                storage.Create(
+                CreateGeneratedChunk(
                     new ChunkCoordinate(0, 0, 0)
                 );
 
             Chunk neighbor =
-                storage.Create(
+                CreateGeneratedChunk(
                     new ChunkCoordinate(1, 0, 0)
                 );
 

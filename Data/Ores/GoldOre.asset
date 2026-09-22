@@ -18,6 +18,6 @@ MonoBehaviour:
   maxY: 45
   rarity: 0.025
   minVeinSize: 2
-  maxVeinSize: 6
-  frequency: 0.06
+  maxVeinSize: 5
+  frequency: 0.05
   hostBlockIds: 0100t

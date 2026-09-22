@@ -15,9 +15,9 @@ MonoBehaviour:
   blockId: 4
   oreName: Copper Ore
   minY: 20
-  maxY: 110
-  rarity: 0.8
+  maxY: 80
+  rarity: 0.08
   minVeinSize: 3
-  maxVeinSize: 8
-  frequency: 0.08
+  maxVeinSize: 6
+  frequency: 0.035
   hostBlockIds: 0100t

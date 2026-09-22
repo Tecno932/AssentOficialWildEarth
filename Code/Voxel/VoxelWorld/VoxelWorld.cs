@@ -433,6 +433,169 @@ namespace WildEarth.Voxel
             neighbor.MarkNeedsMesh();
         }
 
+        public bool TrySetVoxel(
+            int worldX,
+            int worldY,
+            int worldZ,
+            ushort blockId)
+        {
+            ThrowIfNotInitialized();
+
+            if (worldY < VoxelConstants.MinVoxelY ||
+                worldY > VoxelConstants.MaxVoxelY)
+            {
+                return false;
+            }
+
+            ChunkCoordinate coordinate =
+                new ChunkCoordinate(
+                    FloorDiv(
+                        worldX,
+                        VoxelConstants.ChunkSize
+                    ),
+                    FloorDiv(
+                        worldY,
+                        VoxelConstants.ChunkSize
+                    ),
+                    FloorDiv(
+                        worldZ,
+                        VoxelConstants.ChunkSize
+                    )
+                );
+
+            if (!chunkStorage.TryGet(
+                    coordinate,
+                    out Chunk chunk))
+            {
+                return false;
+            }
+
+            if (chunk == null ||
+                !chunk.Data.IsCreated)
+            {
+                return false;
+            }
+
+            if (chunk.State != ChunkState.Generated &&
+                chunk.State != ChunkState.Ready)
+            {
+                return false;
+            }
+
+            int localX =
+                Mod(
+                    worldX,
+                    VoxelConstants.ChunkSize
+                );
+
+            int localY =
+                Mod(
+                    worldY,
+                    VoxelConstants.ChunkSize
+                );
+
+            int localZ =
+                Mod(
+                    worldZ,
+                    VoxelConstants.ChunkSize
+                );
+
+            int index =
+                VoxelIndex.ToIndex(
+                    localX,
+                    localY,
+                    localZ
+                );
+
+            Voxel current =
+                chunk.Data.Voxels[index];
+
+            if (current.BlockId == blockId)
+            {
+                return false;
+            }
+
+            NativeArray<Voxel> voxels =
+                chunk.Data.Voxels;
+
+            voxels[index] =
+                new Voxel(
+                    blockId,
+                    current.Light,
+                    current.State
+                );
+
+            chunk.MarkVoxelDataChanged();
+
+            if (localX == 0)
+            {
+                TryMarkNeighborForRemesh(
+                    new ChunkCoordinate(
+                        coordinate.X - 1,
+                        coordinate.Y,
+                        coordinate.Z
+                    )
+                );
+            }
+            else if (localX ==
+                    VoxelConstants.ChunkSize - 1)
+            {
+                TryMarkNeighborForRemesh(
+                    new ChunkCoordinate(
+                        coordinate.X + 1,
+                        coordinate.Y,
+                        coordinate.Z
+                    )
+                );
+            }
+
+            if (localY == 0)
+            {
+                TryMarkNeighborForRemesh(
+                    new ChunkCoordinate(
+                        coordinate.X,
+                        coordinate.Y - 1,
+                        coordinate.Z
+                    )
+                );
+            }
+            else if (localY ==
+                    VoxelConstants.ChunkSize - 1)
+            {
+                TryMarkNeighborForRemesh(
+                    new ChunkCoordinate(
+                        coordinate.X,
+                        coordinate.Y + 1,
+                        coordinate.Z
+                    )
+                );
+            }
+
+            if (localZ == 0)
+            {
+                TryMarkNeighborForRemesh(
+                    new ChunkCoordinate(
+                        coordinate.X,
+                        coordinate.Y,
+                        coordinate.Z - 1
+                    )
+                );
+            }
+            else if (localZ ==
+                    VoxelConstants.ChunkSize - 1)
+            {
+                TryMarkNeighborForRemesh(
+                    new ChunkCoordinate(
+                        coordinate.X,
+                        coordinate.Y,
+                        coordinate.Z + 1
+                    )
+                );
+            }
+
+            return true;
+        }
+
         public void DebugLogChunkBlockCounts(
             ChunkCoordinate coordinate)
         {
@@ -503,6 +666,41 @@ namespace WildEarth.Voxel
                 $"Grass={grass} | " +
                 $"Other={other}"
             );
+        }
+
+        private static int FloorDiv(
+            int value,
+            int divisor)
+        {
+            int result =
+                value / divisor;
+
+            int remainder =
+                value % divisor;
+
+            if (remainder != 0 &&
+                ((remainder < 0) !=
+                (divisor < 0)))
+            {
+                result--;
+            }
+
+            return result;
+        }
+
+        private static int Mod(
+            int value,
+            int modulus)
+        {
+            int result =
+                value % modulus;
+
+            if (result < 0)
+            {
+                result += modulus;
+            }
+
+            return result;
         }
 
         private void ThrowIfDisposed()
