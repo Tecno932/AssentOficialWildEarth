@@ -161,93 +161,93 @@ namespace WildEarth.Voxel
             );
         }
 
-        private JobHandle ScheduleTerrain(
-            Chunk chunk,
-            ChunkGenerationContext context,
-            NativeArray<int> surfaceHeights,
-            JobHandle dependency)
+private JobHandle ScheduleTerrain(
+    Chunk chunk,
+    ChunkGenerationContext context,
+    NativeArray<int> surfaceHeights,
+    JobHandle dependency)
+{
+    TerrainGenerationJob job =
+        new TerrainGenerationJob
         {
-            TerrainGenerationJob job =
-                new TerrainGenerationJob
-                {
-                    Context = context,
-                    Settings = settings.Terrain,
+            Context = context,
+            Settings = settings.Terrain,
 
-                    Voxels =
-                        chunk.Data.Voxels,
+            Voxels =
+                chunk.Data.Voxels,
 
-                    Biomes =
-                        chunk.BiomeData.Biomes,
+            Biomes =
+                chunk.BiomeData.Biomes,
 
-                    BiomeDatabase =
-                        biomeDatabase.AsNativeArray(),
+            BiomeDatabase =
+                biomeDatabase.AsNativeArray(),
 
-                    SurfaceHeights =
-                        surfaceHeights
-                };
+            SurfaceHeights =
+                surfaceHeights
+        };
 
-            return job.Schedule(
-                dependency
-            );
-        }
+    return job.Schedule(
+        dependency
+    );
+}
 
-        private JobHandle ScheduleCaves(
-            Chunk chunk,
-            ChunkGenerationContext context,
-            JobHandle dependency)
+private JobHandle ScheduleCaves(
+    Chunk chunk,
+    ChunkGenerationContext context,
+    JobHandle dependency)
+{
+    CaveGenerationJob job =
+        new CaveGenerationJob
         {
-            CaveGenerationJob job =
-                new CaveGenerationJob
-                {
-                    Context = context,
-                    Settings = settings.Caves,
+            Context = context,
+            Settings = settings.Caves,
 
-                    Voxels =
-                        chunk.Data.Voxels,
+            Voxels =
+                chunk.Data.Voxels,
 
-                    BlockDatabase =
-                        blockDatabase.AsNativeArray()
-                };
+            BlockDatabase =
+                blockDatabase.AsNativeArray()
+        };
 
-            return job.Schedule(
-                dependency
-            );
-        }
+    return job.Schedule(
+        dependency
+    );
+}
 
-        private JobHandle ScheduleFluids(
-            Chunk chunk,
-            ChunkGenerationContext context,
-            NativeArray<int> surfaceHeights,
-            JobHandle dependency)
+private JobHandle ScheduleFluids(
+    Chunk chunk,
+    ChunkGenerationContext context,
+    NativeArray<int> surfaceHeights,
+    JobHandle dependency)
+{
+    FluidGenerationJob job =
+        new FluidGenerationJob
         {
-            FluidGenerationJob job =
-                new FluidGenerationJob
-                {
-                    Settings =
-                        settings.Fluids,
+            Settings =
+                settings.Fluids,
 
-                    TerrainSettings =
-                        settings.Terrain,
+            TerrainSettings =
+                settings.Terrain,
 
-                    Voxels =
-                        chunk.Data.Voxels,
+            Voxels =
+                chunk.Data.Voxels,
 
-                    SurfaceHeights =
-                        surfaceHeights,
+            SurfaceHeights =
+                surfaceHeights,
 
-                    Water =
-                        fluidDatabase.Get(
-                            FluidType.Water
-                        ),
+            Water =
+                fluidDatabase.Get(
+                    FluidType.Water
+                ),
 
-                    WorldOriginY =
-                        context.WorldOrigin.y
-                };
+            WorldOriginY =
+                context.WorldOrigin.y
+        };
 
-            return job.Schedule(
-                dependency
-            );
-        }
+    return job.Schedule(
+        dependency
+    );
+}
 
         private JobHandle ScheduleOres(
             Chunk chunk,

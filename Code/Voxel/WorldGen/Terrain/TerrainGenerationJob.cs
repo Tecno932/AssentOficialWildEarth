@@ -8,34 +8,14 @@ namespace WildEarth.Voxel
     [BurstCompile]
     public struct TerrainGenerationJob : IJob
     {
-        /*
-         * Estratigrafía base:
-         *
-         *   Surface:
-         *       1 Grass
-         *
-         *   SubSurface:
-         *       4 Dirt
-         *
-         *   Deep:
-         *       Stone
-         *
-         * Ejemplo con superficie Y = 64:
-         *
-         *   Y = 64  Grass
-         *   Y = 63  Dirt
-         *   Y = 62  Dirt
-         *   Y = 61  Dirt
-         *   Y = 60  Dirt
-         *   Y <= 59 Stone
-         */
-
         private const int SurfaceDepth = 1;
+
         public ChunkGenerationContext Context;
         public TerrainGenerationSettings Settings;
 
         public NativeArray<Voxel> Voxels;
 
+        [ReadOnly]
         public NativeArray<BiomeId> Biomes;
 
         [ReadOnly]
@@ -52,78 +32,55 @@ namespace WildEarth.Voxel
             {
                 for (int x = 0; x < chunkSize; x++)
                 {
+                    int columnIndex =
+                        x + z * chunkSize;
+
                     BiomeId biomeId =
-                        GetBiome(
-                            x,
-                            z
-                        );
+                        Biomes[columnIndex];
 
-                    BiomeRuntimeData biome =
-                        GetBiomeData(
-                            biomeId
-                        );
+            BiomeRuntimeData biome =
+                GetBiomeData(biomeId);
 
-                    int worldX =
-                        Context.WorldOrigin.x +
-                        x;
+            int worldX =
+                Context.WorldOrigin.x + x;
 
-                    int worldZ =
-                        Context.WorldOrigin.z +
-                        z;
+            int worldZ =
+                Context.WorldOrigin.z + z;
 
-                    int terrainHeight =
-                        CalculateTerrainHeight(
-                            worldX,
-                            worldZ,
-                            biome
-                        );
+            int terrainHeight =
+                CalculateTerrainHeight(
+                    worldX,
+                    worldZ,
+                    biome
+                );
 
-                    int surfaceIndex =
-                        x +
-                        z * chunkSize;
+            SurfaceHeights[columnIndex] =
+                terrainHeight;
 
-                    SurfaceHeights[surfaceIndex] =
-                        terrainHeight;
+            for (int y = 0; y < chunkSize; y++)
+            {
+                int worldY =
+                    Context.WorldOrigin.y + y;
 
-                    for (int y = 0; y < chunkSize; y++)
-                    {
-                        int worldY =
-                            Context.WorldOrigin.y +
-                            y;
+                ushort blockId =
+                    ResolveBlock(
+                        worldY,
+                        terrainHeight,
+                        biome
+                    );
 
-                        ushort blockId =
-                            ResolveBlock(
-                                worldY,
-                                terrainHeight,
-                                biome
-                            );
+                int index =
+                    VoxelIndex.ToIndex(
+                        x,
+                        y,
+                        z
+                    );
 
-                        int index =
-                            VoxelIndex.ToIndex(
-                                x,
-                                y,
-                                z
-                            );
-
-                        Voxels[index] =
-                            new Voxel(
-                                blockId
-                            );
+                Voxels[index] =
+                    new Voxel(blockId);
                     }
                 }
             }
-        }
-
-        private BiomeId GetBiome(
-            int localX,
-            int localZ)
-        {
-            int index =
-                localX +
-                localZ *
-                VoxelConstants.ChunkSize;
-
-            return Biomes[index];
         }
 
         private BiomeRuntimeData GetBiomeData(
@@ -201,10 +158,10 @@ namespace WildEarth.Voxel
                 TerrainNoise.Fractal01(
                     position,
                     Settings.ErosionFrequency,
-                    octaves: 3,
-                    lacunarity: 2f,
-                    persistence: 0.5f,
-                    seed: Context.Seed + 2000
+                    3,
+                    2f,
+                    0.5f,
+                    Context.Seed + 2000
                 );
 
             float erosionShape =
@@ -218,10 +175,10 @@ namespace WildEarth.Voxel
                 TerrainNoise.Fractal01(
                     position,
                     Settings.PeaksFrequency,
-                    octaves: 4,
-                    lacunarity: 2f,
-                    persistence: 0.5f,
-                    seed: Context.Seed + 3000
+                    4,
+                    2f,
+                    0.5f,
+                    Context.Seed + 3000
                 );
 
             float peaksShape =

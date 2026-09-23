@@ -20,13 +20,13 @@ MonoBehaviour:
   lightEmission: 0
   topTexture:
     Column: 0
-    Row: 6
+    Row: 0
   bottomTexture:
     Column: 0
-    Row: 6
+    Row: 0
   sideTexture:
     Column: 0
-    Row: 6
+    Row: 0
   requiredTool: 0
   requiredToolLevel: 0
   material: {fileID: 0}

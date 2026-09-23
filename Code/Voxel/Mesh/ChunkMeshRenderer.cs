@@ -16,18 +16,25 @@ namespace WildEarth.Voxel
 
         private void Awake()
         {
-            meshFilter = GetComponent<MeshFilter>();
-            meshRenderer = GetComponent<MeshRenderer>();
-            meshCollider = GetComponent<MeshCollider>();
+            meshFilter =
+                GetComponent<MeshFilter>();
 
-            mesh = new Mesh
-            {
-                name = "ChunkMesh"
-            };
+            meshRenderer =
+                GetComponent<MeshRenderer>();
+
+            meshCollider =
+                GetComponent<MeshCollider>();
+
+            mesh =
+                new Mesh
+                {
+                    name = "ChunkMesh"
+                };
 
             mesh.MarkDynamic();
 
             meshFilter.sharedMesh = mesh;
+
             meshCollider.sharedMesh = mesh;
         }
 
@@ -36,9 +43,11 @@ namespace WildEarth.Voxel
             Material material)
         {
             if (meshData == null)
+            {
                 throw new System.ArgumentNullException(
                     nameof(meshData)
                 );
+            }
 
             EnsureMesh();
 
@@ -47,12 +56,30 @@ namespace WildEarth.Voxel
             if (meshData.VertexCount > 0)
             {
                 var vertices =
-                    new Vector3[meshData.Vertices.Count];
+                    new Vector3[
+                        meshData.Vertices.Count
+                    ];
 
                 var uvs =
-                    new Vector2[meshData.UVs.Count];
+                    new Vector2[
+                        meshData.UVs.Count
+                    ];
 
-                for (int i = 0; i < vertices.Length; i++)
+                var tiledUVs =
+                    new Vector2[
+                        meshData.TiledUVs.Count
+                    ];
+
+                var normals =
+                    new Vector3[
+                        meshData.Normals.Count
+                    ];
+
+                for (
+                    int i = 0;
+                    i < vertices.Length;
+                    i++
+                )
                 {
                     vertices[i] =
                         new Vector3(
@@ -62,12 +89,43 @@ namespace WildEarth.Voxel
                         );
                 }
 
-                for (int i = 0; i < uvs.Length; i++)
+                for (
+                    int i = 0;
+                    i < uvs.Length;
+                    i++
+                )
                 {
                     uvs[i] =
                         new Vector2(
                             meshData.UVs[i].x,
                             meshData.UVs[i].y
+                        );
+                }
+
+                for (
+                    int i = 0;
+                    i < tiledUVs.Length;
+                    i++
+                )
+                {
+                    tiledUVs[i] =
+                        new Vector2(
+                            meshData.TiledUVs[i].x,
+                            meshData.TiledUVs[i].y
+                        );
+                }
+
+                for (
+                    int i = 0;
+                    i < normals.Length;
+                    i++
+                )
+                {
+                    normals[i] =
+                        new Vector3(
+                            meshData.Normals[i].x,
+                            meshData.Normals[i].y,
+                            meshData.Normals[i].z
                         );
                 }
 
@@ -83,14 +141,23 @@ namespace WildEarth.Voxel
                     uvs
                 );
 
+                mesh.SetUVs(
+                    1,
+                    tiledUVs
+                );
+
+                mesh.SetNormals(normals);
+
                 mesh.RecalculateBounds();
-                mesh.RecalculateNormals();
             }
 
-            meshRenderer.sharedMaterial = material;
+            meshRenderer.sharedMaterial =
+                material;
 
             meshCollider.sharedMesh = null;
-            meshCollider.sharedMesh = mesh;
+
+            meshCollider.sharedMesh =
+                mesh;
         }
 
         public void Clear()
@@ -105,37 +172,51 @@ namespace WildEarth.Voxel
         private void EnsureMesh()
         {
             if (meshFilter == null)
-                meshFilter = GetComponent<MeshFilter>();
+            {
+                meshFilter =
+                    GetComponent<MeshFilter>();
+            }
 
             if (meshRenderer == null)
-                meshRenderer = GetComponent<MeshRenderer>();
+            {
+                meshRenderer =
+                    GetComponent<MeshRenderer>();
+            }
 
             if (meshCollider == null)
-                meshCollider = GetComponent<MeshCollider>();
+            {
+                meshCollider =
+                    GetComponent<MeshCollider>();
+            }
 
             if (mesh != null)
                 return;
 
-            mesh = new Mesh
-            {
-                name = "ChunkMesh"
-            };
+            mesh =
+                new Mesh
+                {
+                    name = "ChunkMesh"
+                };
 
             mesh.MarkDynamic();
 
             meshFilter.sharedMesh = mesh;
+
             meshCollider.sharedMesh = mesh;
         }
 
         private void OnDestroy()
         {
             if (meshCollider != null)
+            {
                 meshCollider.sharedMesh = null;
+            }
 
             if (mesh == null)
                 return;
 
             Destroy(mesh);
+
             mesh = null;
         }
     }

@@ -11,9 +11,13 @@ namespace WildEarth.Voxel
         public TerrainGenerationSettings TerrainSettings;
 
         public NativeArray<Voxel> Voxels;
+
+        [ReadOnly]
         public NativeArray<int> SurfaceHeights;
 
         public FluidRuntimeData Water;
+
+        public int WorldOriginY;
 
         public void Execute()
         {
@@ -49,9 +53,30 @@ namespace WildEarth.Voxel
                     int endY =
                         TerrainSettings.SeaLevel;
 
-                    for (int worldY = startY;
-                         worldY <= endY;
-                         worldY++)
+                    int chunkMinY =
+                        WorldOriginY;
+
+                    int chunkMaxY =
+                        WorldOriginY +
+                        chunkSize -
+                        1;
+
+                    int fillMinY =
+                        startY > chunkMinY
+                            ? startY
+                            : chunkMinY;
+
+                    int fillMaxY =
+                        endY < chunkMaxY
+                            ? endY
+                            : chunkMaxY;
+
+                    if (fillMinY > fillMaxY)
+                        continue;
+
+                    for (int worldY = fillMinY;
+                        worldY <= fillMaxY;
+                        worldY++)
                     {
                         if (worldY <
                             VoxelConstants.MinVoxelY ||
@@ -64,12 +89,6 @@ namespace WildEarth.Voxel
                         int localY =
                             worldY -
                             WorldOriginY;
-
-                        if (localY < 0 ||
-                            localY >= chunkSize)
-                        {
-                            continue;
-                        }
 
                         int voxelIndex =
                             VoxelIndex.ToIndex(
@@ -96,7 +115,5 @@ namespace WildEarth.Voxel
                 }
             }
         }
-
-        public int WorldOriginY;
     }
 }
