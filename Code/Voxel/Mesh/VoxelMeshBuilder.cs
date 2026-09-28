@@ -9,9 +9,12 @@ namespace WildEarth.Voxel
         private readonly BlockRuntimeDatabase blockDatabase;
         private readonly VoxelAtlasSettings atlasSettings;
 
-        private const int MaskSize =
-            VoxelConstants.ChunkSize *
+        private const int BinaryMaskSize =
             VoxelConstants.ChunkSize;
+
+        private const int MaskCellCount =
+            BinaryMaskSize *
+            BinaryMaskSize;
 
         public VoxelMeshBuilder(
             BlockRuntimeDatabase blockDatabase,
@@ -35,10 +38,14 @@ namespace WildEarth.Voxel
             ChunkStorage storage)
         {
             if (chunk == null)
-                throw new ArgumentNullException(nameof(chunk));
+                throw new ArgumentNullException(
+                    nameof(chunk)
+                );
 
             if (storage == null)
-                throw new ArgumentNullException(nameof(storage));
+                throw new ArgumentNullException(
+                    nameof(storage)
+                );
 
             if (!chunk.Data.IsCreated)
             {
@@ -68,7 +75,7 @@ namespace WildEarth.Voxel
                 face < 6;
                 face++)
             {
-                BuildGreedyDirection(
+                BuildBinaryGreedyDirection(
                     mesh,
                     voxelIds,
                     (VoxelFace)face
@@ -95,9 +102,6 @@ namespace WildEarth.Voxel
                     size
                 ];
 
-            // Copia directa de los voxels del chunk.
-            // Evita ChunkStorage + readiness checks para
-            // los 4096 voxels internos.
             for (
                 int y = 0;
                 y < chunkSize;
@@ -128,13 +132,12 @@ namespace WildEarth.Voxel
                                 z + 1,
                                 size
                             )
-                        ] = voxel.BlockId;
+                        ] =
+                            voxel.BlockId;
                     }
                 }
             }
 
-            // Solo necesitamos los voxels externos de las
-            // seis caras para el face culling.
             for (
                 int i = 0;
                 i < chunkSize;
@@ -145,7 +148,6 @@ namespace WildEarth.Voxel
                     j < chunkSize;
                     j++)
                 {
-                    // West
                     cache[
                         CacheIndex(
                             0,
@@ -153,15 +155,15 @@ namespace WildEarth.Voxel
                             i + 1,
                             size
                         )
-                    ] = GetNeighborBlockId(
-                        storage,
-                        chunk,
-                        -1,
-                        j,
-                        i
-                    );
+                    ] =
+                        GetNeighborBlockId(
+                            storage,
+                            chunk,
+                            -1,
+                            j,
+                            i
+                        );
 
-                    // East
                     cache[
                         CacheIndex(
                             chunkSize + 1,
@@ -169,15 +171,15 @@ namespace WildEarth.Voxel
                             i + 1,
                             size
                         )
-                    ] = GetNeighborBlockId(
-                        storage,
-                        chunk,
-                        chunkSize,
-                        j,
-                        i
-                    );
+                    ] =
+                        GetNeighborBlockId(
+                            storage,
+                            chunk,
+                            chunkSize,
+                            j,
+                            i
+                        );
 
-                    // Below
                     cache[
                         CacheIndex(
                             i + 1,
@@ -185,15 +187,15 @@ namespace WildEarth.Voxel
                             j + 1,
                             size
                         )
-                    ] = GetNeighborBlockId(
-                        storage,
-                        chunk,
-                        i,
-                        -1,
-                        j
-                    );
+                    ] =
+                        GetNeighborBlockId(
+                            storage,
+                            chunk,
+                            i,
+                            -1,
+                            j
+                        );
 
-                    // Above
                     cache[
                         CacheIndex(
                             i + 1,
@@ -201,15 +203,15 @@ namespace WildEarth.Voxel
                             j + 1,
                             size
                         )
-                    ] = GetNeighborBlockId(
-                        storage,
-                        chunk,
-                        i,
-                        chunkSize,
-                        j
-                    );
+                    ] =
+                        GetNeighborBlockId(
+                            storage,
+                            chunk,
+                            i,
+                            chunkSize,
+                            j
+                        );
 
-                    // South
                     cache[
                         CacheIndex(
                             i + 1,
@@ -217,15 +219,15 @@ namespace WildEarth.Voxel
                             0,
                             size
                         )
-                    ] = GetNeighborBlockId(
-                        storage,
-                        chunk,
-                        i,
-                        j,
-                        -1
-                    );
+                    ] =
+                        GetNeighborBlockId(
+                            storage,
+                            chunk,
+                            i,
+                            j,
+                            -1
+                        );
 
-                    // North
                     cache[
                         CacheIndex(
                             i + 1,
@@ -233,13 +235,14 @@ namespace WildEarth.Voxel
                             chunkSize + 1,
                             size
                         )
-                    ] = GetNeighborBlockId(
-                        storage,
-                        chunk,
-                        i,
-                        j,
-                        chunkSize
-                    );
+                    ] =
+                        GetNeighborBlockId(
+                            storage,
+                            chunk,
+                            i,
+                            j,
+                            chunkSize
+                        );
                 }
             }
 
@@ -268,7 +271,7 @@ namespace WildEarth.Voxel
                 : BlockIds.Air;
         }
 
-        private void BuildGreedyDirection(
+        private void BuildBinaryGreedyDirection(
             ChunkMeshData mesh,
             ushort[] voxelIds,
             VoxelFace face)
@@ -276,11 +279,20 @@ namespace WildEarth.Voxel
             int chunkSize =
                 VoxelConstants.ChunkSize;
 
-            int size =
+            int cacheSize =
                 chunkSize + 2;
 
-            int[] mask =
-                new int[MaskSize];
+            // Cada fila representa 16 celdas mediante bits.
+            ushort[] binaryRows =
+                new ushort[
+                    BinaryMaskSize
+                ];
+
+            // Mantiene el texture/block key de cada celda.
+            int[] keys =
+                new int[
+                    MaskCellCount
+                ];
 
             for (
                 int slice = 0;
@@ -288,31 +300,40 @@ namespace WildEarth.Voxel
                 slice++)
             {
                 Array.Clear(
-                    mask,
+                    binaryRows,
                     0,
-                    mask.Length
+                    binaryRows.Length
                 );
 
-                BuildFaceMask(
+                Array.Clear(
+                    keys,
+                    0,
+                    keys.Length
+                );
+
+                BuildBinaryFaceMask(
+                    binaryRows,
+                    keys,
                     voxelIds,
-                    mask,
                     face,
                     slice,
-                    size
+                    cacheSize
                 );
 
-                GreedyMergeMask(
+                BinaryGreedyMerge(
                     mesh,
-                    mask,
+                    binaryRows,
+                    keys,
                     face,
                     slice
                 );
             }
         }
 
-        private void BuildFaceMask(
+        private void BuildBinaryFaceMask(
+            ushort[] binaryRows,
+            int[] keys,
             ushort[] voxelIds,
-            int[] mask,
             VoxelFace face,
             int slice,
             int cacheSize)
@@ -325,6 +346,8 @@ namespace WildEarth.Voxel
                 v < chunkSize;
                 v++)
             {
+                ushort rowMask = 0;
+
                 for (
                     int u = 0;
                     u < chunkSize;
@@ -427,18 +450,26 @@ namespace WildEarth.Voxel
                             face
                         );
 
-                    mask[
+                    int index =
                         u +
-                        v * chunkSize
-                    ] =
+                        v * chunkSize;
+
+                    keys[index] =
                         textureKey;
+
+                    rowMask |=
+                        (ushort)(1 << u);
                 }
+
+                binaryRows[v] =
+                    rowMask;
             }
         }
 
-        private void GreedyMergeMask(
+        private void BinaryGreedyMerge(
             ChunkMeshData mesh,
-            int[] mask,
+            ushort[] binaryRows,
+            int[] keys,
             VoxelFace face,
             int slice)
         {
@@ -450,73 +481,62 @@ namespace WildEarth.Voxel
                 v < chunkSize;
                 v++)
             {
-                for (
-                    int u = 0;
-                    u < chunkSize;
-                    u++)
+                while (binaryRows[v] != 0)
                 {
+                    int u =
+                        FindFirstSetBit(
+                            binaryRows[v]
+                        );
+
                     int index =
                         u +
                         v * chunkSize;
 
                     int key =
-                        mask[index];
+                        keys[index];
 
                     if (key == 0)
-                        continue;
-
-                    int width = 1;
-
-                    while (
-                        u + width < chunkSize &&
-                        mask[
-                            u +
-                            width +
-                            v * chunkSize
-                        ] == key)
                     {
-                        width++;
+                        binaryRows[v] &=
+                            (ushort)~(1 << u);
+
+                        continue;
                     }
 
-                    int height = 1;
+                    int width =
+                        FindBinaryWidth(
+                            binaryRows[v],
+                            keys,
+                            v,
+                            u,
+                            key
+                        );
 
-                    bool canExpand;
+                    int height =
+                        FindBinaryHeight(
+                            binaryRows,
+                            keys,
+                            v,
+                            u,
+                            width,
+                            key
+                        );
 
-                    do
-                    {
-                        canExpand = true;
+                    ushort rectangleMask =
+                        CreateRectangleMask(
+                            u,
+                            width
+                        );
 
-                        if (
-                            v + height >=
-                            chunkSize)
-                        {
-                            canExpand = false;
-                        }
-                        else
-                        {
-                            for (
-                                int x = 0;
-                                x < width;
-                                x++)
-                            {
-                                if (
-                                    mask[
-                                        u +
-                                        x +
-                                        (v + height) *
-                                        chunkSize
-                                    ] != key)
-                                {
-                                    canExpand = false;
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (canExpand)
-                            height++;
-
-                    } while (canExpand);
+                    ClearBinaryRectangle(
+                        binaryRows,
+                        keys,
+                        v,
+                        u,
+                        width,
+                        height,
+                        rectangleMask
+                    );
 
                     ushort blockId =
                         GetBlockIdFromTextureKey(
@@ -549,25 +569,165 @@ namespace WildEarth.Voxel
                         height,
                         texture
                     );
+                }
+            }
+        }
 
-                    for (
-                        int y = 0;
-                        y < height;
-                        y++)
+        private int FindFirstSetBit(
+            ushort value)
+        {
+            for (
+                int bit = 0;
+                bit < BinaryMaskSize;
+                bit++)
+            {
+                if ((value & (1 << bit)) != 0)
+                    return bit;
+            }
+
+            return 0;
+        }
+
+        private int FindBinaryWidth(
+            ushort row,
+            int[] keys,
+            int v,
+            int startU,
+            int key)
+        {
+            int chunkSize =
+                VoxelConstants.ChunkSize;
+
+            int width = 0;
+
+            for (
+                int u = startU;
+                u < chunkSize;
+                u++)
+            {
+                if ((row & (1 << u)) == 0)
+                    break;
+
+                if (keys[
+                        u +
+                        v * chunkSize
+                    ] != key)
+                {
+                    break;
+                }
+
+                width++;
+            }
+
+            return width;
+        }
+
+        private int FindBinaryHeight(
+            ushort[] binaryRows,
+            int[] keys,
+            int startV,
+            int startU,
+            int width,
+            int key)
+        {
+            int chunkSize =
+                VoxelConstants.ChunkSize;
+
+            int height = 1;
+
+            ushort rectangleMask =
+                CreateRectangleMask(
+                    startU,
+                    width
+                );
+
+            while (
+                startV + height <
+                chunkSize)
+            {
+                ushort nextRow =
+                    binaryRows[
+                        startV + height
+                    ];
+
+                if ((nextRow & rectangleMask) !=
+                    rectangleMask)
+                {
+                    break;
+                }
+
+                bool sameKey = true;
+
+                for (
+                    int u = startU;
+                    u < startU + width;
+                    u++)
+                {
+                    if (keys[
+                            u +
+                            (startV + height) *
+                            chunkSize
+                        ] != key)
                     {
-                        for (
-                            int x = 0;
-                            x < width;
-                            x++)
-                        {
-                            mask[
-                                u +
-                                x +
-                                (v + y) *
-                                chunkSize
-                            ] = 0;
-                        }
+                        sameKey = false;
+                        break;
                     }
+                }
+
+                if (!sameKey)
+                    break;
+
+                height++;
+            }
+
+            return height;
+        }
+
+        private ushort CreateRectangleMask(
+            int startU,
+            int width)
+        {
+            int mask =
+                ((1 << width) - 1)
+                << startU;
+
+            return (ushort)mask;
+        }
+
+        private void ClearBinaryRectangle(
+            ushort[] binaryRows,
+            int[] keys,
+            int startV,
+            int startU,
+            int width,
+            int height,
+            ushort rectangleMask)
+        {
+            int chunkSize =
+                VoxelConstants.ChunkSize;
+
+            for (
+                int y = 0;
+                y < height;
+                y++)
+            {
+                int row =
+                    startV + y;
+
+                binaryRows[row] &=
+                    (ushort)~rectangleMask;
+
+                for (
+                    int x = 0;
+                    x < width;
+                    x++)
+                {
+                    keys[
+                        startU +
+                        x +
+                        row *
+                        chunkSize
+                    ] = 0;
                 }
             }
         }
@@ -628,26 +788,10 @@ namespace WildEarth.Voxel
                     z1 = v + height;
 
                     mesh.AddTiledQuad(
-                        new float3(
-                            x0,
-                            y0,
-                            z0
-                        ),
-                        new float3(
-                            x1,
-                            y0,
-                            z0
-                        ),
-                        new float3(
-                            x1,
-                            y0,
-                            z1
-                        ),
-                        new float3(
-                            x0,
-                            y0,
-                            z1
-                        ),
+                        new float3(x0, y0, z0),
+                        new float3(x1, y0, z0),
+                        new float3(x1, y0, z1),
+                        new float3(x0, y0, z1),
                         atlasTileMin,
                         uv0,
                         uv1,
@@ -664,26 +808,10 @@ namespace WildEarth.Voxel
                     z1 = v + height;
 
                     mesh.AddTiledQuad(
-                        new float3(
-                            x0,
-                            y0,
-                            z1
-                        ),
-                        new float3(
-                            x1,
-                            y0,
-                            z1
-                        ),
-                        new float3(
-                            x1,
-                            y0,
-                            z0
-                        ),
-                        new float3(
-                            x0,
-                            y0,
-                            z0
-                        ),
+                        new float3(x0, y0, z1),
+                        new float3(x1, y0, z1),
+                        new float3(x1, y0, z0),
+                        new float3(x0, y0, z0),
                         atlasTileMin,
                         uv0,
                         uv1,
@@ -700,26 +828,10 @@ namespace WildEarth.Voxel
                     z0 = slice + 1;
 
                     mesh.AddTiledQuad(
-                        new float3(
-                            x0,
-                            y0,
-                            z0
-                        ),
-                        new float3(
-                            x1,
-                            y0,
-                            z0
-                        ),
-                        new float3(
-                            x1,
-                            y1,
-                            z0
-                        ),
-                        new float3(
-                            x0,
-                            y1,
-                            z0
-                        ),
+                        new float3(x0, y0, z0),
+                        new float3(x1, y0, z0),
+                        new float3(x1, y1, z0),
+                        new float3(x0, y1, z0),
                         atlasTileMin,
                         uv0,
                         uv1,
@@ -736,26 +848,10 @@ namespace WildEarth.Voxel
                     z0 = slice;
 
                     mesh.AddTiledQuad(
-                        new float3(
-                            x1,
-                            y0,
-                            z0
-                        ),
-                        new float3(
-                            x0,
-                            y0,
-                            z0
-                        ),
-                        new float3(
-                            x0,
-                            y1,
-                            z0
-                        ),
-                        new float3(
-                            x1,
-                            y1,
-                            z0
-                        ),
+                        new float3(x1, y0, z0),
+                        new float3(x0, y0, z0),
+                        new float3(x0, y1, z0),
+                        new float3(x1, y1, z0),
                         atlasTileMin,
                         uv0,
                         uv1,
@@ -772,26 +868,10 @@ namespace WildEarth.Voxel
                     z1 = u + width;
 
                     mesh.AddTiledQuad(
-                        new float3(
-                            x0,
-                            y0,
-                            z1
-                        ),
-                        new float3(
-                            x0,
-                            y0,
-                            z0
-                        ),
-                        new float3(
-                            x0,
-                            y1,
-                            z0
-                        ),
-                        new float3(
-                            x0,
-                            y1,
-                            z1
-                        ),
+                        new float3(x0, y0, z1),
+                        new float3(x0, y0, z0),
+                        new float3(x0, y1, z0),
+                        new float3(x0, y1, z1),
                         atlasTileMin,
                         uv0,
                         uv1,
@@ -808,26 +888,10 @@ namespace WildEarth.Voxel
                     z1 = u + width;
 
                     mesh.AddTiledQuad(
-                        new float3(
-                            x0,
-                            y0,
-                            z0
-                        ),
-                        new float3(
-                            x0,
-                            y0,
-                            z1
-                        ),
-                        new float3(
-                            x0,
-                            y1,
-                            z1
-                        ),
-                        new float3(
-                            x0,
-                            y1,
-                            z0
-                        ),
+                        new float3(x0, y0, z0),
+                        new float3(x0, y0, z1),
+                        new float3(x0, y1, z1),
+                        new float3(x0, y1, z0),
                         atlasTileMin,
                         uv0,
                         uv1,
@@ -968,22 +1032,6 @@ namespace WildEarth.Voxel
             return new float2(
                 min.x,
                 min.y
-            );
-        }
-
-        private float2 GetAtlasUV(
-            AtlasTileCoordinate texture,
-            int corner)
-        {
-            Vector2 uv =
-                atlasSettings.GetUV(
-                    texture,
-                    corner
-                );
-
-            return new float2(
-                uv.x,
-                uv.y
             );
         }
     }

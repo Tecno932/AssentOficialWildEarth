@@ -20,6 +20,10 @@ namespace WildEarth.Voxel
         private readonly HashSet<FluidSimulationRequest>
             pendingSimulationKeys;
 
+        // Reutilizada para evitar allocation en cada CompleteFinished().
+        private readonly List<ChunkCoordinate>
+            completedCoordinates;
+
         private bool disposed;
 
         public int RunningCount =>
@@ -79,6 +83,9 @@ namespace WildEarth.Voxel
 
             pendingSimulationKeys =
                 new HashSet<FluidSimulationRequest>();
+
+            completedCoordinates =
+                new List<ChunkCoordinate>();
 
             disposed = false;
         }
@@ -178,7 +185,6 @@ namespace WildEarth.Voxel
             if (runners.ContainsKey(coordinate))
             {
                 RemovePendingRequest();
-
                 return false;
             }
 
@@ -187,14 +193,12 @@ namespace WildEarth.Voxel
                     out Chunk chunk))
             {
                 RemovePendingRequest();
-
                 return false;
             }
 
             if (chunk == null)
             {
                 RemovePendingRequest();
-
                 return false;
             }
 
@@ -240,15 +244,6 @@ namespace WildEarth.Voxel
                     continue;
                 }
 
-                /*
-                * TryScheduleNext() puede consumir una solicitud
-                * inválida, por ejemplo:
-                *
-                * - chunk inexistente
-                * - chunk que ya está ejecutándose
-                *
-                * En ese caso seguimos buscando otra solicitud válida.
-                */
                 if (
                     pendingSimulationRequests.Count <
                     pendingBefore)
@@ -256,11 +251,6 @@ namespace WildEarth.Voxel
                     continue;
                 }
 
-                /*
-                * La solicitud sigue en la cola pero no pudo
-                * programarse. No seguimos intentando para evitar
-                * un bucle infinito.
-                */
                 break;
             }
 
@@ -394,8 +384,7 @@ namespace WildEarth.Voxel
             if (runners.Count == 0)
                 return 0;
 
-            List<ChunkCoordinate> completedCoordinates =
-                new List<ChunkCoordinate>();
+            completedCoordinates.Clear();
 
             foreach (
                 KeyValuePair<
@@ -414,39 +403,40 @@ namespace WildEarth.Voxel
 
             int added = 0;
 
-            foreach (
-                ChunkCoordinate coordinate
-                in completedCoordinates)
+            for (int i = 0;
+                 i < completedCoordinates.Count;
+                 i++)
             {
                 added +=
                     CompleteAndEnqueue(
-                        coordinate
+                        completedCoordinates[i]
                     );
             }
 
             return added;
         }
 
-public void CompleteAll()
-{
-    ThrowIfDisposed();
+        public void CompleteAll()
+        {
+            ThrowIfDisposed();
 
-    foreach (
-        FluidSimulationRunner runner
-        in runners.Values)
-    {
-        runner.Complete();
-    }
+            foreach (
+                FluidSimulationRunner runner
+                in runners.Values)
+            {
+                runner.Complete();
+            }
 
-    foreach (
-        FluidSimulationRunner runner
-        in runners.Values)
-    {
-        runner.Dispose();
-    }
+            foreach (
+                FluidSimulationRunner runner
+                in runners.Values)
+            {
+                runner.Dispose();
+            }
 
-    runners.Clear();
-}
+            runners.Clear();
+            completedCoordinates.Clear();
+        }
 
         public bool Remove(
             ChunkCoordinate coordinate)
@@ -484,6 +474,8 @@ public void CompleteAll()
 
             pendingSimulationRequests.Clear();
             pendingSimulationKeys.Clear();
+
+            completedCoordinates.Clear();
         }
 
         public void Dispose()
@@ -502,6 +494,8 @@ public void CompleteAll()
 
             pendingSimulationRequests.Clear();
             pendingSimulationKeys.Clear();
+
+            completedCoordinates.Clear();
 
             disposed = true;
         }

@@ -62,13 +62,19 @@ namespace WildEarth.Voxel.Tests
                     0
                 );
 
-            chunkStorage.Create(
-                chunkCoordinate
-            );
+            Chunk chunk =
+                chunkStorage.Create(
+                    chunkCoordinate
+                );
 
-            chunkStorage.Create(
-                neighborCoordinate
-            );
+            chunk.MarkGenerated();
+
+            Chunk neighborChunk =
+                chunkStorage.Create(
+                    neighborCoordinate
+                );
+
+            neighborChunk.MarkGenerated();
 
             waterDefinition =
                 CreateFluidDefinition(
@@ -1851,6 +1857,8 @@ namespace WildEarth.Voxel.Tests
                 chunkStorage.Create(
                     unloadedCoordinate
                 );
+
+            loadedChunk.MarkGenerated();
 
             scheduler.NotifyChunkLoaded(
                 unloadedCoordinate

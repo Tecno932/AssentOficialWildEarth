@@ -208,17 +208,17 @@ namespace WildEarth.Tests.Voxel
 
             Assert.That(
                 mesh.FaceCount,
-                Is.EqualTo(10)
+                Is.EqualTo(6)
             );
 
             Assert.That(
                 mesh.VertexCount,
-                Is.EqualTo(40)
+                Is.EqualTo(24)
             );
 
             Assert.That(
-                mesh.TriangleIndexCount,
-                Is.EqualTo(60)
+                mesh.Triangles.Count,
+                Is.EqualTo(36)
             );
 
             mesh.Dispose();

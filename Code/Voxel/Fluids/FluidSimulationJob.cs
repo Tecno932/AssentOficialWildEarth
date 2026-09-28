@@ -1,6 +1,5 @@
 using Unity.Burst;
 using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 
 namespace WildEarth.Voxel
@@ -69,45 +68,57 @@ namespace WildEarth.Voxel
                 fluid
             );
 
-            TryCreateHorizontalChange(
-                index,
-                ref changeCount,
-                x + 1,
-                y,
-                z,
-                state,
-                fluid
-            );
+            if (Settings.AllowHorizontalFlow)
+            {
+                byte horizontalLevel =
+                    FluidPropagation.CalculateHorizontalLevel(
+                        state.Level,
+                        fluid.HorizontalFlowDecay
+                    );
 
-            TryCreateHorizontalChange(
-                index,
-                ref changeCount,
-                x - 1,
-                y,
-                z,
-                state,
-                fluid
-            );
+                if (horizontalLevel != 0)
+                {
+                    TryCreateHorizontalChange(
+                        index,
+                        ref changeCount,
+                        x + 1,
+                        y,
+                        z,
+                        state,
+                        horizontalLevel
+                    );
 
-            TryCreateHorizontalChange(
-                index,
-                ref changeCount,
-                x,
-                y,
-                z + 1,
-                state,
-                fluid
-            );
+                    TryCreateHorizontalChange(
+                        index,
+                        ref changeCount,
+                        x - 1,
+                        y,
+                        z,
+                        state,
+                        horizontalLevel
+                    );
 
-            TryCreateHorizontalChange(
-                index,
-                ref changeCount,
-                x,
-                y,
-                z - 1,
-                state,
-                fluid
-            );
+                    TryCreateHorizontalChange(
+                        index,
+                        ref changeCount,
+                        x,
+                        y,
+                        z + 1,
+                        state,
+                        horizontalLevel
+                    );
+
+                    TryCreateHorizontalChange(
+                        index,
+                        ref changeCount,
+                        x,
+                        y,
+                        z - 1,
+                        state,
+                        horizontalLevel
+                    );
+                }
+            }
 
             ChangeCounts[index] =
                 (byte)changeCount;
@@ -145,40 +156,26 @@ namespace WildEarth.Voxel
             if (y <= 0)
                 return;
 
-            int targetX;
-            int targetY;
-            int targetZ;
+            /*
+             * El destino vertical siempre permanece dentro
+             * del chunk porque y > 0.
+             */
+            int targetX = x;
+            int targetY = y - 1;
+            int targetZ = z;
 
-            ChunkCoordinate targetChunk =
-                ChunkCoordinateUtility.ResolveChunk(
-                    ChunkCoordinate,
-                    x,
-                    y - 1,
-                    z,
-                    out targetX,
-                    out targetY,
-                    out targetZ
+            int targetIndex =
+                VoxelIndex.ToIndex(
+                    targetX,
+                    targetY,
+                    targetZ
                 );
 
-            /*
-             * Si el destino sigue dentro del chunk actual,
-             * podemos comprobar inmediatamente si está ocupado.
-             */
-            if (targetChunk == ChunkCoordinate)
-            {
-                int targetIndex =
-                    VoxelIndex.ToIndex(
-                        targetX,
-                        targetY,
-                        targetZ
-                    );
+            Voxel target =
+                Voxels[targetIndex];
 
-                Voxel target =
-                    Voxels[targetIndex];
-
-                if (!target.IsAir)
-                    return;
-            }
+            if (!target.IsAir)
+                return;
 
             byte level =
                 FluidPropagation.CalculateVerticalLevel(
@@ -193,7 +190,7 @@ namespace WildEarth.Voxel
                 sourceIndex,
                 ref changeCount,
                 new FluidChange(
-                    targetChunk,
+                    ChunkCoordinate,
                     targetX,
                     targetY,
                     targetZ,
@@ -212,11 +209,8 @@ namespace WildEarth.Voxel
             int y,
             int z,
             FluidState state,
-            FluidRuntimeData fluid)
+            byte level)
         {
-            if (!Settings.AllowHorizontalFlow)
-                return;
-
             if (y < 0 ||
                 y >= VoxelConstants.ChunkSize)
             {
@@ -234,30 +228,13 @@ namespace WildEarth.Voxel
                     out int targetZ
                 );
 
-            byte level =
-                FluidPropagation.CalculateHorizontalLevel(
-                    state.Level,
-                    fluid.HorizontalFlowDecay
-                );
-
-            if (level == 0)
-                return;
-
             /*
-             * No podemos consultar directamente el voxel
-             * del chunk vecino desde este job porque este
-             * job solo posee el NativeArray del chunk actual.
+             * Si el destino permanece dentro del chunk,
+             * podemos comprobarlo directamente.
              *
-             * Por lo tanto:
-             *
-             * - coordenada dentro del chunk actual:
-             *   se puede comprobar contra Voxels.
-             *
-             * - coordenada fuera del chunk:
-             *   se genera como cambio pendiente.
-             *
-             * La validación del voxel vecino se hará en
-             * la fase de aplicación/scheduler.
+             * Si cruza el límite del chunk, se genera el
+             * cambio pendiente para que FluidUpdateSystem
+             * lo valide posteriormente.
              */
             if (targetChunk == ChunkCoordinate)
             {

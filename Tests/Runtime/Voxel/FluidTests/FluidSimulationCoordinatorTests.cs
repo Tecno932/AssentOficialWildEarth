@@ -82,6 +82,8 @@ namespace WildEarth.Voxel.Tests
                     )
                 );
 
+            chunk.MarkGenerated();
+
             updateSystem =
                 new FluidUpdateSystem(
                     storage,

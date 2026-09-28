@@ -18,25 +18,34 @@ namespace WildEarth.Voxel
             if (!fluidDatabase.IsCreated)
                 return false;
 
+            var fluidsByBlockId =
+                fluidDatabase.AsBlockLookupNativeArray();
+
             for (
                 int index = 0;
                 index < VoxelConstants.VoxelsPerChunk;
                 index++)
             {
-                Voxel voxel = chunkData.Voxels[index];
+                Voxel voxel =
+                    chunkData.Voxels[index];
 
-                if (voxel.IsAir)
+                if (voxel.IsAir ||
+                    voxel.State == 0)
+                {
+                    continue;
+                }
+
+                ushort blockId =
+                    voxel.BlockId;
+
+                if (blockId >= fluidsByBlockId.Length)
                     continue;
 
-                if (
-                    fluidDatabase.TryGetByBlockId(
-                        voxel.BlockId,
-                        out FluidRuntimeData fluid
-                    ))
-                {
-                    if (voxel.State > 0)
-                        return true;
-                }
+                FluidRuntimeData fluid =
+                    fluidsByBlockId[blockId];
+
+                if (fluid.IsValid)
+                    return true;
             }
 
             return false;

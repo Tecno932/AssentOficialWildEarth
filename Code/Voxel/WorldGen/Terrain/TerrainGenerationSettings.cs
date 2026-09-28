@@ -46,7 +46,7 @@ namespace WildEarth.Voxel
                 DetailFrequency = 0.025f,
                 DetailAmplitude = 2f,
 
-                BiomeHeightInfluence = 1f,
+                BiomeHeightInfluence = 1.15f,
 
                 StoneBlockId = 1,
                 DirtBlockId = 2,

@@ -42,8 +42,7 @@ namespace WildEarth.Voxel
 
                 GenerateOre(
                     oreIndex,
-                    ore
-                );
+                    ore);
             }
         }
 
@@ -78,21 +77,11 @@ namespace WildEarth.Voxel
                 chunkSize -
                 1;
 
-            /*
-             * Las vetas pueden desplazarse en las seis
-             * direcciones, por lo que necesitamos margen
-             * en los tres ejes.
-             */
             int margin =
                 math.max(
                     1,
-                    ore.MaxVeinSize
-                );
+                    ore.MaxVeinSize);
 
-            /*
-             * Si el rango vertical del mineral no intersecta
-             * el área extendida del chunk, no hay nada que generar.
-             */
             if (ore.MaxY < chunkMinY - margin ||
                 ore.MinY > chunkMaxY + margin)
             {
@@ -102,14 +91,12 @@ namespace WildEarth.Voxel
             int minWorldY =
                 math.max(
                     ore.MinY,
-                    chunkMinY - margin
-                );
+                    chunkMinY - margin);
 
             int maxWorldY =
                 math.min(
                     ore.MaxY,
-                    chunkMaxY + margin
-                );
+                    chunkMaxY + margin);
 
             int minLocalY =
                 minWorldY -
@@ -125,6 +112,23 @@ namespace WildEarth.Voxel
             int minZ = -margin;
             int maxZ = chunkSize + margin - 1;
 
+            int baseSeed =
+                Context.Seed +
+                Settings.SeedOffset +
+                oreIndex * 7919;
+
+            float3 seedOffset0 =
+                OreNoise.CreateSeedOffset(
+                    baseSeed);
+
+            float3 seedOffset1 =
+                OreNoise.CreateSeedOffset(
+                    baseSeed + 1297);
+
+            float3 seedOffset2 =
+                OreNoise.CreateSeedOffset(
+                    baseSeed + 2594);
+
             for (int localY = minLocalY;
                  localY <= maxLocalY;
                  localY++)
@@ -138,23 +142,28 @@ namespace WildEarth.Voxel
                          localX++)
                     {
                         TryCreateVein(
-                            oreIndex,
                             ore,
                             localX,
                             localY,
-                            localZ
-                        );
+                            localZ,
+                            baseSeed,
+                            seedOffset0,
+                            seedOffset1,
+                            seedOffset2);
                     }
                 }
             }
         }
 
         private void TryCreateVein(
-            int oreIndex,
             OreRuntimeData ore,
             int localX,
             int localY,
-            int localZ)
+            int localZ,
+            int baseSeed,
+            float3 seedOffset0,
+            float3 seedOffset1,
+            float3 seedOffset2)
         {
             int worldX =
                 Context.WorldOrigin.x +
@@ -175,20 +184,18 @@ namespace WildEarth.Voxel
             }
 
             float density =
-                OreNoise.Fractal01(
+                OreNoise.Fractal01Cached(
                     new float3(
                         worldX,
                         worldY,
-                        worldZ
-                    ),
+                        worldZ),
                     ore.Frequency,
                     Settings.Octaves,
                     Settings.Lacunarity,
                     Settings.Persistence,
-                    Context.Seed +
-                    Settings.SeedOffset +
-                    oreIndex * 7919
-                );
+                    seedOffset0,
+                    seedOffset1,
+                    seedOffset2);
 
             float threshold =
                 1f - ore.Rarity;
@@ -201,10 +208,7 @@ namespace WildEarth.Voxel
                     worldX,
                     worldY,
                     worldZ,
-                    Context.Seed +
-                    Settings.SeedOffset +
-                    oreIndex * 7919
-                );
+                    baseSeed);
 
             int veinRange =
                 ore.MaxVeinSize -
@@ -221,20 +225,17 @@ namespace WildEarth.Voxel
                         worldX + 17,
                         worldY + 31,
                         worldZ + 47,
-                        (int)positionSeed
-                    );
+                        (int)positionSeed);
 
                 veinSize +=
                     (int)(
                         HashTo01(sizeSeed) *
-                        veinRange
-                    );
+                        veinRange);
 
                 veinSize =
                     math.min(
                         veinSize,
-                        ore.MaxVeinSize
-                    );
+                        ore.MaxVeinSize);
             }
 
             GenerateVein(
@@ -243,8 +244,7 @@ namespace WildEarth.Voxel
                 worldY,
                 worldZ,
                 veinSize,
-                positionSeed
-            );
+                positionSeed);
         }
 
         private void GenerateVein(
@@ -259,8 +259,7 @@ namespace WildEarth.Voxel
                 new int3(
                     startX,
                     startY,
-                    startZ
-                );
+                    startZ);
 
             for (int i = 0;
                  i < veinSize;
@@ -270,8 +269,7 @@ namespace WildEarth.Voxel
                     ore,
                     current.x,
                     current.y,
-                    current.z
-                );
+                    current.z);
 
                 uint stepSeed =
                     Hash(
@@ -279,14 +277,12 @@ namespace WildEarth.Voxel
                         current.y,
                         current.z,
                         (int)seed +
-                        i * 1543
-                    );
+                        i * 1543);
 
                 int direction =
                     (int)(
                         HashTo01(stepSeed) *
-                        6f
-                    );
+                        6f);
 
                 switch (direction)
                 {
@@ -315,16 +311,6 @@ namespace WildEarth.Voxel
                         break;
                 }
 
-                /*
-                 * La veta puede cruzar el límite del chunk.
-                 *
-                 * NO detenemos la generación por salir del chunk.
-                 * TryPlaceOre() se encargará de ignorar posiciones
-                 * que no pertenezcan al chunk actual.
-                 *
-                 * Solo detenemos si abandonamos el rango Y válido
-                 * del propio mineral.
-                 */
                 if (current.y < ore.MinY ||
                     current.y > ore.MaxY)
                 {
@@ -369,8 +355,7 @@ namespace WildEarth.Voxel
                 VoxelIndex.ToIndex(
                     localX,
                     localY,
-                    localZ
-                );
+                    localZ);
 
             Voxel voxel =
                 Voxels[index];
@@ -386,8 +371,7 @@ namespace WildEarth.Voxel
                 new Voxel(
                     ore.BlockId,
                     voxel.Light,
-                    voxel.State
-                );
+                    voxel.State);
         }
 
         private bool IsHostBlock(
@@ -421,15 +405,9 @@ namespace WildEarth.Voxel
             uint h =
                 (uint)seed;
 
-            h ^= (uint)x *
-                 374761393u;
-
-            h ^= (uint)y *
-                 668265263u;
-
-            h ^= (uint)z *
-                 2147483647u;
-
+            h ^= (uint)x * 374761393u;
+            h ^= (uint)y * 668265263u;
+            h ^= (uint)z * 2147483647u;
             h ^= h >> 13;
             h *= 1274126177u;
             h ^= h >> 16;

@@ -24,7 +24,25 @@ namespace WildEarth.Voxel
             int chunkSize =
                 VoxelConstants.ChunkSize;
 
-            for (int y = 0; y < chunkSize; y++)
+            int baseSeed =
+                Context.Seed +
+                Settings.SeedOffset;
+
+            float3 seedOffset0 =
+                CaveNoise.CreateSeedOffset(
+                    baseSeed);
+
+            float3 seedOffset1 =
+                CaveNoise.CreateSeedOffset(
+                    baseSeed + 977);
+
+            float3 seedOffset2 =
+                CaveNoise.CreateSeedOffset(
+                    baseSeed + 1954);
+
+            for (int y = 0;
+                 y < chunkSize;
+                 y++)
             {
                 int worldY =
                     Context.WorldOrigin.y + y;
@@ -35,16 +53,19 @@ namespace WildEarth.Voxel
                     continue;
                 }
 
-                for (int z = 0; z < chunkSize; z++)
+                for (int z = 0;
+                     z < chunkSize;
+                     z++)
                 {
-                    for (int x = 0; x < chunkSize; x++)
+                    for (int x = 0;
+                         x < chunkSize;
+                         x++)
                     {
                         int index =
                             VoxelIndex.ToIndex(
                                 x,
                                 y,
-                                z
-                            );
+                                z);
 
                         Voxel voxel =
                             Voxels[index];
@@ -71,27 +92,25 @@ namespace WildEarth.Voxel
                             new float3(
                                 worldX,
                                 worldY,
-                                worldZ
-                            );
+                                worldZ);
 
                         float density =
-                            CaveNoise.Fractal01(
+                            CaveNoise.Fractal01Cached(
                                 position,
                                 Settings.Frequency,
                                 Settings.Octaves,
                                 Settings.Lacunarity,
                                 Settings.Persistence,
-                                Context.Seed +
-                                Settings.SeedOffset
-                            );
+                                seedOffset0,
+                                seedOffset1,
+                                seedOffset2);
 
                         if (density >=
                             Settings.Threshold)
                         {
                             Voxels[index] =
                                 new Voxel(
-                                    BlockIds.Air
-                                );
+                                    BlockIds.Air);
                         }
                     }
                 }
@@ -101,7 +120,8 @@ namespace WildEarth.Voxel
         private bool CanCarve(
             ushort blockId)
         {
-            int index = blockId;
+            int index =
+                blockId;
 
             if (index < 0 ||
                 index >= BlockDatabase.Length)

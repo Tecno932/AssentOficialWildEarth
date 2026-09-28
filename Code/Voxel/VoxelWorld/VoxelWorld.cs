@@ -8,59 +8,33 @@ namespace WildEarth.Voxel
     {
         private readonly ChunkStorage chunkStorage;
         private readonly ChunkGenerator chunkGenerator;
-
         private readonly BiomeRegistry biomeRegistry;
         private readonly BiomeRuntimeDatabase biomeDatabase;
-
         private readonly BlockRegistry blockRegistry;
         private readonly BlockRuntimeDatabase blockDatabase;
-
         private readonly OreRegistry oreRegistry;
         private readonly OreRuntimeDatabase oreDatabase;
-
         private readonly FluidRegistry fluidRegistry;
         private readonly FluidRuntimeDatabase fluidDatabase;
-
         private readonly FluidScheduler fluidScheduler;
-        private readonly FluidSimulationCoordinator
-            fluidSimulationCoordinator;
-
-        private readonly FluidSimulationSettings
-            fluidSimulationSettings;
+        private readonly FluidSimulationCoordinator fluidSimulationCoordinator;
+        private readonly FluidSimulationSettings fluidSimulationSettings;
+        private readonly ChunkSaveStorage saveStorage;
 
         private bool initialized;
         private bool disposed;
 
-        public bool IsInitialized =>
-            initialized;
-
-        public int LoadedChunkCount =>
-            chunkStorage?.Count ?? 0;
-
-        public ChunkStorage Chunks =>
-            chunkStorage;
-
-        public ChunkGenerator Generator =>
-            chunkGenerator;
-
-        public BiomeRegistry Biomes =>
-            biomeRegistry;
-
-        public BlockRegistry Blocks =>
-            blockRegistry;
-
-        public BlockRuntimeDatabase BlockDatabase =>
-            blockDatabase;
-
-        public OreRegistry Ores =>
-            oreRegistry;
-
-        public FluidRegistry Fluids =>
-            fluidRegistry;
-
+        public bool IsInitialized => initialized;
+        public int LoadedChunkCount => chunkStorage?.Count ?? 0;
+        public ChunkStorage Chunks => chunkStorage;
+        public ChunkGenerator Generator => chunkGenerator;
+        public BiomeRegistry Biomes => biomeRegistry;
+        public BlockRegistry Blocks => blockRegistry;
+        public BlockRuntimeDatabase BlockDatabase => blockDatabase;
+        public OreRegistry Ores => oreRegistry;
+        public FluidRegistry Fluids => fluidRegistry;
         public FluidSimulationCoordinator FluidSimulation =>
             fluidSimulationCoordinator;
-
         public FluidScheduler FluidScheduler =>
             fluidScheduler;
 
@@ -73,35 +47,26 @@ namespace WildEarth.Voxel
             FluidRegistryAsset fluidRegistryAsset)
         {
             if (oreRegistryAsset == null)
-            {
                 throw new ArgumentNullException(
                     nameof(oreRegistryAsset)
                 );
-            }
 
             if (fluidRegistryAsset == null)
-            {
                 throw new ArgumentNullException(
                     nameof(fluidRegistryAsset)
                 );
-            }
 
             if (biomeRegistryAsset == null)
-            {
                 throw new ArgumentNullException(
                     nameof(biomeRegistryAsset)
                 );
-            }
 
             if (blockRegistry == null)
-            {
                 throw new ArgumentNullException(
                     nameof(blockRegistry)
                 );
-            }
 
-            this.blockRegistry =
-                blockRegistry;
+            this.blockRegistry = blockRegistry;
 
             biomeRegistry =
                 new BiomeRegistry(
@@ -194,6 +159,17 @@ namespace WildEarth.Voxel
                     fluidScheduler,
                     FluidSimulationCoordinatorSettings.Default
                 );
+
+            string savePath =
+                System.IO.Path.Combine(
+                    Application.persistentDataPath,
+                    "World"
+                );
+
+            saveStorage =
+                new ChunkSaveStorage(
+                    savePath
+                );
         }
 
         public void Initialize()
@@ -246,19 +222,40 @@ namespace WildEarth.Voxel
                 return existingChunk;
             }
 
-            return chunkStorage.Create(
-                coordinate
-            );
+            Chunk chunk =
+                chunkStorage.Create(
+                    coordinate
+                );
+
+            if (saveStorage.TryLoad(
+                coordinate,
+                chunk.Data.Voxels))
+            {
+                chunk.MarkGenerated();
+                chunk.SetLoadedFromDisk();
+                chunk.MarkNeedsMesh();
+
+                MarkNeighborChunksForRemesh(
+                    chunk
+                );
+
+                Debug.Log(
+                    $"[VoxelSave] Chunk cargado: {coordinate}"
+                );
+            }
+
+            return chunk;
         }
 
         public Chunk LoadAndGenerateChunk(
             ChunkCoordinate coordinate)
         {
             Chunk chunk =
-                LoadChunk(coordinate);
+                LoadChunk(
+                    coordinate
+                );
 
-            if (chunk.State ==
-                ChunkState.Loading)
+            if (chunk.State == ChunkState.Loading)
             {
                 chunkGenerator.Schedule(
                     chunk
@@ -281,6 +278,10 @@ namespace WildEarth.Voxel
             }
 
             chunkGenerator.CompleteChunk(
+                chunk
+            );
+
+            SaveChunkIfNeeded(
                 chunk
             );
 
@@ -310,23 +311,96 @@ namespace WildEarth.Voxel
             if (disposed)
                 return;
 
+            if (initialized)
+            {
+                SaveModifiedChunks();
+            }
+
             disposed = true;
 
             fluidSimulationCoordinator.Dispose();
-
             chunkGenerator.Dispose();
-
             chunkStorage.Dispose();
-
             biomeDatabase.Dispose();
-
             blockDatabase.Dispose();
-
             oreDatabase.Dispose();
-
             fluidDatabase.Dispose();
 
             initialized = false;
+        }
+
+        private void SaveModifiedChunks()
+        {
+            var completedChunks =
+                chunkGenerator.CompletedChunks;
+
+            for (int i = 0;
+                i < completedChunks.Count;
+                i++)
+            {
+                Chunk chunk =
+                    completedChunks[i];
+
+                if (chunk == null)
+                    continue;
+
+                if (chunk.NeedsSave)
+                {
+                    SaveChunkIfNeeded(
+                        chunk
+                    );
+                }
+            }
+
+            var coordinates =
+                new System.Collections.Generic.List<ChunkCoordinate>();
+
+            chunkStorage.GetCoordinates(
+                coordinates
+            );
+
+            for (int i = 0;
+                i < coordinates.Count;
+                i++)
+            {
+                if (!chunkStorage.TryGet(
+                        coordinates[i],
+                        out Chunk chunk))
+                {
+                    continue;
+                }
+
+                if (chunk == null)
+                    continue;
+
+                SaveChunkIfNeeded(
+                    chunk
+                );
+            }
+        }
+
+        private void SaveChunkIfNeeded(
+            Chunk chunk)
+        {
+            if (chunk == null)
+                return;
+
+            if (!chunk.NeedsSave)
+                return;
+
+            if (!chunk.Data.IsCreated)
+                return;
+
+            saveStorage.Save(
+                chunk.Coordinate,
+                chunk.Data.Voxels
+            );
+
+            chunk.MarkSaved();
+
+            Debug.Log(
+                $"[VoxelSave] Chunk guardado: {chunk.Coordinate}"
+            );
         }
 
         private void ProcessCompletedChunks()
@@ -410,6 +484,38 @@ namespace WildEarth.Voxel
                 )
             );
         }
+
+private void MarkNeighborForRemesh(
+    int x,
+    int y,
+    int z)
+{
+    ChunkCoordinate coordinate =
+        new ChunkCoordinate(
+            x,
+            y,
+            z
+        );
+
+    if (!chunkStorage.TryGet(
+            coordinate,
+            out Chunk neighbor))
+    {
+        return;
+    }
+
+    if (neighbor == null)
+    {
+        return;
+    }
+
+    if (!neighbor.Data.IsCreated)
+    {
+        return;
+    }
+
+    neighbor.MarkNeedsMesh();
+}
 
         private void TryMarkNeighborForRemesh(
             ChunkCoordinate coordinate)
@@ -511,9 +617,7 @@ namespace WildEarth.Voxel
                 chunk.Data.Voxels[index];
 
             if (current.BlockId == blockId)
-            {
                 return false;
-            }
 
             NativeArray<Voxel> voxels =
                 chunk.Data.Voxels;
@@ -527,71 +631,56 @@ namespace WildEarth.Voxel
 
             chunk.MarkVoxelDataChanged();
 
-            if (localX == 0)
-            {
-                TryMarkNeighborForRemesh(
-                    new ChunkCoordinate(
-                        coordinate.X - 1,
-                        coordinate.Y,
-                        coordinate.Z
-                    )
-                );
-            }
-            else if (localX ==
-                    VoxelConstants.ChunkSize - 1)
-            {
-                TryMarkNeighborForRemesh(
-                    new ChunkCoordinate(
-                        coordinate.X + 1,
-                        coordinate.Y,
-                        coordinate.Z
-                    )
-                );
-            }
+if (localX == 0)
+{
+    MarkNeighborForRemesh(
+        coordinate.X - 1,
+        coordinate.Y,
+        coordinate.Z
+    );
+}
+else if (localX == VoxelConstants.ChunkSize - 1)
+{
+    MarkNeighborForRemesh(
+        coordinate.X + 1,
+        coordinate.Y,
+        coordinate.Z
+    );
+}
 
-            if (localY == 0)
-            {
-                TryMarkNeighborForRemesh(
-                    new ChunkCoordinate(
-                        coordinate.X,
-                        coordinate.Y - 1,
-                        coordinate.Z
-                    )
-                );
-            }
-            else if (localY ==
-                    VoxelConstants.ChunkSize - 1)
-            {
-                TryMarkNeighborForRemesh(
-                    new ChunkCoordinate(
-                        coordinate.X,
-                        coordinate.Y + 1,
-                        coordinate.Z
-                    )
-                );
-            }
+if (localY == 0)
+{
+    MarkNeighborForRemesh(
+        coordinate.X,
+        coordinate.Y - 1,
+        coordinate.Z
+    );
+}
+else if (localY == VoxelConstants.ChunkSize - 1)
+{
+    MarkNeighborForRemesh(
+        coordinate.X,
+        coordinate.Y + 1,
+        coordinate.Z
+    );
+}
 
-            if (localZ == 0)
-            {
-                TryMarkNeighborForRemesh(
-                    new ChunkCoordinate(
-                        coordinate.X,
-                        coordinate.Y,
-                        coordinate.Z - 1
-                    )
-                );
-            }
-            else if (localZ ==
-                    VoxelConstants.ChunkSize - 1)
-            {
-                TryMarkNeighborForRemesh(
-                    new ChunkCoordinate(
-                        coordinate.X,
-                        coordinate.Y,
-                        coordinate.Z + 1
-                    )
-                );
-            }
+if (localZ == 0)
+{
+    MarkNeighborForRemesh(
+        coordinate.X,
+        coordinate.Y,
+        coordinate.Z - 1
+    );
+}
+else if (localZ == VoxelConstants.ChunkSize - 1)
+{
+    MarkNeighborForRemesh(
+        coordinate.X,
+        coordinate.Y,
+        coordinate.Z + 1
+    );
+}
 
             return true;
         }
@@ -631,7 +720,9 @@ namespace WildEarth.Voxel
             NativeArray<Voxel> voxels =
                 chunk.Data.Voxels;
 
-            for (int i = 0; i < voxels.Length; i++)
+            for (int i = 0;
+                i < voxels.Length;
+                i++)
             {
                 switch (voxels[i].BlockId)
                 {
@@ -660,10 +751,8 @@ namespace WildEarth.Voxel
             Debug.Log(
                 $"[VoxelDebug] Chunk {coordinate} | " +
                 $"State={chunk.State} | " +
-                $"Air={air} | " +
-                $"Stone={stone} | " +
-                $"Dirt={dirt} | " +
-                $"Grass={grass} | " +
+                $"Air={air} | Stone={stone} | " +
+                $"Dirt={dirt} | Grass={grass} | " +
                 $"Other={other}"
             );
         }
@@ -680,7 +769,7 @@ namespace WildEarth.Voxel
 
             if (remainder != 0 &&
                 ((remainder < 0) !=
-                (divisor < 0)))
+                 (divisor < 0)))
             {
                 result--;
             }
@@ -696,9 +785,7 @@ namespace WildEarth.Voxel
                 value % modulus;
 
             if (result < 0)
-            {
                 result += modulus;
-            }
 
             return result;
         }

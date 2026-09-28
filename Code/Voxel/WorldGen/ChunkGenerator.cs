@@ -18,8 +18,14 @@ namespace WildEarth.Voxel
         private readonly List<GenerationTask> activeTasks =
             new List<GenerationTask>();
 
+        private readonly HashSet<Chunk> activeChunks =
+            new HashSet<Chunk>();
+
         private readonly Queue<GenerationRequest> pendingRequests =
             new Queue<GenerationRequest>();
+
+        private readonly HashSet<Chunk> pendingChunks =
+            new HashSet<Chunk>();
 
         private readonly List<Chunk> completedChunks =
             new List<Chunk>();
@@ -84,7 +90,7 @@ namespace WildEarth.Voxel
                 );
             }
 
-            if (IsPending(chunk))
+            if (pendingChunks.Contains(chunk))
             {
                 throw new InvalidOperationException(
                     $"El chunk {chunk.Coordinate} ya está en cola de generación."
@@ -104,6 +110,8 @@ namespace WildEarth.Voxel
                     )
                 );
 
+                pendingChunks.Add(chunk);
+
                 return default;
             }
 
@@ -119,17 +127,7 @@ namespace WildEarth.Voxel
             if (chunk == null)
                 return false;
 
-            for (int i = 0; i < activeTasks.Count; i++)
-            {
-                if (ReferenceEquals(
-                        activeTasks[i].Chunk,
-                        chunk))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return activeChunks.Contains(chunk);
         }
 
         public void CompleteChunk(
@@ -162,6 +160,8 @@ namespace WildEarth.Voxel
 
                 activeTasks.RemoveAt(i);
 
+                activeChunks.Remove(task.Chunk);
+
                 SchedulePendingRequests();
 
                 return;
@@ -193,6 +193,8 @@ namespace WildEarth.Voxel
                 );
 
                 activeTasks.RemoveAt(i);
+
+                activeChunks.Remove(task.Chunk);
             }
 
             SchedulePendingRequests();
@@ -219,6 +221,8 @@ namespace WildEarth.Voxel
                     );
 
                     activeTasks.RemoveAt(i);
+
+                    activeChunks.Remove(task.Chunk);
                 }
 
                 SchedulePendingRequests();
@@ -233,6 +237,8 @@ namespace WildEarth.Voxel
             CompleteAll();
 
             pendingRequests.Clear();
+            pendingChunks.Clear();
+            activeChunks.Clear();
 
             disposed = true;
         }
@@ -258,6 +264,8 @@ namespace WildEarth.Voxel
                 )
             );
 
+            activeChunks.Add(chunk);
+
             return handle;
         }
 
@@ -270,6 +278,8 @@ namespace WildEarth.Voxel
             {
                 GenerationRequest request =
                     pendingRequests.Dequeue();
+
+                pendingChunks.Remove(request.Chunk);
 
                 if (request.Chunk == null)
                     continue;
@@ -287,24 +297,6 @@ namespace WildEarth.Voxel
             }
         }
 
-        private bool IsPending(
-            Chunk chunk)
-        {
-            foreach (
-                GenerationRequest request
-                in pendingRequests)
-            {
-                if (ReferenceEquals(
-                        request.Chunk,
-                        chunk))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
         private void RemovePendingRequest(
             Chunk chunk)
         {
@@ -319,14 +311,17 @@ namespace WildEarth.Voxel
                 GenerationRequest request =
                     pendingRequests.Dequeue();
 
-                if (!ReferenceEquals(
+                if (ReferenceEquals(
                         request.Chunk,
                         chunk))
                 {
-                    pendingRequests.Enqueue(
-                        request
-                    );
+                    pendingChunks.Remove(chunk);
+                    continue;
                 }
+
+                pendingRequests.Enqueue(
+                    request
+                );
             }
         }
 

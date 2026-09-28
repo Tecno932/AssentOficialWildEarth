@@ -11,6 +11,7 @@ namespace WildEarth.Voxel
         private readonly BlockRuntimeDatabase blockDatabase;
         private readonly OreRuntimeDatabase oreDatabase;
         private readonly FluidRuntimeDatabase fluidDatabase;
+        private readonly FluidRuntimeData water;
 
         public ChunkGenerationPipeline(
             ChunkGenerationSettings settings,
@@ -172,6 +173,7 @@ private JobHandle ScheduleTerrain(
         {
             Context = context,
             Settings = settings.Terrain,
+            BiomeSettings = settings.Biome,
 
             Voxels =
                 chunk.Data.Voxels,

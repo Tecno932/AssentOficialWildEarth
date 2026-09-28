@@ -8,6 +8,9 @@ namespace WildEarth.Voxel.Tests
 {
     public sealed class FluidUpdateSystemTests
     {
+        private const ushort WaterBlockId = 100;
+        private const ushort LavaBlockId = 101;
+
         private ChunkDataPool dataPool;
         private ChunkBiomeDataPool biomeDataPool;
         private ChunkStorage chunkStorage;
@@ -16,7 +19,6 @@ namespace WildEarth.Voxel.Tests
         private FluidDefinition lavaDefinition;
 
         private FluidRuntimeDatabase fluidDatabase;
-
         private FluidUpdateSystem system;
 
         [SetUp]
@@ -25,15 +27,15 @@ namespace WildEarth.Voxel.Tests
             dataPool =
                 new ChunkDataPool(
                     Allocator.Persistent,
-                    2,
-                    8
+                    4,
+                    16
                 );
 
             biomeDataPool =
                 new ChunkBiomeDataPool(
                     Allocator.Persistent,
-                    2,
-                    8
+                    4,
+                    16
                 );
 
             chunkStorage =
@@ -46,7 +48,7 @@ namespace WildEarth.Voxel.Tests
                 CreateFluidDefinition(
                     FluidType.Water,
                     "Water",
-                    100,
+                    WaterBlockId,
                     false
                 );
 
@@ -54,7 +56,7 @@ namespace WildEarth.Voxel.Tests
                 CreateFluidDefinition(
                     FluidType.Lava,
                     "Lava",
-                    101,
+                    LavaBlockId,
                     true
                 );
 
@@ -117,6 +119,20 @@ namespace WildEarth.Voxel.Tests
             system = null;
         }
 
+        private Chunk CreateGeneratedChunk(
+            ChunkCoordinate coordinate
+        )
+        {
+            Chunk chunk =
+                chunkStorage.Create(
+                    coordinate
+                );
+
+            chunk.MarkGenerated();
+
+            return chunk;
+        }
+
         [Test]
         public void AppliesFluidToAir()
         {
@@ -124,7 +140,7 @@ namespace WildEarth.Voxel.Tests
                 new ChunkCoordinate(0, 0, 0);
 
             Chunk chunk =
-                chunkStorage.Create(
+                CreateGeneratedChunk(
                     coordinate
                 );
 
@@ -163,7 +179,7 @@ namespace WildEarth.Voxel.Tests
 
             Assert.That(
                 voxel.BlockId,
-                Is.EqualTo(100)
+                Is.EqualTo(WaterBlockId)
             );
 
             Assert.That(
@@ -176,7 +192,7 @@ namespace WildEarth.Voxel.Tests
         public void RejectsWhenTargetChunkIsNotLoaded()
         {
             ChunkCoordinate coordinate =
-                new ChunkCoordinate(0, 0, 0);
+                new ChunkCoordinate(10, 0, 10);
 
             FluidChange change =
                 CreateWaterChange(
@@ -215,7 +231,7 @@ namespace WildEarth.Voxel.Tests
             ChunkCoordinate coordinate =
                 new ChunkCoordinate(0, 0, 0);
 
-            chunkStorage.Create(
+            CreateGeneratedChunk(
                 coordinate
             );
 
@@ -257,7 +273,7 @@ namespace WildEarth.Voxel.Tests
                 new ChunkCoordinate(0, 0, 0);
 
             Chunk chunk =
-                chunkStorage.Create(
+                CreateGeneratedChunk(
                     coordinate
                 );
 
@@ -315,7 +331,7 @@ namespace WildEarth.Voxel.Tests
                 new ChunkCoordinate(0, 0, 0);
 
             Chunk chunk =
-                chunkStorage.Create(
+                CreateGeneratedChunk(
                     coordinate
                 );
 
@@ -325,7 +341,7 @@ namespace WildEarth.Voxel.Tests
                 2,
                 3,
                 new Voxel(
-                    100,
+                    WaterBlockId,
                     0,
                     5
                 )
@@ -377,7 +393,7 @@ namespace WildEarth.Voxel.Tests
                 new ChunkCoordinate(0, 0, 0);
 
             Chunk chunk =
-                chunkStorage.Create(
+                CreateGeneratedChunk(
                     coordinate
                 );
 
@@ -387,7 +403,7 @@ namespace WildEarth.Voxel.Tests
                 2,
                 3,
                 new Voxel(
-                    100,
+                    WaterBlockId,
                     0,
                     10
                 )
@@ -426,7 +442,7 @@ namespace WildEarth.Voxel.Tests
                 new ChunkCoordinate(0, 0, 0);
 
             Chunk chunk =
-                chunkStorage.Create(
+                CreateGeneratedChunk(
                     coordinate
                 );
 
@@ -436,7 +452,7 @@ namespace WildEarth.Voxel.Tests
                 2,
                 3,
                 new Voxel(
-                    100,
+                    WaterBlockId,
                     0,
                     10
                 )
@@ -475,7 +491,7 @@ namespace WildEarth.Voxel.Tests
                 new ChunkCoordinate(0, 0, 0);
 
             Chunk chunk =
-                chunkStorage.Create(
+                CreateGeneratedChunk(
                     coordinate
                 );
 
@@ -485,7 +501,7 @@ namespace WildEarth.Voxel.Tests
                 2,
                 3,
                 new Voxel(
-                    100,
+                    WaterBlockId,
                     0,
                     10
                 )
@@ -529,7 +545,7 @@ namespace WildEarth.Voxel.Tests
 
             Assert.That(
                 voxel.BlockId,
-                Is.EqualTo(100)
+                Is.EqualTo(WaterBlockId)
             );
 
             Assert.That(
@@ -545,7 +561,7 @@ namespace WildEarth.Voxel.Tests
                 new ChunkCoordinate(0, 0, 0);
 
             Chunk chunk =
-                chunkStorage.Create(
+                CreateGeneratedChunk(
                     coordinate
                 );
 
@@ -573,7 +589,7 @@ namespace WildEarth.Voxel.Tests
 
             Assert.That(
                 voxel.BlockId,
-                Is.EqualTo(101)
+                Is.EqualTo(LavaBlockId)
             );
         }
 
@@ -584,7 +600,7 @@ namespace WildEarth.Voxel.Tests
                 new ChunkCoordinate(0, 0, 0);
 
             Chunk chunk =
-                chunkStorage.Create(
+                CreateGeneratedChunk(
                     coordinate
                 );
 
@@ -623,7 +639,7 @@ namespace WildEarth.Voxel.Tests
                 new ChunkCoordinate(0, 0, 0);
 
             Chunk chunk =
-                chunkStorage.Create(
+                CreateGeneratedChunk(
                     coordinate
                 );
 
@@ -654,7 +670,7 @@ namespace WildEarth.Voxel.Tests
                 new ChunkCoordinate(0, 0, 0);
 
             Chunk chunk =
-                chunkStorage.Create(
+                CreateGeneratedChunk(
                     coordinate
                 );
 
@@ -685,7 +701,7 @@ namespace WildEarth.Voxel.Tests
                 new ChunkCoordinate(0, 0, 0);
 
             Chunk chunk =
-                chunkStorage.Create(
+                CreateGeneratedChunk(
                     coordinate
                 );
 
@@ -716,7 +732,7 @@ namespace WildEarth.Voxel.Tests
                 new ChunkCoordinate(0, 0, 0);
 
             Chunk chunk =
-                chunkStorage.Create(
+                CreateGeneratedChunk(
                     coordinate
                 );
 
@@ -754,12 +770,12 @@ namespace WildEarth.Voxel.Tests
             ChunkCoordinate targetCoordinate =
                 new ChunkCoordinate(1, 0, 0);
 
-            chunkStorage.Create(
+            CreateGeneratedChunk(
                 sourceCoordinate
             );
 
             Chunk targetChunk =
-                chunkStorage.Create(
+                CreateGeneratedChunk(
                     targetCoordinate
                 );
 
@@ -798,7 +814,7 @@ namespace WildEarth.Voxel.Tests
 
             Assert.That(
                 voxel.BlockId,
-                Is.EqualTo(100)
+                Is.EqualTo(WaterBlockId)
             );
 
             Assert.That(
@@ -812,7 +828,8 @@ namespace WildEarth.Voxel.Tests
             int x,
             int y,
             int z,
-            byte level)
+            byte level
+        )
         {
             return new FluidChange(
                 coordinate,
@@ -831,7 +848,8 @@ namespace WildEarth.Voxel.Tests
             int x,
             int y,
             int z,
-            byte level)
+            byte level
+        )
         {
             return new FluidChange(
                 coordinate,
@@ -849,7 +867,8 @@ namespace WildEarth.Voxel.Tests
             FluidType type,
             string fluidName,
             ushort blockId,
-            bool isLava)
+            bool isLava
+        )
         {
             FluidDefinition definition =
                 ScriptableObject.CreateInstance<FluidDefinition>();
@@ -902,7 +921,8 @@ namespace WildEarth.Voxel.Tests
         private static void SetPrivateField(
             object target,
             string fieldName,
-            object value)
+            object value
+        )
         {
             FieldInfo field =
                 target.GetType().GetField(

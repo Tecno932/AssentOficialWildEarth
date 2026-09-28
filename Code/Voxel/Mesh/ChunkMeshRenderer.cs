@@ -12,6 +12,13 @@ namespace WildEarth.Voxel
         private MeshCollider meshCollider;
         private Mesh mesh;
 
+        // Buffers reutilizables para evitar allocations
+        // cada vez que se reconstruye el mesh.
+        private Vector3[] verticesBuffer;
+        private Vector2[] uvsBuffer;
+        private Vector2[] tiledUVsBuffer;
+        private Vector3[] normalsBuffer;
+
         public Mesh Mesh => mesh;
 
         private void Awake()
@@ -55,73 +62,37 @@ namespace WildEarth.Voxel
 
             if (meshData.VertexCount > 0)
             {
-                var vertices =
-                    new Vector3[
-                        meshData.Vertices.Count
-                    ];
+                int vertexCount =
+                    meshData.VertexCount;
 
-                var uvs =
-                    new Vector2[
-                        meshData.UVs.Count
-                    ];
-
-                var tiledUVs =
-                    new Vector2[
-                        meshData.TiledUVs.Count
-                    ];
-
-                var normals =
-                    new Vector3[
-                        meshData.Normals.Count
-                    ];
+                EnsureBuffers(vertexCount);
 
                 for (
                     int i = 0;
-                    i < vertices.Length;
+                    i < vertexCount;
                     i++
                 )
                 {
-                    vertices[i] =
+                    verticesBuffer[i] =
                         new Vector3(
                             meshData.Vertices[i].x,
                             meshData.Vertices[i].y,
                             meshData.Vertices[i].z
                         );
-                }
 
-                for (
-                    int i = 0;
-                    i < uvs.Length;
-                    i++
-                )
-                {
-                    uvs[i] =
+                    uvsBuffer[i] =
                         new Vector2(
                             meshData.UVs[i].x,
                             meshData.UVs[i].y
                         );
-                }
 
-                for (
-                    int i = 0;
-                    i < tiledUVs.Length;
-                    i++
-                )
-                {
-                    tiledUVs[i] =
+                    tiledUVsBuffer[i] =
                         new Vector2(
                             meshData.TiledUVs[i].x,
                             meshData.TiledUVs[i].y
                         );
-                }
 
-                for (
-                    int i = 0;
-                    i < normals.Length;
-                    i++
-                )
-                {
-                    normals[i] =
+                    normalsBuffer[i] =
                         new Vector3(
                             meshData.Normals[i].x,
                             meshData.Normals[i].y,
@@ -129,7 +100,11 @@ namespace WildEarth.Voxel
                         );
                 }
 
-                mesh.SetVertices(vertices);
+                mesh.SetVertices(
+                    verticesBuffer,
+                    0,
+                    vertexCount
+                );
 
                 mesh.SetTriangles(
                     meshData.Triangles,
@@ -138,15 +113,23 @@ namespace WildEarth.Voxel
 
                 mesh.SetUVs(
                     0,
-                    uvs
+                    uvsBuffer,
+                    0,
+                    vertexCount
                 );
 
                 mesh.SetUVs(
                     1,
-                    tiledUVs
+                    tiledUVsBuffer,
+                    0,
+                    vertexCount
                 );
 
-                mesh.SetNormals(normals);
+                mesh.SetNormals(
+                    normalsBuffer,
+                    0,
+                    vertexCount
+                );
 
                 mesh.RecalculateBounds();
             }
@@ -156,8 +139,11 @@ namespace WildEarth.Voxel
 
             meshCollider.sharedMesh = null;
 
-            meshCollider.sharedMesh =
-                mesh;
+            if (meshData.VertexCount > 0)
+            {
+                meshCollider.sharedMesh =
+                    mesh;
+            }
         }
 
         public void Clear()
@@ -167,6 +153,49 @@ namespace WildEarth.Voxel
             mesh.Clear();
 
             meshCollider.sharedMesh = null;
+        }
+
+        private void EnsureBuffers(
+            int requiredVertexCount)
+        {
+            if (requiredVertexCount <= 0)
+                return;
+
+            if (verticesBuffer == null ||
+                verticesBuffer.Length < requiredVertexCount)
+            {
+                verticesBuffer =
+                    new Vector3[
+                        requiredVertexCount
+                    ];
+            }
+
+            if (uvsBuffer == null ||
+                uvsBuffer.Length < requiredVertexCount)
+            {
+                uvsBuffer =
+                    new Vector2[
+                        requiredVertexCount
+                    ];
+            }
+
+            if (tiledUVsBuffer == null ||
+                tiledUVsBuffer.Length < requiredVertexCount)
+            {
+                tiledUVsBuffer =
+                    new Vector2[
+                        requiredVertexCount
+                    ];
+            }
+
+            if (normalsBuffer == null ||
+                normalsBuffer.Length < requiredVertexCount)
+            {
+                normalsBuffer =
+                    new Vector3[
+                        requiredVertexCount
+                    ];
+            }
         }
 
         private void EnsureMesh()
@@ -218,6 +247,11 @@ namespace WildEarth.Voxel
             Destroy(mesh);
 
             mesh = null;
+
+            verticesBuffer = null;
+            uvsBuffer = null;
+            tiledUVsBuffer = null;
+            normalsBuffer = null;
         }
     }
 }

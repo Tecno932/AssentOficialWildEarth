@@ -1390,118 +1390,118 @@ public void Pipeline_Debug_SurfaceHeightIsSameAcrossVerticalChunks()
     }
 }
 
-    [Test]
-    public void Pipeline_Focused_KnownLowTerrainChunk_GeneratesWater()
-    {
-        ChunkGenerationSettings settings =
-            ChunkGenerationSettings.Default;
-
-        settings.Caves.Enabled = false;
-        settings.Ores.Enabled = false;
-
-        settings.Fluids.Enabled = true;
-        settings.Fluids.GenerateWater = true;
-
-        using VoxelWorld world =
-            CreateWorld(settings);
-
-        world.Initialize();
-
-        Chunk chunk =
-            world.LoadAndGenerateChunk(
-                new ChunkCoordinate(-8, 2, -3)
-            );
-
-        world.CompleteGeneration();
-
-        int waterVoxelCount = 0;
-        int solidVoxelCount = 0;
-        int airVoxelCount = 0;
-
-        int firstWaterIndex = -1;
-
-        for (int i = 0;
-            i < chunk.Data.Voxels.Length;
-            i++)
+        [Test]
+        public void Pipeline_Focused_KnownLowTerrainChunk_GeneratesWater()
         {
-            VoxelData voxel =
-                chunk.Data.Voxels[i];
+            ChunkGenerationSettings settings =
+                ChunkGenerationSettings.Default;
 
-            if (voxel.BlockId == BlockIds.Air)
+            settings.Caves.Enabled = false;
+            settings.Ores.Enabled = false;
+
+            settings.Fluids.Enabled = true;
+            settings.Fluids.GenerateWater = true;
+
+            using VoxelWorld world =
+                CreateWorld(settings);
+
+            world.Initialize();
+
+            Chunk chunk =
+                world.LoadAndGenerateChunk(
+                    new ChunkCoordinate(-8, 2, -3)
+                );
+
+            world.CompleteGeneration();
+
+            int waterVoxelCount = 0;
+            int solidVoxelCount = 0;
+            int airVoxelCount = 0;
+
+            int firstWaterIndex = -1;
+
+            for (int i = 0;
+                i < chunk.Data.Voxels.Length;
+                i++)
             {
-                airVoxelCount++;
+                VoxelData voxel =
+                    chunk.Data.Voxels[i];
+
+                if (voxel.BlockId == BlockIds.Air)
+                {
+                    airVoxelCount++;
+                }
+                else if (voxel.BlockId == 7)
+                {
+                    waterVoxelCount++;
+
+                    if (firstWaterIndex < 0)
+                        firstWaterIndex = i;
+                }
+                else
+                {
+                    solidVoxelCount++;
+                }
             }
-            else if (voxel.BlockId == 7)
-            {
-                waterVoxelCount++;
-
-                if (firstWaterIndex < 0)
-                    firstWaterIndex = i;
-            }
-            else
-            {
-                solidVoxelCount++;
-            }
-        }
-
-        Debug.Log(
-            "[Pipeline Known Low Terrain Debug] " +
-            $"Chunk={chunk.Coordinate}, " +
-            $"WorldOriginY={chunk.Coordinate.Y * VoxelConstants.ChunkSize}, " +
-            $"Air={airVoxelCount}, " +
-            $"Solid={solidVoxelCount}, " +
-            $"Water={waterVoxelCount}, " +
-            $"FirstWaterIndex={firstWaterIndex}"
-        );
-
-        if (firstWaterIndex >= 0)
-        {
-            VoxelIndex.FromIndex(
-                firstWaterIndex,
-                out int localX,
-                out int localY,
-                out int localZ
-            );
-
-            int worldX =
-                chunk.Coordinate.X *
-                VoxelConstants.ChunkSize +
-                localX;
-
-            int worldY =
-                chunk.Coordinate.Y *
-                VoxelConstants.ChunkSize +
-                localY;
-
-            int worldZ =
-                chunk.Coordinate.Z *
-                VoxelConstants.ChunkSize +
-                localZ;
-
-            VoxelData waterVoxel =
-                chunk.Data.Voxels[firstWaterIndex];
 
             Debug.Log(
                 "[Pipeline Known Low Terrain Debug] " +
-                $"FirstWater local=({localX},{localY},{localZ}), " +
-                $"world=({worldX},{worldY},{worldZ}), " +
-                $"BlockId={waterVoxel.BlockId}, " +
-                $"State={waterVoxel.State}"
+                $"Chunk={chunk.Coordinate}, " +
+                $"WorldOriginY={chunk.Coordinate.Y * VoxelConstants.ChunkSize}, " +
+                $"Air={airVoxelCount}, " +
+                $"Solid={solidVoxelCount}, " +
+                $"Water={waterVoxelCount}, " +
+                $"FirstWaterIndex={firstWaterIndex}"
+            );
+
+            if (firstWaterIndex >= 0)
+            {
+                VoxelIndex.FromIndex(
+                    firstWaterIndex,
+                    out int localX,
+                    out int localY,
+                    out int localZ
+                );
+
+                int worldX =
+                    chunk.Coordinate.X *
+                    VoxelConstants.ChunkSize +
+                    localX;
+
+                int worldY =
+                    chunk.Coordinate.Y *
+                    VoxelConstants.ChunkSize +
+                    localY;
+
+                int worldZ =
+                    chunk.Coordinate.Z *
+                    VoxelConstants.ChunkSize +
+                    localZ;
+
+                VoxelData waterVoxel =
+                    chunk.Data.Voxels[firstWaterIndex];
+
+                Debug.Log(
+                    "[Pipeline Known Low Terrain Debug] " +
+                    $"FirstWater local=({localX},{localY},{localZ}), " +
+                    $"world=({worldX},{worldY},{worldZ}), " +
+                    $"BlockId={waterVoxel.BlockId}, " +
+                    $"State={waterVoxel.State}"
+                );
+            }
+
+            Assert.That(
+                chunk.State,
+                Is.EqualTo(ChunkState.Generated)
+            );
+
+            Assert.That(
+                waterVoxelCount,
+                Is.GreaterThan(0),
+                "El chunk conocido con terreno bajo el SeaLevel " +
+                "no generó agua mediante el pipeline."
             );
         }
-
-        Assert.That(
-            chunk.State,
-            Is.EqualTo(ChunkState.Generated)
-        );
-
-        Assert.That(
-            waterVoxelCount,
-            Is.GreaterThan(0),
-            "El chunk conocido con terreno bajo el SeaLevel " +
-            "no generó agua mediante el pipeline."
-        );
-    }
 
         private VoxelWorld CreateWorld(
             ChunkGenerationSettings settings)

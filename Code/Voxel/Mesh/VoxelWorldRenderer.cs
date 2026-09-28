@@ -84,12 +84,10 @@ namespace WildEarth.Voxel
 
         private void RenderChunksNeedingMesh()
         {
-            foreach (KeyValuePair<
-                ChunkCoordinate,
-                ChunkMeshRenderer> pair in renderers)
+            // Primero, chunks que ya tienen renderer.
+            foreach (KeyValuePair<ChunkCoordinate, ChunkMeshRenderer> pair in renderers)
             {
-                ChunkCoordinate coordinate =
-                    pair.Key;
+                ChunkCoordinate coordinate = pair.Key;
 
                 if (!world.Chunks.TryGet(
                         coordinate,
@@ -102,6 +100,51 @@ namespace WildEarth.Voxel
                     continue;
 
                 if (!chunk.NeedsMesh)
+                    continue;
+
+                if (chunk.State != ChunkState.Generated &&
+                    chunk.State != ChunkState.Ready)
+                {
+                    continue;
+                }
+
+                RenderChunk(chunk);
+            }
+
+            // Los chunks cargados desde disco no pasan por
+            // ChunkGenerator.CompletedChunks, por lo que necesitan
+            // ser detectados aquí.
+            List<ChunkCoordinate> coordinates =
+                new List<ChunkCoordinate>();
+
+            world.Chunks.GetCoordinates(
+                coordinates
+            );
+
+            for (int i = 0;
+                i < coordinates.Count;
+                i++)
+            {
+                ChunkCoordinate coordinate =
+                    coordinates[i];
+
+                if (renderers.ContainsKey(coordinate))
+                    continue;
+
+                if (!world.Chunks.TryGet(
+                        coordinate,
+                        out Chunk chunk))
+                {
+                    continue;
+                }
+
+                if (chunk == null)
+                    continue;
+
+                if (!chunk.NeedsMesh)
+                    continue;
+
+                if ((chunk.Flags & ChunkFlags.LoadedFromDisk) == 0)
                     continue;
 
                 if (chunk.State != ChunkState.Generated &&

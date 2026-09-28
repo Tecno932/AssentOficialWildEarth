@@ -21,27 +21,48 @@ namespace WildEarth.Voxel
             int chunkSize =
                 VoxelConstants.ChunkSize;
 
-            for (int z = 0; z < chunkSize; z++)
+            float2 temperatureSeedOffset =
+                new float2(
+                    Context.Seed * 0.371f,
+                    Context.Seed * 0.619f
+                );
+
+            int moistureSeed =
+                Context.Seed +
+                Settings.BiomeSeedOffset;
+
+            float2 moistureSeedOffset =
+                new float2(
+                    moistureSeed * 0.271f,
+                    moistureSeed * 0.733f
+                );
+
+            for (int z = 0;
+                 z < chunkSize;
+                 z++)
             {
-                for (int x = 0; x < chunkSize; x++)
+                for (int x = 0;
+                     x < chunkSize;
+                     x++)
                 {
-                    int3 worldPosition =
-                        Context.GetWorldPosition(
-                            x,
-                            0,
-                            z
-                        );
+                    int worldX =
+                        Context.WorldOrigin.x + x;
+
+                    int worldZ =
+                        Context.WorldOrigin.z + z;
 
                     float temperature =
                         CalculateTemperature(
-                            worldPosition.x,
-                            worldPosition.z
+                            worldX,
+                            worldZ,
+                            temperatureSeedOffset
                         );
 
                     float moisture =
                         CalculateMoisture(
-                            worldPosition.x,
-                            worldPosition.z
+                            worldX,
+                            worldZ,
+                            moistureSeedOffset
                         );
 
                     BiomeId biome =
@@ -63,7 +84,8 @@ namespace WildEarth.Voxel
 
         private float CalculateTemperature(
             int worldX,
-            int worldZ)
+            int worldZ,
+            float2 seedOffset)
         {
             float2 position =
                 new float2(
@@ -74,15 +96,10 @@ namespace WildEarth.Voxel
             position *=
                 Settings.TemperatureFrequency;
 
-            float2 seedOffset =
-                new float2(
-                    Context.Seed * 0.371f,
-                    Context.Seed * 0.619f
-                );
-
             float value =
                 noise.snoise(
-                    position + seedOffset
+                    position +
+                    seedOffset
                 );
 
             return
@@ -91,7 +108,8 @@ namespace WildEarth.Voxel
 
         private float CalculateMoisture(
             int worldX,
-            int worldZ)
+            int worldZ,
+            float2 seedOffset)
         {
             float2 position =
                 new float2(
@@ -102,18 +120,10 @@ namespace WildEarth.Voxel
             position *=
                 Settings.MoistureFrequency;
 
-            float2 seedOffset =
-                new float2(
-                    (Context.Seed +
-                     Settings.BiomeSeedOffset) * 0.271f,
-
-                    (Context.Seed +
-                     Settings.BiomeSeedOffset) * 0.733f
-                );
-
             float value =
                 noise.snoise(
-                    position + seedOffset
+                    position +
+                    seedOffset
                 );
 
             return

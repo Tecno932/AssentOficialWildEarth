@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: WildEarth.Voxel::WildEarth.Voxel.BiomeDefinition
   id: 4
   biomeName: Mountains
-  temperatureMin: 0
-  temperatureMax: 1
-  moistureMin: 0
-  moistureMax: 1
-  terrainHeightMultiplier: 1.8
-  terrainHeightOffset: 15
+  temperatureMin: 0.15
+  temperatureMax: 0.65
+  moistureMin: 0.2
+  moistureMax: 0.85
+  terrainHeightMultiplier: 1.35
+  terrainHeightOffset: 5
   surfaceBlockId: 1
   subSurfaceBlockId: 1
   deepBlockId: 1

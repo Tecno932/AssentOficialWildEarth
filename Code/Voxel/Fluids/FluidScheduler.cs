@@ -19,6 +19,9 @@ namespace WildEarth.Voxel
 
         private readonly HashSet<ChunkCoordinate> activeChunks;
 
+        // Reutilizados para evitar allocations temporales.
+        private readonly Queue<FluidPendingUpdate> reusableUpdateQueue;
+
         private float tickAccumulator;
 
         public int PendingCount =>
@@ -69,6 +72,9 @@ namespace WildEarth.Voxel
 
             activeChunks =
                 new HashSet<ChunkCoordinate>();
+
+            reusableUpdateQueue =
+                new Queue<FluidPendingUpdate>();
 
             tickAccumulator = 0f;
         }
@@ -159,7 +165,6 @@ namespace WildEarth.Voxel
                 ))
             {
                 ProcessUpdate(update);
-
                 processed++;
             }
 
@@ -248,10 +253,7 @@ namespace WildEarth.Voxel
             if (deferredUpdates.Count == 0)
                 return;
 
-            Queue<FluidPendingUpdate> remaining =
-                new Queue<FluidPendingUpdate>(
-                    deferredUpdates.Count
-                );
+            reusableUpdateQueue.Clear();
 
             while (
                 deferredUpdates.Count > 0)
@@ -263,24 +265,18 @@ namespace WildEarth.Voxel
                 {
                     RemoveDeferredKey(update);
 
-                    /*
-                     * Volvemos a introducir el update en
-                     * la cola normal. Enqueue() volverá a
-                     * aplicar la deduplicación normal.
-                     */
                     Enqueue(update);
-
                     continue;
                 }
 
-                remaining.Enqueue(update);
+                reusableUpdateQueue.Enqueue(update);
             }
 
             while (
-                remaining.Count > 0)
+                reusableUpdateQueue.Count > 0)
             {
                 deferredUpdates.Enqueue(
-                    remaining.Dequeue()
+                    reusableUpdateQueue.Dequeue()
                 );
             }
         }
@@ -294,6 +290,8 @@ namespace WildEarth.Voxel
             deferredKeys.Clear();
 
             activeChunks.Clear();
+
+            reusableUpdateQueue.Clear();
 
             tickAccumulator = 0f;
         }
@@ -320,7 +318,6 @@ namespace WildEarth.Voxel
             if (!result.TargetChunkLoaded)
             {
                 DeferUpdate(update);
-
                 return;
             }
 
@@ -405,10 +402,7 @@ namespace WildEarth.Voxel
             if (pendingUpdates.Count == 0)
                 return;
 
-            Queue<FluidPendingUpdate> remaining =
-                new Queue<FluidPendingUpdate>(
-                    pendingUpdates.Count
-                );
+            reusableUpdateQueue.Clear();
 
             pendingKeys.Clear();
 
@@ -421,7 +415,7 @@ namespace WildEarth.Voxel
                 if (update.Chunk == coordinate)
                     continue;
 
-                remaining.Enqueue(update);
+                reusableUpdateQueue.Enqueue(update);
 
                 pendingKeys.Add(
                     new FluidUpdateKey(update)
@@ -429,10 +423,10 @@ namespace WildEarth.Voxel
             }
 
             while (
-                remaining.Count > 0)
+                reusableUpdateQueue.Count > 0)
             {
                 pendingUpdates.Enqueue(
-                    remaining.Dequeue()
+                    reusableUpdateQueue.Dequeue()
                 );
             }
         }
@@ -449,10 +443,7 @@ namespace WildEarth.Voxel
                 return;
             }
 
-            Queue<FluidPendingUpdate> remaining =
-                new Queue<FluidPendingUpdate>(
-                    deferredUpdates.Count
-                );
+            reusableUpdateQueue.Clear();
 
             while (
                 deferredUpdates.Count > 0)
@@ -466,14 +457,14 @@ namespace WildEarth.Voxel
                     continue;
                 }
 
-                remaining.Enqueue(update);
+                reusableUpdateQueue.Enqueue(update);
             }
 
             while (
-                remaining.Count > 0)
+                reusableUpdateQueue.Count > 0)
             {
                 deferredUpdates.Enqueue(
-                    remaining.Dequeue()
+                    reusableUpdateQueue.Dequeue()
                 );
             }
 
@@ -487,26 +478,16 @@ namespace WildEarth.Voxel
             if (activeChunks.Count == 0)
                 return;
 
-            HashSet<ChunkCoordinate> stillActive =
-                new HashSet<ChunkCoordinate>();
+            // Equivalente al comportamiento anterior,
+            // pero sin crear otro HashSet temporal.
+            activeChunks.Clear();
 
             foreach (
                 FluidPendingUpdate update
                 in pendingUpdates)
             {
-                stillActive.Add(
-                    update.Chunk
-                );
-            }
-
-            activeChunks.Clear();
-
-            foreach (
-                ChunkCoordinate coordinate
-                in stillActive)
-            {
                 activeChunks.Add(
-                    coordinate
+                    update.Chunk
                 );
             }
         }
@@ -515,7 +496,6 @@ namespace WildEarth.Voxel
             IEquatable<FluidUpdateKey>
         {
             private readonly ChunkCoordinate chunk;
-
             private readonly int x;
             private readonly int y;
             private readonly int z;
@@ -524,7 +504,6 @@ namespace WildEarth.Voxel
                 FluidPendingUpdate update)
             {
                 chunk = update.Chunk;
-
                 x = update.X;
                 y = update.Y;
                 z = update.Z;
