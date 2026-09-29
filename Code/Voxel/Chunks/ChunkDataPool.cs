@@ -9,6 +9,8 @@ namespace WildEarth.Voxel
     ///
     /// Reutiliza NativeArray<Voxel> para evitar allocaciones y
     /// liberaciones constantes durante el streaming del mundo.
+    ///
+    /// Cada ChunkData adquirido se entrega completamente limpio.
     /// </summary>
     public sealed class ChunkDataPool : IDisposable
     {
@@ -65,15 +67,27 @@ namespace WildEarth.Voxel
 
         public ChunkData Acquire()
         {
+            ChunkData data;
+
             if (pool.Count > 0)
-                return pool.Pop();
+            {
+                data = pool.Pop();
+            }
+            else
+            {
+                if (totalCreated >= maxCapacity)
+                {
+                    throw new InvalidOperationException(
+                        "ChunkDataPool alcanzó su capacidad máxima."
+                    );
+                }
 
-            if (totalCreated < maxCapacity)
-                return CreateData();
+                data = CreateData();
+            }
 
-            throw new InvalidOperationException(
-                "ChunkDataPool alcanzó su capacidad máxima."
-            );
+            Clear(data);
+
+            return data;
         }
 
         public void Release(ChunkData data)
@@ -92,6 +106,23 @@ namespace WildEarth.Voxel
             }
 
             pool.Push(data);
+        }
+
+        private static void Clear(ChunkData data)
+        {
+            if (data == null || !data.IsCreated)
+                return;
+
+            Unity.Collections.NativeArrayOptions options =
+                Unity.Collections.NativeArrayOptions.ClearMemory;
+
+            data.Voxels.CopyFrom(
+                new NativeArray<Voxel>(
+                    VoxelConstants.VoxelsPerChunk,
+                    Allocator.Temp,
+                    options
+                )
+            );
         }
 
         public void Dispose()

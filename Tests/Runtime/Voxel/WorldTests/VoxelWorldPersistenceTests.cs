@@ -1,6 +1,8 @@
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using System;
+using System.IO;
 using WildEarth.Voxel;
 
 using VoxelData = WildEarth.Voxel.Voxel;
@@ -10,6 +12,7 @@ namespace WildEarth.Tests.Voxel
     public sealed class VoxelWorldPersistenceTests
     {
         private VoxelWorld world;
+        private string testSavePath;
 
         private BiomeRegistryAsset biomeRegistryAsset;
         private BlockRegistry blockRegistry;
@@ -44,6 +47,17 @@ namespace WildEarth.Tests.Voxel
             Assert.That(oreRegistryAsset, Is.Not.Null);
             Assert.That(fluidRegistryAsset, Is.Not.Null);
 
+            testSavePath =
+                Path.Combine(
+                    Application.temporaryCachePath,
+                    "WildEarthPersistenceTests",
+                    Guid.NewGuid().ToString("N")
+                );
+
+            Directory.CreateDirectory(
+                testSavePath
+            );
+
             VoxelWorldSettings worldSettings =
                 new VoxelWorldSettings(
                     initialChunkPoolSize: 4,
@@ -58,7 +72,8 @@ namespace WildEarth.Tests.Voxel
                     biomeRegistryAsset,
                     blockRegistry,
                     oreRegistryAsset,
-                    fluidRegistryAsset
+                    fluidRegistryAsset,
+                    testSavePath
                 );
 
             world.Initialize();
@@ -69,6 +84,17 @@ namespace WildEarth.Tests.Voxel
         {
             world?.Dispose();
             world = null;
+
+            if (!string.IsNullOrEmpty(testSavePath) &&
+                Directory.Exists(testSavePath))
+            {
+                Directory.Delete(
+                    testSavePath,
+                    true
+                );
+            }
+
+            testSavePath = null;
 
             biomeRegistryAsset = null;
             blockRegistry = null;

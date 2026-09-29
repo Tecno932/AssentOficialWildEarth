@@ -393,31 +393,31 @@ public sealed class VoxelWorldTests
             );
         }
 
-        [Test]
-        public void GeneratedChunkWithFluid_StartsFluidSimulation()
-        {
-            ChunkCoordinate coordinate =
-                new ChunkCoordinate(-8, 2, -3);
+[Test]
+public void GeneratedChunkWithFluid_StartsFluidSimulation()
+{
+    ChunkCoordinate coordinate =
+        new ChunkCoordinate(-8, 2, -3);
 
-            Chunk chunk =
-                world.LoadAndGenerateChunk(coordinate);
+    Chunk chunk =
+        world.LoadAndGenerateChunk(coordinate);
 
-            world.CompleteGeneration();
+    world.CompleteGeneration();
 
-            Assert.That(
-                ChunkContainsWater(chunk),
-                Is.True,
-                "El chunk generado no contiene agua."
-            );
+    Assert.That(
+        ChunkContainsWater(chunk),
+        Is.True,
+        "El chunk generado no contiene agua."
+    );
 
-            world.Update();
+    world.Update();
 
-            Assert.That(
-                world.FluidSimulation.RunningCount,
-                Is.GreaterThanOrEqualTo(1),
-                "Se encontró agua, pero VoxelWorld no inició ninguna simulación de fluidos."
-            );
-        }
+    Assert.That(
+        world.FluidScheduler.HasPendingOrDeferredUpdates,
+        Is.True,
+        "Se encontró agua, pero VoxelWorld no generó actualizaciones de fluidos."
+    );
+}
 
         [Test]
         public void DebugWaterGenerationConfiguration()
@@ -630,110 +630,110 @@ public sealed class VoxelWorldTests
             );
         }
 
-    [Test]
-    public void TrySetVoxel_ChunkBoundaryMarksNeighborForRemesh()
-    {
-        ChunkCoordinate coordinate =
-            new ChunkCoordinate(
-                4000,
-                0,
-                4000
+        [Test]
+        public void TrySetVoxel_ChunkBoundaryMarksNeighborForRemesh()
+        {
+            ChunkCoordinate coordinate =
+                new ChunkCoordinate(
+                    4000,
+                    0,
+                    4000
+                );
+
+            ChunkCoordinate neighborCoordinate =
+                new ChunkCoordinate(
+                    4001,
+                    0,
+                    4000
+                );
+
+            Chunk chunk =
+                world.LoadAndGenerateChunk(
+                    coordinate
+                );
+
+            Chunk neighbor =
+                world.LoadAndGenerateChunk(
+                    neighborCoordinate
+                );
+
+            world.CompleteGeneration();
+
+            Assert.That(
+                chunk.State,
+                Is.EqualTo(ChunkState.Generated)
+                    .Or.EqualTo(ChunkState.Ready)
             );
 
-        ChunkCoordinate neighborCoordinate =
-            new ChunkCoordinate(
-                4001,
-                0,
-                4000
+            Assert.That(
+                neighbor.State,
+                Is.EqualTo(ChunkState.Generated)
+                    .Or.EqualTo(ChunkState.Ready)
             );
 
-        Chunk chunk =
-            world.LoadAndGenerateChunk(
-                coordinate
+            neighbor.ClearNeedsMesh();
+
+            Assert.That(
+                neighbor.NeedsMesh,
+                Is.False
             );
 
-        Chunk neighbor =
-            world.LoadAndGenerateChunk(
-                neighborCoordinate
+            int localX =
+                VoxelConstants.ChunkSize - 1;
+
+            int localY = 1;
+            int localZ = 1;
+
+            int worldX =
+                coordinate.X * VoxelConstants.ChunkSize +
+                localX;
+
+            int worldY =
+                coordinate.Y * VoxelConstants.ChunkSize +
+                localY;
+
+            int worldZ =
+                coordinate.Z * VoxelConstants.ChunkSize +
+                localZ;
+
+            int localIndex =
+                VoxelIndex.ToIndex(
+                    localX,
+                    localY,
+                    localZ
+                );
+
+            ushort currentBlockId =
+                chunk.Data.Voxels[localIndex].BlockId;
+
+            ushort newBlockId =
+                currentBlockId == 0
+                    ? (ushort)1
+                    : (ushort)0;
+
+            bool changed =
+                world.TrySetVoxel(
+                    worldX,
+                    worldY,
+                    worldZ,
+                    newBlockId
+                );
+
+            Assert.That(
+                changed,
+                Is.True
             );
 
-        world.CompleteGeneration();
-
-        Assert.That(
-            chunk.State,
-            Is.EqualTo(ChunkState.Generated)
-                .Or.EqualTo(ChunkState.Ready)
-        );
-
-        Assert.That(
-            neighbor.State,
-            Is.EqualTo(ChunkState.Generated)
-                .Or.EqualTo(ChunkState.Ready)
-        );
-
-        neighbor.ClearNeedsMesh();
-
-        Assert.That(
-            neighbor.NeedsMesh,
-            Is.False
-        );
-
-        int localX =
-            VoxelConstants.ChunkSize - 1;
-
-        int localY = 1;
-        int localZ = 1;
-
-        int worldX =
-            coordinate.X * VoxelConstants.ChunkSize +
-            localX;
-
-        int worldY =
-            coordinate.Y * VoxelConstants.ChunkSize +
-            localY;
-
-        int worldZ =
-            coordinate.Z * VoxelConstants.ChunkSize +
-            localZ;
-
-        int localIndex =
-            VoxelIndex.ToIndex(
-                localX,
-                localY,
-                localZ
+            Assert.That(
+                chunk.NeedsMesh,
+                Is.True
             );
 
-        ushort currentBlockId =
-            chunk.Data.Voxels[localIndex].BlockId;
-
-        ushort newBlockId =
-            currentBlockId == 0
-                ? (ushort)1
-                : (ushort)0;
-
-        bool changed =
-            world.TrySetVoxel(
-                worldX,
-                worldY,
-                worldZ,
-                newBlockId
+            Assert.That(
+                neighbor.NeedsMesh,
+                Is.True
             );
-
-        Assert.That(
-            changed,
-            Is.True
-        );
-
-        Assert.That(
-            chunk.NeedsMesh,
-            Is.True
-        );
-
-        Assert.That(
-            neighbor.NeedsMesh,
-            Is.True
-        );
-    }
+        }
 
         private void GenerateTestChunks()
         {

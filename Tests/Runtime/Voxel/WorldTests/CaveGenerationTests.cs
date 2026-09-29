@@ -11,6 +11,7 @@ namespace WildEarth.Tests.Voxel
     {
         private NativeArray<VoxelData> voxels;
         private NativeArray<BlockRuntimeData> blockDatabase;
+        private NativeArray<BiomeId> biomes;
 
         [SetUp]
         public void SetUp()
@@ -24,6 +25,12 @@ namespace WildEarth.Tests.Voxel
             blockDatabase =
                 new NativeArray<BlockRuntimeData>(
                     2,
+                    Allocator.Persistent
+                );
+
+            biomes =
+                new NativeArray<BiomeId>(
+                    ChunkBiomeData.Size,
                     Allocator.Persistent
                 );
 
@@ -50,6 +57,14 @@ namespace WildEarth.Tests.Voxel
                 voxels[i] =
                     new VoxelData(1);
             }
+
+            for (int i = 0;
+                 i < biomes.Length;
+                 i++)
+            {
+                biomes[i] =
+                    BiomeId.Plains;
+            }
         }
 
         [TearDown]
@@ -64,6 +79,11 @@ namespace WildEarth.Tests.Voxel
             {
                 blockDatabase.Dispose();
             }
+
+            if (biomes.IsCreated)
+            {
+                biomes.Dispose();
+            }
         }
 
         [Test]
@@ -77,24 +97,17 @@ namespace WildEarth.Tests.Voxel
             ChunkGenerationContext context =
                 new ChunkGenerationContext(
                     12345,
-                    new int3(
-                        0,
-                        0,
-                        0
-                    )
+                    new int3(0, 0, 0)
                 );
 
             CaveGenerationJob job =
                 new CaveGenerationJob
                 {
                     Context = context,
-
                     Settings = settings,
-
                     Voxels = voxels,
-
-                    BlockDatabase =
-                        blockDatabase
+                    BlockDatabase = blockDatabase,
+                    Biomes = biomes
                 };
 
             JobHandle handle =
@@ -124,24 +137,17 @@ namespace WildEarth.Tests.Voxel
             ChunkGenerationContext context =
                 new ChunkGenerationContext(
                     12345,
-                    new int3(
-                        0,
-                        0,
-                        0
-                    )
+                    new int3(0, 0, 0)
                 );
 
             CaveGenerationJob job =
                 new CaveGenerationJob
                 {
                     Context = context,
-
                     Settings = settings,
-
                     Voxels = voxels,
-
-                    BlockDatabase =
-                        blockDatabase
+                    BlockDatabase = blockDatabase,
+                    Biomes = biomes
                 };
 
             JobHandle handle =
@@ -197,48 +203,32 @@ namespace WildEarth.Tests.Voxel
                 ChunkGenerationContext context =
                     new ChunkGenerationContext(
                         12345,
-                        new int3(
-                            10,
-                            0,
-                            -4
-                        )
+                        new int3(10, 0, -4)
                     );
 
                 CaveGenerationJob firstJob =
                     new CaveGenerationJob
                     {
                         Context = context,
-
                         Settings = settings,
-
                         Voxels = first,
-
-                        BlockDatabase =
-                            blockDatabase
+                        BlockDatabase = blockDatabase,
+                        Biomes = biomes
                     };
 
                 CaveGenerationJob secondJob =
                     new CaveGenerationJob
                     {
                         Context = context,
-
                         Settings = settings,
-
                         Voxels = second,
-
-                        BlockDatabase =
-                            blockDatabase
+                        BlockDatabase = blockDatabase,
+                        Biomes = biomes
                     };
 
                 firstHandle =
                     firstJob.Schedule();
 
-                /*
-                 * Completamos completamente el primer Job
-                 * antes de iniciar el segundo.
-                 *
-                 * Ambos Jobs usan el mismo blockDatabase.
-                 */
                 firstHandle.Complete();
 
                 secondHandle =
@@ -261,10 +251,6 @@ namespace WildEarth.Tests.Voxel
             }
             finally
             {
-                /*
-                 * Garantizamos que ningún Job siga utilizando
-                 * los NativeArrays antes de hacer Dispose().
-                 */
                 firstHandle.Complete();
                 secondHandle.Complete();
 
@@ -291,24 +277,17 @@ namespace WildEarth.Tests.Voxel
             ChunkGenerationContext context =
                 new ChunkGenerationContext(
                     12345,
-                    new int3(
-                        0,
-                        0,
-                        0
-                    )
+                    new int3(0, 0, 0)
                 );
 
             CaveGenerationJob job =
                 new CaveGenerationJob
                 {
                     Context = context,
-
                     Settings = settings,
-
                     Voxels = voxels,
-
-                    BlockDatabase =
-                        blockDatabase
+                    BlockDatabase = blockDatabase,
+                    Biomes = biomes
                 };
 
             JobHandle handle =
@@ -371,24 +350,17 @@ namespace WildEarth.Tests.Voxel
                 ChunkGenerationContext context =
                     new ChunkGenerationContext(
                         12345,
-                        new int3(
-                            0,
-                            0,
-                            0
-                        )
+                        new int3(0, 0, 0)
                     );
 
                 CaveGenerationJob job =
                     new CaveGenerationJob
                     {
                         Context = context,
-
                         Settings = settings,
-
                         Voxels = voxels,
-
-                        BlockDatabase =
-                            protectedDatabase
+                        BlockDatabase = protectedDatabase,
+                        Biomes = biomes
                     };
 
                 handle =
@@ -408,11 +380,6 @@ namespace WildEarth.Tests.Voxel
             }
             finally
             {
-                /*
-                 * El database también pertenece al Job,
-                 * por lo que debe estar completado antes
-                 * de hacer Dispose().
-                 */
                 handle.Complete();
 
                 if (protectedDatabase.IsCreated)

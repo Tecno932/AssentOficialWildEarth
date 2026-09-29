@@ -16,7 +16,7 @@ MonoBehaviour:
   oreName: Iron Ore
   minY: 5
   maxY: 70
-  rarity: 0.055
+  rarity: 0.14
   minVeinSize: 4
   maxVeinSize: 8
   frequency: 0.045

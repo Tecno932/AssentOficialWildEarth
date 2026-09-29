@@ -19,10 +19,10 @@ MonoBehaviour:
   hardness: 5
   lightEmission: 0
   topTexture:
-    Column: 1
+    Column: 3
     Row: 6
   bottomTexture:
-    Column: 1
+    Column: 3
     Row: 6
   sideTexture:
     Column: 1

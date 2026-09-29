@@ -16,7 +16,7 @@ MonoBehaviour:
   oreName: Gold Ore
   minY: 5
   maxY: 45
-  rarity: 0.025
+  rarity: 0.1
   minVeinSize: 2
   maxVeinSize: 5
   frequency: 0.05

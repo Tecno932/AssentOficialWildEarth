@@ -20,7 +20,6 @@ namespace WildEarth.Voxel
         private readonly HashSet<FluidSimulationRequest>
             pendingSimulationKeys;
 
-        // Reutilizada para evitar allocation en cada CompleteFinished().
         private readonly List<ChunkCoordinate>
             completedCoordinates;
 
@@ -151,12 +150,18 @@ namespace WildEarth.Voxel
             }
 
             if (!FluidChunkUtility.ContainsFluids(
-                    chunk.Data,
-                    fluidDatabase))
+                chunk.Data,
+                fluidDatabase))
             {
                 return false;
             }
 
+            // No volver a solicitar un chunk mientras ya
+            // tiene una simulación ejecutándose.
+            if (runners.ContainsKey(coordinate))
+                return false;
+
+            // RequestSimulation ya evita duplicados pendientes.
             return RequestSimulation(
                 new FluidSimulationRequest(
                     coordinate
@@ -273,6 +278,49 @@ namespace WildEarth.Voxel
                 );
 
             return completed + scheduled;
+        }
+
+        /// <summary>
+        /// Completa todas las simulaciones actualmente ejecutándose.
+        /// Debe llamarse antes de que FluidScheduler escriba voxels,
+        /// porque FluidSimulationJob lee los mismos NativeArray<Voxel>.
+        /// </summary>
+        public int CompleteAllBeforeWrites()
+        {
+            ThrowIfDisposed();
+
+            if (runners.Count == 0)
+                return 0;
+
+            completedCoordinates.Clear();
+
+            foreach (
+                KeyValuePair<
+                    ChunkCoordinate,
+                    FluidSimulationRunner
+                > pair
+                in runners)
+            {
+                completedCoordinates.Add(
+                    pair.Key
+                );
+            }
+
+            int added = 0;
+
+            for (int i = 0;
+                 i < completedCoordinates.Count;
+                 i++)
+            {
+                added +=
+                    CompleteAndEnqueue(
+                        completedCoordinates[i]
+                    );
+            }
+
+            completedCoordinates.Clear();
+
+            return added;
         }
 
         public bool TrySchedule(

@@ -1,6 +1,7 @@
 using System;
 using Unity.Collections;
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace WildEarth.Voxel
 {
@@ -19,6 +20,7 @@ namespace WildEarth.Voxel
         private readonly FluidScheduler fluidScheduler;
         private readonly FluidSimulationCoordinator fluidSimulationCoordinator;
         private readonly FluidSimulationSettings fluidSimulationSettings;
+        private readonly List<ChunkCoordinate> fluidSimulationCoordinates;
         private readonly ChunkSaveStorage saveStorage;
 
         private bool initialized;
@@ -44,7 +46,8 @@ namespace WildEarth.Voxel
             BiomeRegistryAsset biomeRegistryAsset,
             BlockRegistry blockRegistry,
             OreRegistryAsset oreRegistryAsset,
-            FluidRegistryAsset fluidRegistryAsset)
+            FluidRegistryAsset fluidRegistryAsset,
+            string savePath = null)
         {
             if (oreRegistryAsset == null)
                 throw new ArgumentNullException(
@@ -160,11 +163,17 @@ namespace WildEarth.Voxel
                     FluidSimulationCoordinatorSettings.Default
                 );
 
-            string savePath =
-                System.IO.Path.Combine(
-                    Application.persistentDataPath,
-                    "World"
-                );
+            fluidSimulationCoordinates =
+                new List<ChunkCoordinate>();
+
+            if (string.IsNullOrWhiteSpace(savePath))
+            {
+                savePath =
+                    System.IO.Path.Combine(
+                        Application.persistentDataPath,
+                        "World"
+                    );
+            }
 
             saveStorage =
                 new ChunkSaveStorage(
@@ -187,7 +196,6 @@ namespace WildEarth.Voxel
             ThrowIfNotInitialized();
 
             chunkGenerator.Update();
-
             ProcessCompletedChunks();
 
             fluidSimulationCoordinator
@@ -196,9 +204,40 @@ namespace WildEarth.Voxel
                     fluidSimulationSettings
                 );
 
-            fluidScheduler.Advance(
-                Time.deltaTime
+            fluidSimulationCoordinator
+                .CompleteAllBeforeWrites();
+
+            fluidScheduler.Advance(Time.deltaTime);
+
+            while (
+                fluidScheduler.TryConsumeChangedChunk(
+                    out ChunkCoordinate changedCoordinate))
+            {
+                fluidSimulationCoordinator.RequestChunkSimulation(
+                    changedCoordinate,
+                    fluidDatabase
+                );
+            }
+
+            // Mantener activos los chunks que contienen fluidos.
+            // RequestChunkSimulation evita duplicados pendientes
+            // y simulaciones que ya están ejecutándose.
+            fluidSimulationCoordinates.Clear();
+
+            chunkStorage.GetCoordinates(
+                fluidSimulationCoordinates
             );
+
+            for (
+                int i = 0;
+                i < fluidSimulationCoordinates.Count;
+                i++)
+            {
+                fluidSimulationCoordinator.RequestChunkSimulation(
+                    fluidSimulationCoordinates[i],
+                    fluidDatabase
+                );
+            }
         }
 
         public void CompleteGeneration()
@@ -414,11 +453,16 @@ namespace WildEarth.Voxel
                 if (chunk == null)
                     continue;
 
-                fluidSimulationCoordinator
-                    .RequestChunkSimulation(
-                        chunk.Coordinate,
-                        fluidDatabase
-                    );
+                if (FluidChunkUtility.ContainsFluids(
+                        chunk.Data,
+                        fluidDatabase))
+                {
+                    fluidSimulationCoordinator
+                        .RequestChunkSimulation(
+                            chunk.Coordinate,
+                            fluidDatabase
+                        );
+                }
 
                 MarkNeighborChunksForRemesh(
                     chunk

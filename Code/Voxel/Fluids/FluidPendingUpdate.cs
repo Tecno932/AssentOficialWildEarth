@@ -15,6 +15,11 @@ namespace WildEarth.Voxel
 
         public int Distance;
 
+        // true = eliminar el fluido existente en la posición.
+        // Permite representar una eliminación sin hacer que
+        // FluidState.Empty sea un update normal válido.
+        public bool IsRemoval;
+
         public FluidPendingUpdate(
             ChunkCoordinate chunk,
             int x,
@@ -32,6 +37,46 @@ namespace WildEarth.Voxel
             State = state;
 
             Distance = distance;
+
+            IsRemoval = false;
+        }
+
+        private FluidPendingUpdate(
+            ChunkCoordinate chunk,
+            int x,
+            int y,
+            int z,
+            int distance,
+            bool isRemoval)
+        {
+            Chunk = chunk;
+
+            X = x;
+            Y = y;
+            Z = z;
+
+            State = FluidState.Empty;
+
+            Distance = distance;
+
+            IsRemoval = isRemoval;
+        }
+
+        public static FluidPendingUpdate CreateRemoval(
+            ChunkCoordinate chunk,
+            int x,
+            int y,
+            int z,
+            int distance = 0)
+        {
+            return new FluidPendingUpdate(
+                chunk,
+                x,
+                y,
+                z,
+                distance,
+                true
+            );
         }
 
         public bool IsValid =>
@@ -41,7 +86,7 @@ namespace WildEarth.Voxel
             Y < VoxelConstants.ChunkSize &&
             Z >= 0 &&
             Z < VoxelConstants.ChunkSize &&
-            !State.IsEmpty;
+            (IsRemoval || !State.IsEmpty);
 
         public FluidChange ToChange()
         {
@@ -50,7 +95,9 @@ namespace WildEarth.Voxel
                 X,
                 Y,
                 Z,
-                State
+                IsRemoval
+                    ? FluidState.Empty
+                    : State
             );
         }
 
@@ -71,6 +118,21 @@ namespace WildEarth.Voxel
             );
         }
 
+        public FluidPendingUpdate NextRemoval(
+            ChunkCoordinate chunk,
+            int x,
+            int y,
+            int z)
+        {
+            return CreateRemoval(
+                chunk,
+                x,
+                y,
+                z,
+                Distance + 1
+            );
+        }
+
         public bool Equals(
             FluidPendingUpdate other)
         {
@@ -79,7 +141,8 @@ namespace WildEarth.Voxel
                    Y == other.Y &&
                    Z == other.Z &&
                    State == other.State &&
-                   Distance == other.Distance;
+                   Distance == other.Distance &&
+                   IsRemoval == other.IsRemoval;
         }
 
         public override bool Equals(
@@ -97,7 +160,8 @@ namespace WildEarth.Voxel
                 Y,
                 Z,
                 State,
-                Distance
+                Distance,
+                IsRemoval
             );
         }
 

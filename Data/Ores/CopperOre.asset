@@ -16,7 +16,7 @@ MonoBehaviour:
   oreName: Copper Ore
   minY: 20
   maxY: 80
-  rarity: 0.08
+  rarity: 0.18
   minVeinSize: 3
   maxVeinSize: 6
   frequency: 0.035

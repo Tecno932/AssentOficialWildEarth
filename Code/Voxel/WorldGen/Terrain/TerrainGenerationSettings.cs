@@ -31,7 +31,7 @@ namespace WildEarth.Voxel
             new TerrainGenerationSettings
             {
                 BaseHeight = 64,
-                SeaLevel = 40,
+                SeaLevel = 48,
                 TerrainAmplitude = 24,
 
                 ContinentalFrequency = 0.0012f,

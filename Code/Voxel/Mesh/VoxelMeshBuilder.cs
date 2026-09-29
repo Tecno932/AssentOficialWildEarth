@@ -72,6 +72,12 @@ namespace WildEarth.Voxel
                     storage
                 );
 
+            /*
+             * Los bloques cúbicos continúan utilizando
+             * Binary Greedy Meshing.
+             *
+             * Los fluidos NO pasan por este sistema.
+             */
             for (
                 int face = 0;
                 face < 6;
@@ -84,6 +90,16 @@ namespace WildEarth.Voxel
                     (VoxelFace)face
                 );
             }
+
+            /*
+             * Los fluidos utilizan geometría propia porque
+             * su altura depende de Voxel.State.
+             */
+            BuildFluidGeometry(
+                mesh,
+                chunk,
+                storage
+            );
 
             return mesh;
         }
@@ -417,6 +433,15 @@ namespace WildEarth.Voxel
                         );
                     }
 
+                    /*
+                     * IMPORTANTE:
+                     *
+                     * Los fluidos no forman parte del Binary
+                     * Greedy Meshing.
+                     *
+                     * Su geometría se genera posteriormente
+                     * mediante BuildFluidGeometry().
+                     */
                     if (block.MeshType != BlockMeshType.Cube)
                         continue;
 
@@ -467,13 +492,25 @@ namespace WildEarth.Voxel
 
                     if (neighborId != BlockIds.Air)
                     {
-                        if (blockDatabase.TryGet(
+                        if (!blockDatabase.TryGet(
                                 neighborId,
-                                out BlockRuntimeData neighborBlock) &&
-                            neighborBlock.OccludesFaces)
+                                out BlockRuntimeData neighborBlock))
                         {
-                            continue;
+                            throw new InvalidOperationException(
+                                $"VoxelMeshBuilder no pudo resolver " +
+                                $"el BlockId vecino={neighborId}."
+                            );
                         }
+
+                        /*
+                         * Los fluidos no deben considerarse
+                         * sólidos que oculten la cara del cubo.
+                         *
+                         * OccludesFaces sigue siendo la autoridad
+                         * para bloques sólidos.
+                         */
+                        if (neighborBlock.OccludesFaces)
+                            continue;
                     }
 
                     int biomeIndex =
@@ -520,98 +557,572 @@ namespace WildEarth.Voxel
             }
         }
 
-private void BinaryGreedyMerge(
-    ChunkMeshData mesh,
-    ushort[] binaryRows,
-    int[] keys,
-    ushort[] blockIds,
-    byte[] biomeIds,
-    VoxelFace face,
-    int slice)
-{
-    int chunkSize =
-        VoxelConstants.ChunkSize;
-
-    for (
-        int v = 0;
-        v < chunkSize;
-        v++)
-    {
-        while (binaryRows[v] != 0)
+        private void BinaryGreedyMerge(
+            ChunkMeshData mesh,
+            ushort[] binaryRows,
+            int[] keys,
+            ushort[] blockIds,
+            byte[] biomeIds,
+            VoxelFace face,
+            int slice)
         {
-            int u =
-                FindFirstSetBit(
-                    binaryRows[v]
-                );
+            int chunkSize =
+                VoxelConstants.ChunkSize;
 
-            int index =
-                u +
-                v * chunkSize;
-
-            int key =
-                keys[index];
-
-            if (key == 0)
+            for (
+                int v = 0;
+                v < chunkSize;
+                v++)
             {
-                binaryRows[v] &=
-                    (ushort)~(1 << u);
+                while (binaryRows[v] != 0)
+                {
+                    int u =
+                        FindFirstSetBit(
+                            binaryRows[v]
+                        );
 
-                continue;
+                    int index =
+                        u +
+                        v * chunkSize;
+
+                    int key =
+                        keys[index];
+
+                    if (key == 0)
+                    {
+                        binaryRows[v] &=
+                            (ushort)~(1 << u);
+
+                        continue;
+                    }
+
+                    int width =
+                        FindBinaryWidth(
+                            binaryRows[v],
+                            keys,
+                            v,
+                            u,
+                            key
+                        );
+
+                    int height =
+                        FindBinaryHeight(
+                            binaryRows,
+                            keys,
+                            v,
+                            u,
+                            width,
+                            key
+                        );
+
+                    ushort blockId =
+                        blockIds[index];
+
+                    BiomeId biomeId =
+                        (BiomeId)biomeIds[index];
+
+                    ushort rectangleMask =
+                        CreateRectangleMask(
+                            u,
+                            width
+                        );
+
+                    ClearBinaryRectangle(
+                        binaryRows,
+                        keys,
+                        blockIds,
+                        biomeIds,
+                        v,
+                        u,
+                        width,
+                        height,
+                        rectangleMask
+                    );
+
+                    if (!blockDatabase.TryGet(
+                            blockId,
+                            out BlockRuntimeData block))
+                    {
+                        throw new InvalidOperationException(
+                            $"VoxelMeshBuilder no pudo resolver " +
+                            $"BlockId={blockId}."
+                        );
+                    }
+
+                    AtlasTileCoordinate texture =
+                        GetTexture(
+                            block,
+                            face
+                        );
+
+                    Color32 tint =
+                        GetBlockTint(
+                            blockId,
+                            biomeId
+                        );
+
+                    AddGreedyFace(
+                        mesh,
+                        face,
+                        slice,
+                        u,
+                        v,
+                        width,
+                        height,
+                        texture,
+                        tint
+                    );
+                }
             }
+        }
 
-            int width =
-                FindBinaryWidth(
-                    binaryRows[v],
-                    keys,
-                    v,
-                    u,
-                    key
-                );
+        /*
+         * ============================================================
+         * FLUID MESH
+         * ============================================================
+         *
+         * Los fluidos utilizan Voxel.State como nivel:
+         *
+         * 0  = vacío
+         * 1  = 1/15 de altura
+         * ...
+         * 15 = bloque completamente lleno
+         *
+         * No utilizamos greedy meshing aquí porque dos voxels
+         * contiguos pueden tener alturas diferentes.
+         */
 
-            int height =
-                FindBinaryHeight(
-                    binaryRows,
-                    keys,
-                    v,
-                    u,
-                    width,
-                    key
-                );
+        private void BuildFluidGeometry(
+            ChunkMeshData mesh,
+            Chunk chunk,
+            ChunkStorage storage)
+        {
+            int chunkSize =
+                VoxelConstants.ChunkSize;
 
-            // Guardar estos datos ANTES de limpiar el rectángulo.
-            ushort blockId =
-                blockIds[index];
+            for (
+                int y = 0;
+                y < chunkSize;
+                y++)
+            {
+                for (
+                    int z = 0;
+                    z < chunkSize;
+                    z++)
+                {
+                    for (
+                        int x = 0;
+                        x < chunkSize;
+                        x++)
+                    {
+                        Voxel voxel =
+                            ChunkDataAccess.GetVoxel(
+                                chunk.Data,
+                                x,
+                                y,
+                                z
+                            );
 
-            BiomeId biomeId =
-                (BiomeId)biomeIds[index];
+                        if (voxel.BlockId == BlockIds.Air)
+                            continue;
 
-            ushort rectangleMask =
-                CreateRectangleMask(
-                    u,
-                    width
-                );
+                        if (!blockDatabase.TryGet(
+                                voxel.BlockId,
+                                out BlockRuntimeData block))
+                        {
+                            throw new InvalidOperationException(
+                                $"VoxelMeshBuilder encontró un BlockId inválido " +
+                                $"durante el procesamiento de fluidos. " +
+                                $"BlockId={voxel.BlockId}."
+                            );
+                        }
 
-            ClearBinaryRectangle(
-                binaryRows,
-                keys,
-                blockIds,
-                biomeIds,
-                v,
-                u,
-                width,
-                height,
-                rectangleMask
+                        if (block.MeshType != BlockMeshType.Fluid)
+                            continue;
+
+                        if (!block.IsFluid)
+                            continue;
+
+                        float height =
+                            GetFluidHeight(
+                                voxel
+                            );
+
+                        if (height <= 0f)
+                            continue;
+
+                        Color32 tint =
+                            Color.white;
+
+                        /*
+                         * TOP
+                         */
+                        BuildFluidTopFace(
+                            mesh,
+                            chunk,
+                            storage,
+                            x,
+                            y,
+                            z,
+                            voxel,
+                            block,
+                            height,
+                            tint
+                        );
+
+                        /*
+                         * BOTTOM
+                         */
+                        BuildFluidBottomFace(
+                            mesh,
+                            chunk,
+                            storage,
+                            x,
+                            y,
+                            z,
+                            voxel,
+                            block,
+                            height,
+                            tint
+                        );
+
+                        /*
+                         * NORTH
+                         */
+                        BuildFluidSideFace(
+                            mesh,
+                            chunk,
+                            storage,
+                            x,
+                            y,
+                            z,
+                            voxel,
+                            block,
+                            height,
+                            VoxelFace.North,
+                            tint
+                        );
+
+                        /*
+                         * SOUTH
+                         */
+                        BuildFluidSideFace(
+                            mesh,
+                            chunk,
+                            storage,
+                            x,
+                            y,
+                            z,
+                            voxel,
+                            block,
+                            height,
+                            VoxelFace.South,
+                            tint
+                        );
+
+                        /*
+                         * EAST
+                         */
+                        BuildFluidSideFace(
+                            mesh,
+                            chunk,
+                            storage,
+                            x,
+                            y,
+                            z,
+                            voxel,
+                            block,
+                            height,
+                            VoxelFace.East,
+                            tint
+                        );
+
+                        /*
+                         * WEST
+                         */
+                        BuildFluidSideFace(
+                            mesh,
+                            chunk,
+                            storage,
+                            x,
+                            y,
+                            z,
+                            voxel,
+                            block,
+                            height,
+                            VoxelFace.West,
+                            tint
+                        );
+                    }
+                }
+            }
+        }
+
+        private float GetFluidHeight(
+            Voxel voxel)
+        {
+            return Mathf.Clamp01(
+                voxel.State /
+                (float)FluidState.MaxLevel
             );
+        }
 
-            if (!blockDatabase.TryGet(
-                    blockId,
-                    out BlockRuntimeData block))
+        private void BuildFluidTopFace(
+            ChunkMeshData mesh,
+            Chunk chunk,
+            ChunkStorage storage,
+            int x,
+            int y,
+            int z,
+            Voxel voxel,
+            BlockRuntimeData block,
+            float height,
+            Color32 tint)
+        {
+            if (TryGetVoxel(
+                    storage,
+                    chunk,
+                    x,
+                    y + 1,
+                    z,
+                    out Voxel above))
             {
-                throw new InvalidOperationException(
-                    $"VoxelMeshBuilder no pudo resolver " +
-                    $"BlockId={blockId}."
-                );
+                if (above.BlockId != BlockIds.Air &&
+                    blockDatabase.TryGet(
+                        above.BlockId,
+                        out BlockRuntimeData aboveBlock))
+                {
+                    if (aboveBlock.MeshType == BlockMeshType.Fluid &&
+                        above.BlockId == voxel.BlockId &&
+                        above.State > 0)
+                    {
+                        return;
+                    }
+
+                    if (aboveBlock.OccludesFaces)
+                        return;
+                }
             }
+
+            AtlasTileCoordinate texture =
+                GetTexture(
+                    block,
+                    VoxelFace.Top
+                );
+
+            float y0 =
+                y + height;
+
+            float2 atlasTileMin =
+                GetAtlasTileMin(texture);
+
+            mesh.AddTiledQuad(
+                new float3(
+                    x,
+                    y0,
+                    z + 1
+                ),
+                new float3(
+                    x + 1,
+                    y0,
+                    z + 1
+                ),
+                new float3(
+                    x + 1,
+                    y0,
+                    z
+                ),
+                new float3(
+                    x,
+                    y0,
+                    z
+                ),
+                atlasTileMin,
+                new float2(0f, 0f),
+                new float2(1f, 0f),
+                new float2(1f, 1f),
+                new float2(0f, 1f),
+                tint
+            );
+        }
+
+        private void BuildFluidBottomFace(
+            ChunkMeshData mesh,
+            Chunk chunk,
+            ChunkStorage storage,
+            int x,
+            int y,
+            int z,
+            Voxel voxel,
+            BlockRuntimeData block,
+            float height,
+            Color32 tint)
+        {
+            if (TryGetVoxel(
+                    storage,
+                    chunk,
+                    x,
+                    y - 1,
+                    z,
+                    out Voxel below))
+            {
+                if (below.BlockId != BlockIds.Air &&
+                    blockDatabase.TryGet(
+                        below.BlockId,
+                        out BlockRuntimeData belowBlock))
+                {
+                    if (belowBlock.MeshType == BlockMeshType.Fluid &&
+                        below.BlockId == voxel.BlockId)
+                    {
+                        return;
+                    }
+
+                    if (belowBlock.OccludesFaces)
+                        return;
+                }
+            }
+
+            AtlasTileCoordinate texture =
+                GetTexture(
+                    block,
+                    VoxelFace.Bottom
+                );
+
+            float2 atlasTileMin =
+                GetAtlasTileMin(texture);
+
+            mesh.AddTiledQuad(
+                new float3(
+                    x,
+                    y,
+                    z
+                ),
+                new float3(
+                    x + 1,
+                    y,
+                    z
+                ),
+                new float3(
+                    x + 1,
+                    y,
+                    z + 1
+                ),
+                new float3(
+                    x,
+                    y,
+                    z + 1
+                ),
+                atlasTileMin,
+                new float2(0f, 0f),
+                new float2(1f, 0f),
+                new float2(1f, 1f),
+                new float2(0f, 1f),
+                tint
+            );
+        }
+
+        private void BuildFluidSideFace(
+            ChunkMeshData mesh,
+            Chunk chunk,
+            ChunkStorage storage,
+            int x,
+            int y,
+            int z,
+            Voxel voxel,
+            BlockRuntimeData block,
+            float height,
+            VoxelFace face,
+            Color32 tint)
+        {
+            int neighborX = x;
+            int neighborY = y;
+            int neighborZ = z;
+
+            switch (face)
+            {
+                case VoxelFace.North:
+                    neighborZ++;
+                    break;
+
+                case VoxelFace.South:
+                    neighborZ--;
+                    break;
+
+                case VoxelFace.East:
+                    neighborX++;
+                    break;
+
+                case VoxelFace.West:
+                    neighborX--;
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(
+                        nameof(face)
+                    );
+            }
+
+            float neighborHeight = 0f;
+            bool sameFluid = false;
+            bool blocked = false;
+
+            if (TryGetVoxel(
+                    storage,
+                    chunk,
+                    neighborX,
+                    neighborY,
+                    neighborZ,
+                    out Voxel neighbor))
+            {
+                if (neighbor.BlockId != BlockIds.Air)
+                {
+                    if (blockDatabase.TryGet(
+                            neighbor.BlockId,
+                            out BlockRuntimeData neighborBlock))
+                    {
+                        if (neighborBlock.MeshType == BlockMeshType.Fluid &&
+                            neighbor.BlockId == voxel.BlockId &&
+                            neighbor.State > 0)
+                        {
+                            sameFluid = true;
+
+                            neighborHeight =
+                                GetFluidHeight(
+                                    neighbor
+                                );
+                        }
+                        else if (neighborBlock.OccludesFaces)
+                        {
+                            blocked = true;
+                        }
+                    }
+                }
+            }
+
+            if (blocked)
+                return;
+
+            /*
+             * Si el fluido vecino tiene la misma o mayor altura,
+             * nuestra cara queda completamente cubierta.
+             */
+            if (sameFluid &&
+                neighborHeight >= height)
+            {
+                return;
+            }
+
+            /*
+             * Si el vecino tiene el mismo fluido pero es más bajo,
+             * solo queda visible la parte superior a su nivel.
+             */
+            float bottomHeight =
+                sameFluid
+                    ? neighborHeight
+                    : 0f;
+
+            if (bottomHeight >= height)
+                return;
 
             AtlasTileCoordinate texture =
                 GetTexture(
@@ -619,26 +1130,183 @@ private void BinaryGreedyMerge(
                     face
                 );
 
-            Color32 tint =
-                GetBlockTint(
-                    blockId,
-                    biomeId
-                );
+            float2 atlasTileMin =
+                GetAtlasTileMin(texture);
 
-            AddGreedyFace(
-                mesh,
-                face,
-                slice,
-                u,
-                v,
-                width,
-                height,
-                texture,
-                tint
+            float y0 =
+                y + bottomHeight;
+
+            float y1 =
+                y + height;
+
+            switch (face)
+            {
+                case VoxelFace.North:
+                    mesh.AddTiledQuad(
+                        new float3(
+                            x,
+                            y0,
+                            z + 1
+                        ),
+                        new float3(
+                            x + 1,
+                            y0,
+                            z + 1
+                        ),
+                        new float3(
+                            x + 1,
+                            y1,
+                            z + 1
+                        ),
+                        new float3(
+                            x,
+                            y1,
+                            z + 1
+                        ),
+                        atlasTileMin,
+                        new float2(0f, 0f),
+                        new float2(1f, 0f),
+                        new float2(1f, 1f),
+                        new float2(0f, 1f),
+                        tint
+                    );
+                    break;
+
+                case VoxelFace.South:
+                    mesh.AddTiledQuad(
+                        new float3(
+                            x + 1,
+                            y0,
+                            z
+                        ),
+                        new float3(
+                            x,
+                            y0,
+                            z
+                        ),
+                        new float3(
+                            x,
+                            y1,
+                            z
+                        ),
+                        new float3(
+                            x + 1,
+                            y1,
+                            z
+                        ),
+                        atlasTileMin,
+                        new float2(0f, 0f),
+                        new float2(1f, 0f),
+                        new float2(1f, 1f),
+                        new float2(0f, 1f),
+                        tint
+                    );
+                    break;
+
+                case VoxelFace.East:
+                    mesh.AddTiledQuad(
+                        new float3(
+                            x + 1,
+                            y0,
+                            z + 1
+                        ),
+                        new float3(
+                            x + 1,
+                            y0,
+                            z
+                        ),
+                        new float3(
+                            x + 1,
+                            y1,
+                            z
+                        ),
+                        new float3(
+                            x + 1,
+                            y1,
+                            z + 1
+                        ),
+                        atlasTileMin,
+                        new float2(0f, 0f),
+                        new float2(1f, 0f),
+                        new float2(1f, 1f),
+                        new float2(0f, 1f),
+                        tint
+                    );
+                    break;
+
+                case VoxelFace.West:
+                    mesh.AddTiledQuad(
+                        new float3(
+                            x,
+                            y0,
+                            z
+                        ),
+                        new float3(
+                            x,
+                            y0,
+                            z + 1
+                        ),
+                        new float3(
+                            x,
+                            y1,
+                            z + 1
+                        ),
+                        new float3(
+                            x,
+                            y1,
+                            z
+                        ),
+                        atlasTileMin,
+                        new float2(0f, 0f),
+                        new float2(1f, 0f),
+                        new float2(1f, 1f),
+                        new float2(0f, 1f),
+                        tint
+                    );
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(
+                        nameof(face)
+                    );
+            }
+        }
+
+        private bool TryGetVoxel(
+            ChunkStorage storage,
+            Chunk chunk,
+            int x,
+            int y,
+            int z,
+            out Voxel voxel)
+        {
+            if (x >= 0 &&
+                x < VoxelConstants.ChunkSize &&
+                y >= 0 &&
+                y < VoxelConstants.ChunkSize &&
+                z >= 0 &&
+                z < VoxelConstants.ChunkSize)
+            {
+                voxel =
+                    ChunkDataAccess.GetVoxel(
+                        chunk.Data,
+                        x,
+                        y,
+                        z
+                    );
+
+                return true;
+            }
+
+            return ChunkNeighborAccess.TryGetVoxel(
+                storage,
+                chunk.Coordinate,
+                x,
+                y,
+                z,
+                out voxel
             );
         }
-    }
-}
 
         private int FindFirstSetBit(
             ushort value)

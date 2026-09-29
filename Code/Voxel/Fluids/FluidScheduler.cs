@@ -19,6 +19,9 @@ namespace WildEarth.Voxel
 
         private readonly HashSet<ChunkCoordinate> activeChunks;
 
+        private readonly Queue<ChunkCoordinate> changedChunks;
+        private readonly HashSet<ChunkCoordinate> changedChunkKeys;
+
         // Reutilizados para evitar allocations temporales.
         private readonly Queue<FluidPendingUpdate> reusableUpdateQueue;
 
@@ -71,6 +74,12 @@ namespace WildEarth.Voxel
                 >();
 
             activeChunks =
+                new HashSet<ChunkCoordinate>();
+
+            changedChunks =
+                new Queue<ChunkCoordinate>();
+
+            changedChunkKeys =
                 new HashSet<ChunkCoordinate>();
 
             reusableUpdateQueue =
@@ -281,6 +290,25 @@ namespace WildEarth.Voxel
             }
         }
 
+        public bool TryConsumeChangedChunk(
+            out ChunkCoordinate coordinate)
+        {
+            if (changedChunks.Count == 0)
+            {
+                coordinate = default;
+                return false;
+            }
+
+            coordinate =
+                changedChunks.Dequeue();
+
+            changedChunkKeys.Remove(
+                coordinate
+            );
+
+            return true;
+        }
+
         public void Clear()
         {
             pendingUpdates.Clear();
@@ -290,6 +318,9 @@ namespace WildEarth.Voxel
             deferredKeys.Clear();
 
             activeChunks.Clear();
+
+            changedChunks.Clear();
+            changedChunkKeys.Clear();
 
             reusableUpdateQueue.Clear();
 
@@ -331,6 +362,14 @@ namespace WildEarth.Voxel
             ActivateChunk(
                 result.Change.TargetChunk
             );
+
+            if (changedChunkKeys.Add(
+                    result.Change.TargetChunk))
+            {
+                changedChunks.Enqueue(
+                    result.Change.TargetChunk
+                );
+            }
         }
 
         private void DeferUpdate(

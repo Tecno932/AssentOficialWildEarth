@@ -84,6 +84,72 @@ namespace WildEarth.Voxel
                 return false;
             }
 
+            Voxel current =
+                ChunkDataAccess.GetVoxel(
+                    targetChunk.Data,
+                    change.X,
+                    change.Y,
+                    change.Z
+                );
+
+            bool targetWasAir =
+                current.IsAir;
+
+            /*
+            * Empty significa eliminar el fluido existente.
+            *
+            * Nunca elimina bloques sólidos ni otros tipos
+            * de fluidos.
+            */
+            if (change.State.IsEmpty)
+            {
+                if (!TryGetFluidState(
+                        current,
+                        out FluidState fluidToRemove))
+                {
+                    result =
+                        new FluidChangeResult(
+                            change,
+                            false,
+                            true,
+                            false,
+                            false
+                        );
+
+                    return false;
+                }
+
+                Voxel air =
+                    new Voxel(
+                        BlockIds.Air,
+                        current.Light,
+                        0
+                    );
+
+                ChunkDataAccess.SetVoxel(
+                    targetChunk.Data,
+                    change.X,
+                    change.Y,
+                    change.Z,
+                    air
+                );
+
+                MarkChunkDirty(
+                    targetChunk
+                );
+
+                result =
+                    new FluidChangeResult(
+                        change,
+                        true,
+                        true,
+                        false,
+                        false
+                    );
+
+                return true;
+            }
+
             if (!fluidDatabase.TryGet(
                     change.State.Type,
                     out FluidRuntimeData fluid))
@@ -99,17 +165,6 @@ namespace WildEarth.Voxel
 
                 return false;
             }
-
-            Voxel current =
-                ChunkDataAccess.GetVoxel(
-                    targetChunk.Data,
-                    change.X,
-                    change.Y,
-                    change.Z
-                );
-
-            bool targetWasAir =
-                current.IsAir;
 
             if (targetWasAir)
             {

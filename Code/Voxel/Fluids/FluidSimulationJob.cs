@@ -153,29 +153,43 @@ namespace WildEarth.Voxel
             if (!Settings.AllowVerticalFlow)
                 return;
 
-            if (y <= 0)
-                return;
-
-            /*
-             * El destino vertical siempre permanece dentro
-             * del chunk porque y > 0.
-             */
             int targetX = x;
             int targetY = y - 1;
             int targetZ = z;
 
-            int targetIndex =
-                VoxelIndex.ToIndex(
+            ChunkCoordinate targetChunk =
+                ChunkCoordinateUtility.ResolveChunk(
+                    ChunkCoordinate,
                     targetX,
                     targetY,
-                    targetZ
+                    targetZ,
+                    out targetX,
+                    out targetY,
+                    out targetZ
                 );
 
-            Voxel target =
-                Voxels[targetIndex];
+            /*
+            * Si el destino permanece dentro del chunk,
+            * podemos comprobarlo directamente.
+            *
+            * Si cruza al chunk inferior, FluidUpdateSystem
+            * validará el destino cuando procese el cambio.
+            */
+            if (targetChunk == ChunkCoordinate)
+            {
+                int targetIndex =
+                    VoxelIndex.ToIndex(
+                        targetX,
+                        targetY,
+                        targetZ
+                    );
 
-            if (!target.IsAir)
-                return;
+                Voxel target =
+                    Voxels[targetIndex];
+
+                if (!target.IsAir)
+                    return;
+            }
 
             byte level =
                 FluidPropagation.CalculateVerticalLevel(
@@ -190,7 +204,7 @@ namespace WildEarth.Voxel
                 sourceIndex,
                 ref changeCount,
                 new FluidChange(
-                    ChunkCoordinate,
+                    targetChunk,
                     targetX,
                     targetY,
                     targetZ,

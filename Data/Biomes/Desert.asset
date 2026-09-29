@@ -20,7 +20,7 @@ MonoBehaviour:
   moistureMax: 0.35
   terrainHeightMultiplier: 0.9
   terrainHeightOffset: 0
-  surfaceBlockId: 2
-  subSurfaceBlockId: 2
+  surfaceBlockId: 8
+  subSurfaceBlockId: 8
   deepBlockId: 1
   subSurfaceDepth: 3
