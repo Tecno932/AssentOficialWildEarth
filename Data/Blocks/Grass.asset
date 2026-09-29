@@ -29,4 +29,4 @@ MonoBehaviour:
     Row: 0
   requiredTool: 4
   requiredToolLevel: 0
-  material: {fileID: 0}
+  material: {fileID: 2100000, guid: 4c370f2400f4c5143978348c743a150a, type: 2}

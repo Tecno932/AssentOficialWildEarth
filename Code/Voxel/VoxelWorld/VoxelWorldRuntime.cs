@@ -41,6 +41,9 @@ namespace WildEarth.Voxel
         private bool hasStreamingCoordinate;
         private ChunkCoordinate lastStreamingCoordinate;
 
+        private bool hasLoggedBiome;
+        private BiomeId lastLoggedBiome;
+
         public VoxelWorld World =>
             world;
 
@@ -176,6 +179,8 @@ namespace WildEarth.Voxel
             UpdateStreaming();
 
             world.Update();
+
+            UpdateBiomeDebug();
 
             worldRenderer.RenderCompletedChunks();
 
@@ -331,6 +336,48 @@ namespace WildEarth.Voxel
                 x,
                 y,
                 z
+            );
+        }
+
+        private void UpdateBiomeDebug()
+        {
+            if (world == null ||
+                streamingTarget == null)
+            {
+                return;
+            }
+
+            Vector3 position =
+                streamingTarget.position;
+
+            int worldX =
+                Mathf.FloorToInt(position.x);
+
+            int worldZ =
+                Mathf.FloorToInt(position.z);
+
+            if (!world.TryGetBiomeAt(
+                    worldX,
+                    worldZ,
+                    out BiomeId biomeId))
+            {
+                return;
+            }
+
+            if (hasLoggedBiome &&
+                biomeId == lastLoggedBiome)
+            {
+                return;
+            }
+
+            lastLoggedBiome =
+                biomeId;
+
+            hasLoggedBiome = true;
+
+            Debug.Log(
+                $"[VoxelBiome] Bioma actual: {biomeId} " +
+                $"| Posición: ({worldX}, {worldZ})"
             );
         }
 

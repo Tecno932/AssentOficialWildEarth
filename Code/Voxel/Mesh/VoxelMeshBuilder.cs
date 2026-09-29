@@ -16,6 +16,8 @@ namespace WildEarth.Voxel
             BinaryMaskSize *
             BinaryMaskSize;
 
+        private const ushort GrassBlockId = 3;
+
         public VoxelMeshBuilder(
             BlockRuntimeDatabase blockDatabase,
             VoxelAtlasSettings atlasSettings)
@@ -78,6 +80,7 @@ namespace WildEarth.Voxel
                 BuildBinaryGreedyDirection(
                     mesh,
                     voxelIds,
+                    chunk,
                     (VoxelFace)face
                 );
             }
@@ -274,6 +277,7 @@ namespace WildEarth.Voxel
         private void BuildBinaryGreedyDirection(
             ChunkMeshData mesh,
             ushort[] voxelIds,
+            Chunk chunk,
             VoxelFace face)
         {
             int chunkSize =
@@ -282,15 +286,23 @@ namespace WildEarth.Voxel
             int cacheSize =
                 chunkSize + 2;
 
-            // Cada fila representa 16 celdas mediante bits.
             ushort[] binaryRows =
                 new ushort[
                     BinaryMaskSize
                 ];
 
-            // Mantiene el texture/block key de cada celda.
             int[] keys =
                 new int[
+                    MaskCellCount
+                ];
+
+            ushort[] blockIds =
+                new ushort[
+                    MaskCellCount
+                ];
+
+            byte[] biomeIds =
+                new byte[
                     MaskCellCount
                 ];
 
@@ -311,10 +323,25 @@ namespace WildEarth.Voxel
                     keys.Length
                 );
 
+                Array.Clear(
+                    blockIds,
+                    0,
+                    blockIds.Length
+                );
+
+                Array.Clear(
+                    biomeIds,
+                    0,
+                    biomeIds.Length
+                );
+
                 BuildBinaryFaceMask(
                     binaryRows,
                     keys,
+                    blockIds,
+                    biomeIds,
                     voxelIds,
+                    chunk,
                     face,
                     slice,
                     cacheSize
@@ -324,6 +351,8 @@ namespace WildEarth.Voxel
                     mesh,
                     binaryRows,
                     keys,
+                    blockIds,
+                    biomeIds,
                     face,
                     slice
                 );
@@ -333,7 +362,10 @@ namespace WildEarth.Voxel
         private void BuildBinaryFaceMask(
             ushort[] binaryRows,
             int[] keys,
+            ushort[] blockIds,
+            byte[] biomeIds,
             ushort[] voxelIds,
+            Chunk chunk,
             VoxelFace face,
             int slice,
             int cacheSize)
@@ -444,10 +476,26 @@ namespace WildEarth.Voxel
                         }
                     }
 
+                    int biomeIndex =
+                        x +
+                        z * chunkSize;
+
+                    BiomeId biomeId =
+                        chunk.BiomeData.Biomes[
+                            biomeIndex
+                        ];
+
                     int textureKey =
                         GetTextureKey(
                             block,
                             face
+                        );
+
+                    int mergeKey =
+                        GetMergeKey(
+                            textureKey,
+                            blockId,
+                            biomeId
                         );
 
                     int index =
@@ -455,7 +503,13 @@ namespace WildEarth.Voxel
                         v * chunkSize;
 
                     keys[index] =
-                        textureKey;
+                        mergeKey;
+
+                    blockIds[index] =
+                        blockId;
+
+                    biomeIds[index] =
+                        (byte)biomeId;
 
                     rowMask |=
                         (ushort)(1 << u);
@@ -466,112 +520,125 @@ namespace WildEarth.Voxel
             }
         }
 
-        private void BinaryGreedyMerge(
-            ChunkMeshData mesh,
-            ushort[] binaryRows,
-            int[] keys,
-            VoxelFace face,
-            int slice)
+private void BinaryGreedyMerge(
+    ChunkMeshData mesh,
+    ushort[] binaryRows,
+    int[] keys,
+    ushort[] blockIds,
+    byte[] biomeIds,
+    VoxelFace face,
+    int slice)
+{
+    int chunkSize =
+        VoxelConstants.ChunkSize;
+
+    for (
+        int v = 0;
+        v < chunkSize;
+        v++)
+    {
+        while (binaryRows[v] != 0)
         {
-            int chunkSize =
-                VoxelConstants.ChunkSize;
+            int u =
+                FindFirstSetBit(
+                    binaryRows[v]
+                );
 
-            for (
-                int v = 0;
-                v < chunkSize;
-                v++)
+            int index =
+                u +
+                v * chunkSize;
+
+            int key =
+                keys[index];
+
+            if (key == 0)
             {
-                while (binaryRows[v] != 0)
-                {
-                    int u =
-                        FindFirstSetBit(
-                            binaryRows[v]
-                        );
+                binaryRows[v] &=
+                    (ushort)~(1 << u);
 
-                    int index =
-                        u +
-                        v * chunkSize;
-
-                    int key =
-                        keys[index];
-
-                    if (key == 0)
-                    {
-                        binaryRows[v] &=
-                            (ushort)~(1 << u);
-
-                        continue;
-                    }
-
-                    int width =
-                        FindBinaryWidth(
-                            binaryRows[v],
-                            keys,
-                            v,
-                            u,
-                            key
-                        );
-
-                    int height =
-                        FindBinaryHeight(
-                            binaryRows,
-                            keys,
-                            v,
-                            u,
-                            width,
-                            key
-                        );
-
-                    ushort rectangleMask =
-                        CreateRectangleMask(
-                            u,
-                            width
-                        );
-
-                    ClearBinaryRectangle(
-                        binaryRows,
-                        keys,
-                        v,
-                        u,
-                        width,
-                        height,
-                        rectangleMask
-                    );
-
-                    ushort blockId =
-                        GetBlockIdFromTextureKey(
-                            key
-                        );
-
-                    if (!blockDatabase.TryGet(
-                            blockId,
-                            out BlockRuntimeData block))
-                    {
-                        throw new InvalidOperationException(
-                            $"VoxelMeshBuilder no pudo resolver " +
-                            $"BlockId={blockId}."
-                        );
-                    }
-
-                    AtlasTileCoordinate texture =
-                        GetTexture(
-                            block,
-                            face
-                        );
-
-                    AddGreedyFace(
-                        mesh,
-                        face,
-                        slice,
-                        u,
-                        v,
-                        width,
-                        height,
-                        texture
-                    );
-                }
+                continue;
             }
+
+            int width =
+                FindBinaryWidth(
+                    binaryRows[v],
+                    keys,
+                    v,
+                    u,
+                    key
+                );
+
+            int height =
+                FindBinaryHeight(
+                    binaryRows,
+                    keys,
+                    v,
+                    u,
+                    width,
+                    key
+                );
+
+            // Guardar estos datos ANTES de limpiar el rectángulo.
+            ushort blockId =
+                blockIds[index];
+
+            BiomeId biomeId =
+                (BiomeId)biomeIds[index];
+
+            ushort rectangleMask =
+                CreateRectangleMask(
+                    u,
+                    width
+                );
+
+            ClearBinaryRectangle(
+                binaryRows,
+                keys,
+                blockIds,
+                biomeIds,
+                v,
+                u,
+                width,
+                height,
+                rectangleMask
+            );
+
+            if (!blockDatabase.TryGet(
+                    blockId,
+                    out BlockRuntimeData block))
+            {
+                throw new InvalidOperationException(
+                    $"VoxelMeshBuilder no pudo resolver " +
+                    $"BlockId={blockId}."
+                );
+            }
+
+            AtlasTileCoordinate texture =
+                GetTexture(
+                    block,
+                    face
+                );
+
+            Color32 tint =
+                GetBlockTint(
+                    blockId,
+                    biomeId
+                );
+
+            AddGreedyFace(
+                mesh,
+                face,
+                slice,
+                u,
+                v,
+                width,
+                height,
+                texture,
+                tint
+            );
         }
+    }
+}
 
         private int FindFirstSetBit(
             ushort value)
@@ -697,6 +764,8 @@ namespace WildEarth.Voxel
         private void ClearBinaryRectangle(
             ushort[] binaryRows,
             int[] keys,
+            ushort[] blockIds,
+            byte[] biomeIds,
             int startV,
             int startU,
             int width,
@@ -722,12 +791,15 @@ namespace WildEarth.Voxel
                     x < width;
                     x++)
                 {
-                    keys[
+                    int index =
                         startU +
                         x +
                         row *
-                        chunkSize
-                    ] = 0;
+                        chunkSize;
+
+                    keys[index] = 0;
+                    blockIds[index] = 0;
+                    biomeIds[index] = 0;
                 }
             }
         }
@@ -740,7 +812,8 @@ namespace WildEarth.Voxel
             int v,
             int width,
             int height,
-            AtlasTileCoordinate texture)
+            AtlasTileCoordinate texture,
+            Color32 tint)
         {
             float2 atlasTileMin =
                 GetAtlasTileMin(
@@ -796,7 +869,8 @@ namespace WildEarth.Voxel
                         uv0,
                         uv1,
                         uv2,
-                        uv3
+                        uv3,
+                        tint
                     );
                     break;
 
@@ -816,7 +890,8 @@ namespace WildEarth.Voxel
                         uv0,
                         uv1,
                         uv2,
-                        uv3
+                        uv3,
+                        tint
                     );
                     break;
 
@@ -836,7 +911,8 @@ namespace WildEarth.Voxel
                         uv0,
                         uv1,
                         uv2,
-                        uv3
+                        uv3,
+                        tint
                     );
                     break;
 
@@ -856,7 +932,8 @@ namespace WildEarth.Voxel
                         uv0,
                         uv1,
                         uv2,
-                        uv3
+                        uv3,
+                        tint
                     );
                     break;
 
@@ -876,7 +953,8 @@ namespace WildEarth.Voxel
                         uv0,
                         uv1,
                         uv2,
-                        uv3
+                        uv3,
+                        tint
                     );
                     break;
 
@@ -896,7 +974,8 @@ namespace WildEarth.Voxel
                         uv0,
                         uv1,
                         uv2,
-                        uv3
+                        uv3,
+                        tint
                     );
                     break;
 
@@ -990,10 +1069,70 @@ namespace WildEarth.Voxel
                 (texture.Row & 0xFF);
         }
 
-        private ushort GetBlockIdFromTextureKey(
-            int key)
+        private int GetMergeKey(
+            int textureKey,
+            ushort blockId,
+            BiomeId biomeId)
         {
-            return (ushort)(key >> 16);
+            if (blockId != GrassBlockId)
+                return textureKey;
+
+            return textureKey ^
+                   ((int)biomeId << 24);
+        }
+
+        private Color32 GetBlockTint(
+            ushort blockId,
+            BiomeId biomeId)
+        {
+            if (blockId != GrassBlockId)
+                return Color.white;
+
+            switch (biomeId)
+            {
+                case BiomeId.Plains:
+                    return new Color32(
+                        126,
+                        181,
+                        72,
+                        255
+                    );
+
+                case BiomeId.Forest:
+                    return new Color32(
+                        78,
+                        145,
+                        54,
+                        255
+                    );
+
+                case BiomeId.Desert:
+                    return new Color32(
+                        177,
+                        171,
+                        82,
+                        255
+                    );
+
+                case BiomeId.Tundra:
+                    return new Color32(
+                        145,
+                        176,
+                        113,
+                        255
+                    );
+
+                case BiomeId.Mountains:
+                    return new Color32(
+                        102,
+                        156,
+                        76,
+                        255
+                    );
+
+                default:
+                    return Color.white;
+            }
         }
 
         private AtlasTileCoordinate GetTexture(

@@ -208,7 +208,10 @@ private JobHandle ScheduleCaves(
                 chunk.Data.Voxels,
 
             BlockDatabase =
-                blockDatabase.AsNativeArray()
+                blockDatabase.AsNativeArray(),
+
+            Biomes =
+                chunk.BiomeData.Biomes
         };
 
     return job.Schedule(

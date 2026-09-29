@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Unity.Mathematics;
+using UnityEngine;
 
 namespace WildEarth.Voxel
 {
@@ -15,6 +16,8 @@ namespace WildEarth.Voxel
         public List<float2> TiledUVs { get; }
 
         public List<float3> Normals { get; }
+
+        public List<Color32> Colors { get; }
 
         public int VertexCount =>
             Vertices.Count;
@@ -59,6 +62,11 @@ namespace WildEarth.Voxel
                 new List<float3>(
                     initialCapacity
                 );
+
+            Colors =
+                new List<Color32>(
+                    initialCapacity
+                );
         }
 
         public void Clear()
@@ -68,6 +76,7 @@ namespace WildEarth.Voxel
             UVs.Clear();
             TiledUVs.Clear();
             Normals.Clear();
+            Colors.Clear();
         }
 
         public void AddQuad(
@@ -79,6 +88,30 @@ namespace WildEarth.Voxel
             float2 uv1,
             float2 uv2,
             float2 uv3)
+        {
+            AddQuad(
+                v0,
+                v1,
+                v2,
+                v3,
+                uv0,
+                uv1,
+                uv2,
+                uv3,
+                Color.white
+            );
+        }
+
+        public void AddQuad(
+            float3 v0,
+            float3 v1,
+            float3 v2,
+            float3 v3,
+            float2 uv0,
+            float2 uv1,
+            float2 uv2,
+            float2 uv3,
+            Color32 color)
         {
             int startIndex =
                 Vertices.Count;
@@ -109,18 +142,16 @@ namespace WildEarth.Voxel
                 new float2(0f, 1f)
             );
 
-            float3 normal =
-                math.normalize(
-                    math.cross(
-                        v1 - v0,
-                        v2 - v0
-                    )
-                );
+            AddNormals(
+                v0,
+                v1,
+                v2
+            );
 
-            Normals.Add(normal);
-            Normals.Add(normal);
-            Normals.Add(normal);
-            Normals.Add(normal);
+            Colors.Add(color);
+            Colors.Add(color);
+            Colors.Add(color);
+            Colors.Add(color);
 
             AddTriangles(startIndex);
         }
@@ -135,6 +166,32 @@ namespace WildEarth.Voxel
             float2 uv1,
             float2 uv2,
             float2 uv3)
+        {
+            AddTiledQuad(
+                v0,
+                v1,
+                v2,
+                v3,
+                atlasTileMin,
+                uv0,
+                uv1,
+                uv2,
+                uv3,
+                Color.white
+            );
+        }
+
+        public void AddTiledQuad(
+            float3 v0,
+            float3 v1,
+            float3 v2,
+            float3 v3,
+            float2 atlasTileMin,
+            float2 uv0,
+            float2 uv1,
+            float2 uv2,
+            float2 uv3,
+            Color32 color)
         {
             int startIndex =
                 Vertices.Count;
@@ -154,6 +211,25 @@ namespace WildEarth.Voxel
             TiledUVs.Add(uv2);
             TiledUVs.Add(uv3);
 
+            AddNormals(
+                v0,
+                v1,
+                v2
+            );
+
+            Colors.Add(color);
+            Colors.Add(color);
+            Colors.Add(color);
+            Colors.Add(color);
+
+            AddTriangles(startIndex);
+        }
+
+        private void AddNormals(
+            float3 v0,
+            float3 v1,
+            float3 v2)
+        {
             float3 normal =
                 math.normalize(
                     math.cross(
@@ -166,8 +242,6 @@ namespace WildEarth.Voxel
             Normals.Add(normal);
             Normals.Add(normal);
             Normals.Add(normal);
-
-            AddTriangles(startIndex);
         }
 
         private void AddTriangles(

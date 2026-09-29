@@ -10,23 +10,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6dc548f42ffc7c24f87e72d4c0e3b5ac, type: 3}
-  m_Name: Water
+  m_Name: Sand
   m_EditorClassIdentifier: WildEarth.Voxel::WildEarth.Voxel.BlockDefinition
-  id: 7
-  blockName: Water
-  meshType: 5
-  flags: 50
-  hardness: 0
+  id: 8
+  blockName: Sand
+  meshType: 0
+  flags: 321
+  hardness: 1
   lightEmission: 0
   topTexture:
-    Column: 30
-    Row: 0
+    Column: 2
+    Row: 1
   bottomTexture:
-    Column: 30
-    Row: 0
+    Column: 2
+    Row: 1
   sideTexture:
-    Column: 30
-    Row: 0
-  requiredTool: 0
+    Column: 2
+    Row: 1
+  requiredTool: 4
   requiredToolLevel: 0
   material: {fileID: 0}

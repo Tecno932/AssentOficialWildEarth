@@ -15,6 +15,8 @@ namespace WildEarth.Voxel
 
         [ReadOnly]
         public NativeArray<BlockRuntimeData> BlockDatabase;
+        [ReadOnly]
+        public NativeArray<BiomeId> Biomes;
 
         public void Execute()
         {
@@ -67,6 +69,12 @@ namespace WildEarth.Voxel
                                 y,
                                 z);
 
+                        int columnIndex =
+                            x + z * chunkSize;
+
+                        BiomeId biomeId =
+                            Biomes[columnIndex];
+
                         Voxel voxel =
                             Voxels[index];
 
@@ -105,8 +113,27 @@ namespace WildEarth.Voxel
                                 seedOffset1,
                                 seedOffset2);
 
+                        float biomeMultiplier =
+                            GetBiomeCaveMultiplier(
+                                biomeId
+                            );
+
+                        float depthMultiplier =
+                            GetDepthMultiplier(
+                                worldY
+                            );
+
+                        float effectiveThreshold =
+                            Settings.Threshold +
+                            (
+                                1f -
+                                biomeMultiplier *
+                                depthMultiplier
+                            ) *
+                            0.20f;
+
                         if (density >=
-                            Settings.Threshold)
+                            effectiveThreshold)
                         {
                             Voxels[index] =
                                 new Voxel(
@@ -115,6 +142,63 @@ namespace WildEarth.Voxel
                     }
                 }
             }
+        }
+
+        private float GetBiomeCaveMultiplier(
+            BiomeId biomeId)
+        {
+            switch (biomeId)
+            {
+                case BiomeId.Mountains:
+                    return 0.75f;
+
+                case BiomeId.Forest:
+                    return 0.70f;
+
+                case BiomeId.Tundra:
+                    return 0.60f;
+
+                case BiomeId.Plains:
+                    return 0.55f;
+
+                case BiomeId.Desert:
+                    return 0.35f;
+
+                default:
+                    return 0.75f;
+            }
+        }
+
+        private float GetDepthMultiplier(
+            int worldY)
+        {
+            float minimum =
+                Settings.MinimumY;
+
+            float maximum =
+                Settings.MaximumY;
+
+            float normalized =
+                math.saturate(
+                    (worldY - minimum) /
+                    math.max(
+                        1f,
+                        maximum - minimum
+                    )
+                );
+
+            /*
+            * Cerca de la superficie:
+            * pocas cuevas.
+            *
+            * En profundidad:
+            * máxima actividad.
+            */
+            return math.lerp(
+                0.35f,
+                1.15f,
+                1f - normalized
+            );
         }
 
         private bool CanCarve(

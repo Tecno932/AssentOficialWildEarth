@@ -20,17 +20,12 @@ Shader "WildEarth/VoxelAtlasBlock"
         Pass
         {
             Name "ForwardLit"
-
-            Tags
-            {
-                "LightMode"="UniversalForward"
-            }
+            Tags { "LightMode"="UniversalForward" }
 
             HLSLPROGRAM
 
             #pragma vertex vert
             #pragma fragment frag
-
             #pragma multi_compile_fog
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
@@ -45,6 +40,7 @@ Shader "WildEarth/VoxelAtlasBlock"
                 float2 atlasUV : TEXCOORD0;
                 float2 tiledUV : TEXCOORD1;
                 float3 normalOS : NORMAL;
+                float4 color : COLOR;
             };
 
             struct Varyings
@@ -54,22 +50,20 @@ Shader "WildEarth/VoxelAtlasBlock"
                 float2 tiledUV : TEXCOORD1;
                 float3 normalWS : TEXCOORD2;
                 float3 positionWS : TEXCOORD3;
+                float4 color : COLOR;
             };
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
 
             CBUFFER_START(UnityPerMaterial)
-
                 float4 _BaseColor;
                 float4 _BaseMap_ST;
                 float _Smoothness;
                 float _Metallic;
-
             CBUFFER_END
 
-            Varyings vert(
-                Attributes input)
+            Varyings vert(Attributes input)
             {
                 Varyings output;
 
@@ -98,62 +92,119 @@ Shader "WildEarth/VoxelAtlasBlock"
                 output.tiledUV =
                     input.tiledUV;
 
+                output.color =
+                    input.color;
+
                 return output;
             }
 
-            half4 frag(
-                Varyings input) : SV_Target
+            // =========================================================
+            // RGB -> HSV
+            // =========================================================
+
+            float3 RGBtoHSV(float3 c)
+            {
+                float4 K =
+                    float4(
+                        0.0,
+                        -1.0 / 3.0,
+                        2.0 / 3.0,
+                        -1.0
+                    );
+
+                float4 p =
+                    c.g < c.b
+                        ? float4(c.bg, K.wz)
+                        : float4(c.gb, K.xy);
+
+                float4 q =
+                    c.r < p.x
+                        ? float4(p.xyw, c.r)
+                        : float4(c.r, p.yzx);
+
+                float d =
+                    q.x -
+                    min(q.w, q.y);
+
+                float e =
+                    1e-10;
+
+                return float3(
+                    abs(
+                        q.z +
+                        (q.w - q.y) /
+                        (6.0 * d + e)
+                    ),
+                    d /
+                    (q.x + e),
+                    q.x
+                );
+            }
+
+            // =========================================================
+            // HSV -> RGB
+            // =========================================================
+
+            float3 HSVtoRGB(float3 hsv)
+            {
+                float3 p =
+                    abs(
+                        frac(
+                            hsv.xxx +
+                            float3(
+                                0.0,
+                                2.0 / 3.0,
+                                1.0 / 3.0
+                            )
+                        ) * 6.0 -
+                        3.0
+                    );
+
+                return hsv.z *
+                    lerp(
+                        float3(
+                            1.0,
+                            1.0,
+                            1.0
+                        ),
+                        saturate(
+                            p - 1.0
+                        ),
+                        hsv.y
+                    );
+            }
+
+            half4 frag(Varyings input) : SV_Target
             {
                 const int AtlasWidth = 512;
                 const int AtlasHeight = 512;
                 const int TileSize = 16;
 
-                /*
-                 * atlasUV contiene la esquina inferior
-                 * izquierda del tile.
-                 *
-                 * La convertimos directamente a píxeles.
-                 */
-                int2 tileOrigin =
-                    int2(
-                        round(
-                            input.atlasUV.x *
-                            AtlasWidth
-                        ),
-                        round(
-                            input.atlasUV.y *
-                            AtlasHeight
-                        )
-                    );
+                int2 tileOrigin = int2(
+                    round(
+                        input.atlasUV.x *
+                        AtlasWidth
+                    ),
+                    round(
+                        input.atlasUV.y *
+                        AtlasHeight
+                    )
+                );
 
-                /*
-                 * tiledUV representa la posición
-                 * dentro del greedy quad.
-                 *
-                 * Cada unidad equivale a un bloque.
-                 *
-                 * Convertimos directamente a uno de
-                 * los 16x16 píxeles del tile.
-                 */
                 float2 localUV =
                     frac(input.tiledUV);
 
-                int2 localPixel =
-                    int2(
-                        floor(
-                            localUV.x *
-                            TileSize
-                        ),
-                        floor(
-                            localUV.y *
-                            TileSize
-                        )
-                    );
+                int2 localPixel = int2(
+                    floor(
+                        localUV.x *
+                        TileSize
+                    ),
+                    floor(
+                        localUV.y *
+                        TileSize
+                    )
+                );
 
-                /*
-                 * Protección contra cualquier
-                 * posible error de precisión.
-                 */
                 localPixel =
                     clamp(
                         localPixel,
@@ -168,19 +219,70 @@ Shader "WildEarth/VoxelAtlasBlock"
                     tileOrigin +
                     localPixel;
 
-                /*
-                 * Lectura exacta de un píxel.
-                 *
-                 * No existe filtrado bilineal,
-                 * mipmap ni mezcla con el tile vecino.
-                 */
+                // =====================================================
+                // Textura original
+                // =====================================================
+
                 half4 albedo =
                     _BaseMap.Load(
                         int3(
                             atlasPixel,
                             0
                         )
-                    ) * _BaseColor;
+                    ) *
+                    _BaseColor;
+
+                // =====================================================
+                // SISTEMA DE GRISES
+                // =====================================================
+
+                float3 hsv =
+                    RGBtoHSV(
+                        albedo.rgb
+                    );
+
+                float brightness =
+                    hsv.z;
+
+                float saturation =
+                    hsv.y;
+
+                bool isGray =
+                    saturation < 0.25 &&
+                    brightness > 0.12 &&
+                    brightness < 0.95;
+
+                // =====================================================
+                // COLOR DEL BIOMA
+                //
+                // Solamente se aplica a los píxeles grises.
+                // Las partes marrones de la textura permanecen
+                // con su color original.
+                // =====================================================
+
+                if (isGray)
+                {
+                    float3 biomeHSV =
+                        RGBtoHSV(
+                            input.color.rgb
+                        );
+
+                    // Conservamos el brillo original
+                    // de la textura.
+                    biomeHSV.z =
+                        brightness;
+
+                    // Aplicamos el tono y saturación
+                    // del color del bioma.
+                    albedo.rgb =
+                        HSVtoRGB(
+                            biomeHSV
+                        );
+                }
+
+                // =====================================================
+                // Lighting
+                // =====================================================
 
                 float3 normalWS =
                     normalize(
@@ -219,11 +321,7 @@ Shader "WildEarth/VoxelAtlasBlock"
         Pass
         {
             Name "ShadowCaster"
-
-            Tags
-            {
-                "LightMode"="ShadowCaster"
-            }
+            Tags { "LightMode"="ShadowCaster" }
 
             ZWrite On
             ZTest LEqual

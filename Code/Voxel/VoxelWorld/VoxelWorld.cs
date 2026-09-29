@@ -238,10 +238,6 @@ namespace WildEarth.Voxel
                 MarkNeighborChunksForRemesh(
                     chunk
                 );
-
-                Debug.Log(
-                    $"[VoxelSave] Chunk cargado: {coordinate}"
-                );
             }
 
             return chunk;
@@ -631,56 +627,117 @@ private void MarkNeighborForRemesh(
 
             chunk.MarkVoxelDataChanged();
 
-if (localX == 0)
-{
-    MarkNeighborForRemesh(
-        coordinate.X - 1,
-        coordinate.Y,
-        coordinate.Z
-    );
-}
-else if (localX == VoxelConstants.ChunkSize - 1)
-{
-    MarkNeighborForRemesh(
-        coordinate.X + 1,
-        coordinate.Y,
-        coordinate.Z
-    );
-}
+            if (localX == 0)
+            {
+                MarkNeighborForRemesh(
+                    coordinate.X - 1,
+                    coordinate.Y,
+                    coordinate.Z
+                );
+            }
+            else if (localX == VoxelConstants.ChunkSize - 1)
+            {
+                MarkNeighborForRemesh(
+                    coordinate.X + 1,
+                    coordinate.Y,
+                    coordinate.Z
+                );
+            }
 
-if (localY == 0)
-{
-    MarkNeighborForRemesh(
-        coordinate.X,
-        coordinate.Y - 1,
-        coordinate.Z
-    );
-}
-else if (localY == VoxelConstants.ChunkSize - 1)
-{
-    MarkNeighborForRemesh(
-        coordinate.X,
-        coordinate.Y + 1,
-        coordinate.Z
-    );
-}
+            if (localY == 0)
+            {
+                MarkNeighborForRemesh(
+                    coordinate.X,
+                    coordinate.Y - 1,
+                    coordinate.Z
+                );
+            }
+            else if (localY == VoxelConstants.ChunkSize - 1)
+            {
+                MarkNeighborForRemesh(
+                    coordinate.X,
+                    coordinate.Y + 1,
+                    coordinate.Z
+                );
+            }
 
-if (localZ == 0)
-{
-    MarkNeighborForRemesh(
-        coordinate.X,
-        coordinate.Y,
-        coordinate.Z - 1
-    );
-}
-else if (localZ == VoxelConstants.ChunkSize - 1)
-{
-    MarkNeighborForRemesh(
-        coordinate.X,
-        coordinate.Y,
-        coordinate.Z + 1
-    );
-}
+            if (localZ == 0)
+            {
+                MarkNeighborForRemesh(
+                    coordinate.X,
+                    coordinate.Y,
+                    coordinate.Z - 1
+                );
+            }
+            else if (localZ == VoxelConstants.ChunkSize - 1)
+            {
+                MarkNeighborForRemesh(
+                    coordinate.X,
+                    coordinate.Y,
+                    coordinate.Z + 1
+                );
+            }
+
+            return true;
+        }
+
+        public bool TryGetBiomeAt(
+            int worldX,
+            int worldZ,
+            out BiomeId biomeId)
+        {
+            biomeId = BiomeId.Plains;
+
+            ChunkCoordinate coordinate =
+                new ChunkCoordinate(
+                    FloorDiv(
+                        worldX,
+                        VoxelConstants.ChunkSize
+                    ),
+                    0,
+                    FloorDiv(
+                        worldZ,
+                        VoxelConstants.ChunkSize
+                    )
+                );
+
+            if (!chunkStorage.TryGet(
+                    coordinate,
+                    out Chunk chunk))
+            {
+                return false;
+            }
+
+            if (chunk == null ||
+                !chunk.BiomeData.IsCreated)
+            {
+                return false;
+            }
+
+            if (chunk.State != ChunkState.Generated &&
+                chunk.State != ChunkState.Ready)
+            {
+                return false;
+            }
+
+            int localX =
+                Mod(
+                    worldX,
+                    VoxelConstants.ChunkSize
+                );
+
+            int localZ =
+                Mod(
+                    worldZ,
+                    VoxelConstants.ChunkSize
+                );
+
+            int index =
+                localX +
+                localZ * VoxelConstants.ChunkSize;
+
+            biomeId =
+                chunk.BiomeData.Biomes[index];
 
             return true;
         }

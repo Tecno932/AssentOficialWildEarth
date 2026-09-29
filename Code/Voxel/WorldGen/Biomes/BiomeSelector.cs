@@ -21,17 +21,12 @@ namespace WildEarth.Voxel
             float bestScore =
                 float.MaxValue;
 
-            for (int i = 0; i < biomes.Length; i++)
+            for (int i = 0;
+                 i < biomes.Length;
+                 i++)
             {
                 BiomeRuntimeData biome =
                     biomes[i];
-
-                if (!biome.MatchesClimate(
-                        temperature,
-                        moisture))
-                {
-                    continue;
-                }
 
                 float temperatureCenter =
                     (biome.TemperatureMin +

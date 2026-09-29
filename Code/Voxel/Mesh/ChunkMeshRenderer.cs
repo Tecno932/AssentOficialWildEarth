@@ -12,12 +12,11 @@ namespace WildEarth.Voxel
         private MeshCollider meshCollider;
         private Mesh mesh;
 
-        // Buffers reutilizables para evitar allocations
-        // cada vez que se reconstruye el mesh.
         private Vector3[] verticesBuffer;
         private Vector2[] uvsBuffer;
         private Vector2[] tiledUVsBuffer;
         private Vector3[] normalsBuffer;
+        private Color32[] colorsBuffer;
 
         public Mesh Mesh => mesh;
 
@@ -70,8 +69,7 @@ namespace WildEarth.Voxel
                 for (
                     int i = 0;
                     i < vertexCount;
-                    i++
-                )
+                    i++)
                 {
                     verticesBuffer[i] =
                         new Vector3(
@@ -98,6 +96,9 @@ namespace WildEarth.Voxel
                             meshData.Normals[i].y,
                             meshData.Normals[i].z
                         );
+
+                    colorsBuffer[i] =
+                        meshData.Colors[i];
                 }
 
                 mesh.SetVertices(
@@ -127,6 +128,12 @@ namespace WildEarth.Voxel
 
                 mesh.SetNormals(
                     normalsBuffer,
+                    0,
+                    vertexCount
+                );
+
+                mesh.SetColors(
+                    colorsBuffer,
                     0,
                     vertexCount
                 );
@@ -196,6 +203,15 @@ namespace WildEarth.Voxel
                         requiredVertexCount
                     ];
             }
+
+            if (colorsBuffer == null ||
+                colorsBuffer.Length < requiredVertexCount)
+            {
+                colorsBuffer =
+                    new Color32[
+                        requiredVertexCount
+                    ];
+            }
         }
 
         private void EnsureMesh()
@@ -252,6 +268,7 @@ namespace WildEarth.Voxel
             uvsBuffer = null;
             tiledUVsBuffer = null;
             normalsBuffer = null;
+            colorsBuffer = null;
         }
     }
 }
