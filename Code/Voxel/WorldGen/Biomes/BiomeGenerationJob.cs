@@ -16,10 +16,27 @@ namespace WildEarth.Voxel
 
         public NativeArray<BiomeId> Output;
 
+        private struct RegionSample
+        {
+            public int CellX;
+            public int CellZ;
+
+            public float2 Center;
+
+            public float Temperature;
+            public float Moisture;
+        }
+
         public void Execute()
         {
             int chunkSize =
                 VoxelConstants.ChunkSize;
+
+            float regionSize =
+                math.max(
+                    64f,
+                    Settings.BiomeRegionSize
+                );
 
             float2 temperatureSeedOffset =
                 new float2(
@@ -37,10 +54,118 @@ namespace WildEarth.Voxel
                     moistureSeed * 0.733f
                 );
 
+            int minCellX =
+                (int)math.floor(
+                    Context.WorldOrigin.x /
+                    regionSize
+                );
+
+            int maxCellX =
+                (int)math.floor(
+                    (Context.WorldOrigin.x +
+                     chunkSize - 1) /
+                    regionSize
+                );
+
+            int minCellZ =
+                (int)math.floor(
+                    Context.WorldOrigin.z /
+                    regionSize
+                );
+
+            int maxCellZ =
+                (int)math.floor(
+                    (Context.WorldOrigin.z +
+                     chunkSize - 1) /
+                    regionSize
+                );
+
+            int cellWidth =
+                maxCellX -
+                minCellX +
+                3;
+
+            int cellHeight =
+                maxCellZ -
+                minCellZ +
+                3;
+
+            int cacheOriginX =
+                minCellX - 1;
+
+            int cacheOriginZ =
+                minCellZ - 1;
+
+            NativeArray<RegionSample> regionCache =
+                new NativeArray<RegionSample>(
+                    cellWidth * cellHeight,
+                    Allocator.Temp
+                );
+
+            for (int cacheZ = 0;
+                 cacheZ < cellHeight;
+                 cacheZ++)
+            {
+                int cellZ =
+                    cacheOriginZ + cacheZ;
+
+                for (int cacheX = 0;
+                     cacheX < cellWidth;
+                     cacheX++)
+                {
+                    int cellX =
+                        cacheOriginX + cacheX;
+
+                    float2 center =
+                        GetRegionCenter(
+                            cellX,
+                            cellZ,
+                            regionSize
+                        );
+
+                    float temperature =
+                        CalculateTemperature(
+                            center.x,
+                            center.y,
+                            temperatureSeedOffset
+                        );
+
+                    float moisture =
+                        CalculateMoisture(
+                            center.x,
+                            center.y,
+                            moistureSeedOffset
+                        );
+
+                    int cacheIndex =
+                        cacheX +
+                        cacheZ * cellWidth;
+
+                    regionCache[cacheIndex] =
+                        new RegionSample
+                        {
+                            CellX = cellX,
+                            CellZ = cellZ,
+                            Center = center,
+                            Temperature = temperature,
+                            Moisture = moisture
+                        };
+                }
+            }
+
             for (int z = 0;
                  z < chunkSize;
                  z++)
             {
+                int worldZ =
+                    Context.WorldOrigin.z + z;
+
+                int cellZ =
+                    (int)math.floor(
+                        worldZ /
+                        regionSize
+                    );
+
                 for (int x = 0;
                      x < chunkSize;
                      x++)
@@ -48,130 +173,101 @@ namespace WildEarth.Voxel
                     int worldX =
                         Context.WorldOrigin.x + x;
 
-                    int worldZ =
-                        Context.WorldOrigin.z + z;
-
-                    BiomeId biome =
-                        CalculateBiome(
-                            worldX,
-                            worldZ,
-                            temperatureSeedOffset,
-                            moistureSeedOffset
-                        );
-
-                    int index =
-                        x +
-                        z * chunkSize;
-
-                    Output[index] =
-                        biome;
-                }
-            }
-        }
-
-        private BiomeId CalculateBiome(
-            int worldX,
-            int worldZ,
-            float2 temperatureSeedOffset,
-            float2 moistureSeedOffset)
-        {
-            float regionSize =
-                math.max(
-                    64f,
-                    Settings.BiomeRegionSize
-                );
-
-            int cellX =
-                (int)math.floor(
-                    worldX / regionSize
-                );
-
-            int cellZ =
-                (int)math.floor(
-                    worldZ / regionSize
-                );
-
-            float2 position =
-                new float2(
-                    worldX,
-                    worldZ
-                );
-
-            float bestDistance =
-                float.MaxValue;
-
-            int bestCellX = cellX;
-            int bestCellZ = cellZ;
-
-            for (int offsetZ = -1;
-                 offsetZ <= 1;
-                 offsetZ++)
-            {
-                for (int offsetX = -1;
-                     offsetX <= 1;
-                     offsetX++)
-                {
-                    int candidateX =
-                        cellX + offsetX;
-
-                    int candidateZ =
-                        cellZ + offsetZ;
-
-                    float2 center =
-                        GetRegionCenter(
-                            candidateX,
-                            candidateZ,
+                    int cellX =
+                        (int)math.floor(
+                            worldX /
                             regionSize
                         );
 
-                    float2 difference =
-                        position - center;
-
-                    float distance =
-                        math.lengthsq(
-                            difference
+                    float2 position =
+                        new float2(
+                            worldX,
+                            worldZ
                         );
 
-                    if (distance >= bestDistance)
-                        continue;
+                    float bestDistance =
+                        float.MaxValue;
 
-                    bestDistance =
-                        distance;
+                    float bestTemperature = 0f;
+                    float bestMoisture = 0f;
 
-                    bestCellX =
-                        candidateX;
+                    /*
+                     * Preserve the original candidate order:
+                     * offsetZ -> offsetX.
+                     *
+                     * This keeps tie-breaking deterministic.
+                     */
+                    for (int offsetZ = -1;
+                         offsetZ <= 1;
+                         offsetZ++)
+                    {
+                        int candidateZ =
+                            cellZ + offsetZ;
 
-                    bestCellZ =
-                        candidateZ;
+                        int cacheZ =
+                            candidateZ -
+                            cacheOriginZ;
+
+                        for (int offsetX = -1;
+                             offsetX <= 1;
+                             offsetX++)
+                        {
+                            int candidateX =
+                                cellX + offsetX;
+
+                            int cacheX =
+                                candidateX -
+                                cacheOriginX;
+
+                            int cacheIndex =
+                                cacheX +
+                                cacheZ * cellWidth;
+
+                            RegionSample sample =
+                                regionCache[
+                                    cacheIndex
+                                ];
+
+                            float2 difference =
+                                position -
+                                sample.Center;
+
+                            float distance =
+                                math.lengthsq(
+                                    difference
+                                );
+
+                            if (distance >= bestDistance)
+                                continue;
+
+                            bestDistance =
+                                distance;
+
+                            bestTemperature =
+                                sample.Temperature;
+
+                            bestMoisture =
+                                sample.Moisture;
+                        }
+                    }
+
+                    BiomeId biome =
+                        BiomeSelector.Select(
+                            BiomeDatabase,
+                            bestTemperature,
+                            bestMoisture
+                        );
+
+                    int outputIndex =
+                        x +
+                        z * chunkSize;
+
+                    Output[outputIndex] =
+                        biome;
                 }
             }
 
-            float2 selectedCenter =
-                GetRegionCenter(
-                    bestCellX,
-                    bestCellZ,
-                    regionSize
-                );
-
-            float temperature =
-                CalculateTemperature(
-                    selectedCenter.x,
-                    selectedCenter.y,
-                    temperatureSeedOffset
-                );
-
-            float moisture =
-                CalculateMoisture(
-                    selectedCenter.x,
-                    selectedCenter.y,
-                    moistureSeedOffset
-                );
-
-            return BiomeSelector.Select(
-                BiomeDatabase,
-                temperature,
-                moisture
-            );
+            regionCache.Dispose();
         }
 
         private float2 GetRegionCenter(

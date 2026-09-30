@@ -187,6 +187,16 @@ namespace WildEarth.Voxel
             initialized = true;
         }
 
+        public void SetGenerationPriorityCenter(
+            ChunkCoordinate center)
+        {
+            ThrowIfNotInitialized();
+
+            chunkGenerator.SetGenerationPriorityCenter(
+                center
+            );
+        }
+
         public void Update()
         {
             ThrowIfNotInitialized();
@@ -471,6 +481,16 @@ namespace WildEarth.Voxel
 
                 if (chunk == null)
                     continue;
+
+                /*
+                * El chunk ya tiene sus datos completos.
+                *
+                * No se genera el mesh inmediatamente.
+                * Primero queda marcado como candidato y
+                * VoxelWorldRenderer esperará a que sus
+                * vecinos estén disponibles.
+                */
+                chunk.MarkNeedsMesh();
 
                 MarkNeighborChunksForRemesh(
                     chunk

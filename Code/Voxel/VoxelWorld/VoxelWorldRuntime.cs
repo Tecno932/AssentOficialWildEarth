@@ -123,6 +123,10 @@ namespace WildEarth.Voxel
                     streamingTarget.position
                 );
 
+            world.SetGenerationPriorityCenter(
+                center
+            );
+
             int chunksPerColumn =
                 VoxelConstants.WorldHeight /
                 VoxelConstants.ChunkSize;
@@ -238,6 +242,10 @@ namespace WildEarth.Voxel
         private void LoadRequiredChunks(
             ChunkCoordinate center)
         {
+            world.SetGenerationPriorityCenter(
+                center
+            );
+
             int chunksPerColumn =
                 VoxelConstants.WorldHeight /
                 VoxelConstants.ChunkSize;

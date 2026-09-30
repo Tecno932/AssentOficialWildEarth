@@ -66,28 +66,19 @@ namespace WildEarth.Voxel
                 );
             }
 
-            IReadOnlyList<Chunk> completedChunks =
-                world.Generator.CompletedChunks;
-
-            for (int i = 0; i < completedChunks.Count; i++)
-            {
-                Chunk chunk = completedChunks[i];
-
-                if (chunk == null)
-                    continue;
-
-                RenderChunk(chunk);
-            }
-
             RenderChunksNeedingMesh();
         }
 
         private void RenderChunksNeedingMesh()
         {
-            // Primero, chunks que ya tienen renderer.
-            foreach (KeyValuePair<ChunkCoordinate, ChunkMeshRenderer> pair in renderers)
+            foreach (
+                KeyValuePair<
+                    ChunkCoordinate,
+                    ChunkMeshRenderer
+                > pair in renderers)
             {
-                ChunkCoordinate coordinate = pair.Key;
+                ChunkCoordinate coordinate =
+                    pair.Key;
 
                 if (!world.Chunks.TryGet(
                         coordinate,
@@ -108,12 +99,15 @@ namespace WildEarth.Voxel
                     continue;
                 }
 
+                if (!AreNeighborsReadyForMesh(
+                        chunk))
+                {
+                    continue;
+                }
+
                 RenderChunk(chunk);
             }
 
-            // Los chunks cargados desde disco no pasan por
-            // ChunkGenerator.CompletedChunks, por lo que necesitan
-            // ser detectados aquí.
             List<ChunkCoordinate> coordinates =
                 new List<ChunkCoordinate>();
 
@@ -144,11 +138,14 @@ namespace WildEarth.Voxel
                 if (!chunk.NeedsMesh)
                     continue;
 
-                if ((chunk.Flags & ChunkFlags.LoadedFromDisk) == 0)
-                    continue;
-
                 if (chunk.State != ChunkState.Generated &&
                     chunk.State != ChunkState.Ready)
+                {
+                    continue;
+                }
+
+                if (!AreNeighborsReadyForMesh(
+                        chunk))
                 {
                     continue;
                 }
@@ -222,6 +219,109 @@ namespace WildEarth.Voxel
             {
                 meshData.Dispose();
             }
+        }
+
+        private bool AreNeighborsReadyForMesh(
+            Chunk chunk)
+        {
+            ChunkCoordinate coordinate =
+                chunk.Coordinate;
+
+            if (!IsNeighborReady(
+                    coordinate.X - 1,
+                    coordinate.Y,
+                    coordinate.Z))
+            {
+                return false;
+            }
+
+            if (!IsNeighborReady(
+                    coordinate.X + 1,
+                    coordinate.Y,
+                    coordinate.Z))
+            {
+                return false;
+            }
+
+            if (!IsNeighborReady(
+                    coordinate.X,
+                    coordinate.Y,
+                    coordinate.Z - 1))
+            {
+                return false;
+            }
+
+            if (!IsNeighborReady(
+                    coordinate.X,
+                    coordinate.Y,
+                    coordinate.Z + 1))
+            {
+                return false;
+            }
+
+            /*
+            * Los límites verticales del mundo no tienen
+            * un subchunk vecino.
+            */
+            if (coordinate.Y > 0)
+            {
+                if (!IsNeighborReady(
+                        coordinate.X,
+                        coordinate.Y - 1,
+                        coordinate.Z))
+                {
+                    return false;
+                }
+            }
+
+            int maxChunkY =
+                VoxelConstants.WorldHeight /
+                VoxelConstants.ChunkSize - 1;
+
+            if (coordinate.Y < maxChunkY)
+            {
+                if (!IsNeighborReady(
+                        coordinate.X,
+                        coordinate.Y + 1,
+                        coordinate.Z))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private bool IsNeighborReady(
+            int x,
+            int y,
+            int z)
+        {
+            ChunkCoordinate coordinate =
+                new ChunkCoordinate(
+                    x,
+                    y,
+                    z
+                );
+
+            if (!world.Chunks.TryGet(
+                    coordinate,
+                    out Chunk neighbor))
+            {
+                /*
+                * Si no existe porque está fuera de la zona
+                * cargada, el mesh puede considerar ese borde
+                * como vacío.
+                */
+                return true;
+            }
+
+            if (neighbor == null)
+                return true;
+
+            return
+                neighbor.State == ChunkState.Generated ||
+                neighbor.State == ChunkState.Ready;
         }
 
         public void RemoveChunk(

@@ -21,14 +21,18 @@ namespace WildEarth.Voxel
         private readonly HashSet<Chunk> activeChunks =
             new HashSet<Chunk>();
 
-        private readonly Queue<GenerationRequest> pendingRequests =
-            new Queue<GenerationRequest>();
+        private readonly List<GenerationRequest> pendingRequests =
+            new List<GenerationRequest>();
 
         private readonly HashSet<Chunk> pendingChunks =
             new HashSet<Chunk>();
 
         private readonly List<Chunk> completedChunks =
             new List<Chunk>();
+
+        private ChunkCoordinate generationPriorityCenter;
+
+        private bool hasGenerationPriorityCenter;
 
         private bool disposed;
 
@@ -75,6 +79,18 @@ namespace WildEarth.Voxel
                 );
         }
 
+        public void SetGenerationPriorityCenter(
+            ChunkCoordinate center)
+        {
+            ThrowIfDisposed();
+
+            generationPriorityCenter =
+                center;
+
+            hasGenerationPriorityCenter =
+                true;
+        }
+
         public JobHandle Schedule(
             Chunk chunk,
             JobHandle dependency = default)
@@ -97,28 +113,27 @@ namespace WildEarth.Voxel
                 );
             }
 
-            if (activeTasks.Count >= MaxConcurrentGenerationJobs)
-            {
-                chunk.SetState(
-                    ChunkState.Generating
-                );
-
-                pendingRequests.Enqueue(
-                    new GenerationRequest(
-                        chunk,
-                        dependency
-                    )
-                );
-
-                pendingChunks.Add(chunk);
-
-                return default;
-            }
-
-            return ScheduleImmediate(
-                chunk,
-                dependency
+            chunk.SetState(
+                ChunkState.Generating
             );
+
+            pendingRequests.Add(
+                new GenerationRequest(
+                    chunk,
+                    dependency
+                )
+            );
+
+            pendingChunks.Add(chunk);
+
+            /*
+             * La generación se inicia desde Update().
+             *
+             * Esto permite que VoxelWorldRuntime pueda encolar
+             * toda la zona primero y que después los trabajos
+             * se seleccionen realmente por prioridad espacial.
+             */
+            return default;
         }
 
         public bool IsGenerating(
@@ -160,7 +175,9 @@ namespace WildEarth.Voxel
 
                 activeTasks.RemoveAt(i);
 
-                activeChunks.Remove(task.Chunk);
+                activeChunks.Remove(
+                    task.Chunk
+                );
 
                 SchedulePendingRequests();
 
@@ -194,7 +211,9 @@ namespace WildEarth.Voxel
 
                 activeTasks.RemoveAt(i);
 
-                activeChunks.Remove(task.Chunk);
+                activeChunks.Remove(
+                    task.Chunk
+                );
             }
 
             SchedulePendingRequests();
@@ -222,7 +241,9 @@ namespace WildEarth.Voxel
 
                     activeTasks.RemoveAt(i);
 
-                    activeChunks.Remove(task.Chunk);
+                    activeChunks.Remove(
+                        task.Chunk
+                    );
                 }
 
                 SchedulePendingRequests();
@@ -276,10 +297,19 @@ namespace WildEarth.Voxel
                     MaxConcurrentGenerationJobs &&
                 pendingRequests.Count > 0)
             {
-                GenerationRequest request =
-                    pendingRequests.Dequeue();
+                int bestIndex =
+                    FindBestPendingRequestIndex();
 
-                pendingChunks.Remove(request.Chunk);
+                GenerationRequest request =
+                    pendingRequests[bestIndex];
+
+                pendingRequests.RemoveAt(
+                    bestIndex
+                );
+
+                pendingChunks.Remove(
+                    request.Chunk
+                );
 
                 if (request.Chunk == null)
                     continue;
@@ -297,31 +327,177 @@ namespace WildEarth.Voxel
             }
         }
 
+        private int FindBestPendingRequestIndex()
+        {
+            int bestIndex = 0;
+
+            GenerationRequest bestRequest =
+                pendingRequests[0];
+
+            for (int i = 1;
+                 i < pendingRequests.Count;
+                 i++)
+            {
+                GenerationRequest candidate =
+                    pendingRequests[i];
+
+                if (CompareGenerationPriority(
+                        candidate.Chunk,
+                        bestRequest.Chunk) < 0)
+                {
+                    bestIndex = i;
+                    bestRequest = candidate;
+                }
+            }
+
+            return bestIndex;
+        }
+
+        private int CompareGenerationPriority(
+            Chunk a,
+            Chunk b)
+        {
+            if (a == null)
+                return 1;
+
+            if (b == null)
+                return -1;
+
+            if (!hasGenerationPriorityCenter)
+                return 0;
+
+            ChunkCoordinate center =
+                generationPriorityCenter;
+
+            ChunkCoordinate coordinateA =
+                a.Coordinate;
+
+            ChunkCoordinate coordinateB =
+                b.Coordinate;
+
+            int ringA =
+                Math.Max(
+                    Math.Abs(
+                        coordinateA.X - center.X
+                    ),
+                    Math.Abs(
+                        coordinateA.Z - center.Z
+                    )
+                );
+
+            int ringB =
+                Math.Max(
+                    Math.Abs(
+                        coordinateB.X - center.X
+                    ),
+                    Math.Abs(
+                        coordinateB.Z - center.Z
+                    )
+                );
+
+            if (ringA != ringB)
+            {
+                return ringA.CompareTo(
+                    ringB
+                );
+            }
+
+            int verticalDistanceA =
+                Math.Abs(
+                    coordinateA.Y - center.Y
+                );
+
+            int verticalDistanceB =
+                Math.Abs(
+                    coordinateB.Y - center.Y
+                );
+
+            if (verticalDistanceA !=
+                verticalDistanceB)
+            {
+                return verticalDistanceA.CompareTo(
+                    verticalDistanceB
+                );
+            }
+
+            int horizontalDistanceA =
+                GetHorizontalDistanceSquared(
+                    coordinateA,
+                    center
+                );
+
+            int horizontalDistanceB =
+                GetHorizontalDistanceSquared(
+                    coordinateB,
+                    center
+                );
+
+            if (horizontalDistanceA !=
+                horizontalDistanceB)
+            {
+                return horizontalDistanceA.CompareTo(
+                    horizontalDistanceB
+                );
+            }
+
+            if (coordinateA.Z !=
+                coordinateB.Z)
+            {
+                return coordinateA.Z.CompareTo(
+                    coordinateB.Z
+                );
+            }
+
+            return coordinateA.X.CompareTo(
+                coordinateB.X
+            );
+        }
+
+        private static int GetHorizontalDistanceSquared(
+            ChunkCoordinate coordinate,
+            ChunkCoordinate center)
+        {
+            int dx =
+                coordinate.X -
+                center.X;
+
+            int dz =
+                coordinate.Z -
+                center.Z;
+
+            return
+                dx * dx +
+                dz * dz;
+        }
+
         private void RemovePendingRequest(
             Chunk chunk)
         {
             if (pendingRequests.Count == 0)
                 return;
 
-            int count =
-                pendingRequests.Count;
-
-            for (int i = 0; i < count; i++)
+            for (int i =
+                    pendingRequests.Count - 1;
+                i >= 0;
+                i--)
             {
                 GenerationRequest request =
-                    pendingRequests.Dequeue();
+                    pendingRequests[i];
 
-                if (ReferenceEquals(
+                if (!ReferenceEquals(
                         request.Chunk,
                         chunk))
                 {
-                    pendingChunks.Remove(chunk);
                     continue;
                 }
 
-                pendingRequests.Enqueue(
-                    request
+                pendingRequests.RemoveAt(i);
+
+                pendingChunks.Remove(
+                    chunk
                 );
+
+                return;
             }
         }
 
