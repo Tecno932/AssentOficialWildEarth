@@ -95,6 +95,18 @@ namespace WildEarth.Voxel
             bool targetWasAir =
                 current.IsAir;
 
+            UnityEngine.Debug.Log(
+                $"[FluidTargetDebug] " +
+                $"Chunk={change.TargetChunk} " +
+                $"XYZ=({change.X},{change.Y},{change.Z}) " +
+                $"BlockId={current.BlockId} " +
+                $"State={current.State} " +
+                $"IsAir={current.IsAir} " +
+                $"IsFluid={fluidDatabase.TryGetByBlockId(current.BlockId, out FluidRuntimeData targetFluid)} " +
+                $"TargetFluidType={(targetFluid.IsValid ? targetFluid.Type.ToString() : "None")} " +
+                $"TargetFluidLevel={(targetFluid.IsValid ? current.State.ToString() : "0")}"
+            );
+
             /*
             * Empty significa eliminar el fluido existente.
             *

@@ -20,7 +20,6 @@ namespace WildEarth.Voxel
         private readonly FluidScheduler fluidScheduler;
         private readonly FluidSimulationCoordinator fluidSimulationCoordinator;
         private readonly FluidSimulationSettings fluidSimulationSettings;
-        private readonly List<ChunkCoordinate> fluidSimulationCoordinates;
         private readonly ChunkSaveStorage saveStorage;
 
         private bool initialized;
@@ -163,9 +162,6 @@ namespace WildEarth.Voxel
                     FluidSimulationCoordinatorSettings.Default
                 );
 
-            fluidSimulationCoordinates =
-                new List<ChunkCoordinate>();
-
             if (string.IsNullOrWhiteSpace(savePath))
             {
                 savePath =
@@ -196,6 +192,7 @@ namespace WildEarth.Voxel
             ThrowIfNotInitialized();
 
             chunkGenerator.Update();
+
             ProcessCompletedChunks();
 
             fluidSimulationCoordinator
@@ -207,7 +204,9 @@ namespace WildEarth.Voxel
             fluidSimulationCoordinator
                 .CompleteAllBeforeWrites();
 
-            fluidScheduler.Advance(Time.deltaTime);
+            fluidScheduler.Advance(
+                Time.deltaTime
+            );
 
             while (
                 fluidScheduler.TryConsumeChangedChunk(
@@ -215,26 +214,6 @@ namespace WildEarth.Voxel
             {
                 fluidSimulationCoordinator.RequestChunkSimulation(
                     changedCoordinate,
-                    fluidDatabase
-                );
-            }
-
-            // Mantener activos los chunks que contienen fluidos.
-            // RequestChunkSimulation evita duplicados pendientes
-            // y simulaciones que ya están ejecutándose.
-            fluidSimulationCoordinates.Clear();
-
-            chunkStorage.GetCoordinates(
-                fluidSimulationCoordinates
-            );
-
-            for (
-                int i = 0;
-                i < fluidSimulationCoordinates.Count;
-                i++)
-            {
-                fluidSimulationCoordinator.RequestChunkSimulation(
-                    fluidSimulationCoordinates[i],
                     fluidDatabase
                 );
             }
@@ -453,17 +432,6 @@ namespace WildEarth.Voxel
                 if (chunk == null)
                     continue;
 
-                if (FluidChunkUtility.ContainsFluids(
-                        chunk.Data,
-                        fluidDatabase))
-                {
-                    fluidSimulationCoordinator
-                        .RequestChunkSimulation(
-                            chunk.Coordinate,
-                            fluidDatabase
-                        );
-                }
-
                 MarkNeighborChunksForRemesh(
                     chunk
                 );
@@ -671,6 +639,10 @@ private void MarkNeighborForRemesh(
 
             chunk.MarkVoxelDataChanged();
 
+            RequestFluidSimulationAround(
+                coordinate
+            );
+
             if (localX == 0)
             {
                 MarkNeighborForRemesh(
@@ -723,6 +695,69 @@ private void MarkNeighborForRemesh(
             }
 
             return true;
+        }
+
+        private void RequestFluidSimulationAround(
+            ChunkCoordinate coordinate)
+        {
+            fluidSimulationCoordinator.RequestChunkSimulation(
+                coordinate,
+                fluidDatabase
+            );
+
+            fluidSimulationCoordinator.RequestChunkSimulation(
+                new ChunkCoordinate(
+                    coordinate.X - 1,
+                    coordinate.Y,
+                    coordinate.Z
+                ),
+                fluidDatabase
+            );
+
+            fluidSimulationCoordinator.RequestChunkSimulation(
+                new ChunkCoordinate(
+                    coordinate.X + 1,
+                    coordinate.Y,
+                    coordinate.Z
+                ),
+                fluidDatabase
+            );
+
+            fluidSimulationCoordinator.RequestChunkSimulation(
+                new ChunkCoordinate(
+                    coordinate.X,
+                    coordinate.Y - 1,
+                    coordinate.Z
+                ),
+                fluidDatabase
+            );
+
+            fluidSimulationCoordinator.RequestChunkSimulation(
+                new ChunkCoordinate(
+                    coordinate.X,
+                    coordinate.Y + 1,
+                    coordinate.Z
+                ),
+                fluidDatabase
+            );
+
+            fluidSimulationCoordinator.RequestChunkSimulation(
+                new ChunkCoordinate(
+                    coordinate.X,
+                    coordinate.Y,
+                    coordinate.Z - 1
+                ),
+                fluidDatabase
+            );
+
+            fluidSimulationCoordinator.RequestChunkSimulation(
+                new ChunkCoordinate(
+                    coordinate.X,
+                    coordinate.Y,
+                    coordinate.Z + 1
+                ),
+                fluidDatabase
+            );
         }
 
         public bool TryGetBiomeAt(

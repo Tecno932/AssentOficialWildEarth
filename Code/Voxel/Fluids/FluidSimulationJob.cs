@@ -157,6 +157,15 @@ namespace WildEarth.Voxel
             int targetY = y - 1;
             int targetZ = z;
 
+            byte level =
+                FluidPropagation.CalculateVerticalLevel(
+                    state.Level,
+                    fluid.VerticalFlowDecay
+                );
+
+            if (level == 0)
+                return;
+
             ChunkCoordinate targetChunk =
                 ChunkCoordinateUtility.ResolveChunk(
                     ChunkCoordinate,
@@ -168,13 +177,6 @@ namespace WildEarth.Voxel
                     out targetZ
                 );
 
-            /*
-            * Si el destino permanece dentro del chunk,
-            * podemos comprobarlo directamente.
-            *
-            * Si cruza al chunk inferior, FluidUpdateSystem
-            * validará el destino cuando procese el cambio.
-            */
             if (targetChunk == ChunkCoordinate)
             {
                 int targetIndex =
@@ -188,17 +190,25 @@ namespace WildEarth.Voxel
                     Voxels[targetIndex];
 
                 if (!target.IsAir)
-                    return;
+                {
+                    if (!TryGetFluid(
+                            target.BlockId,
+                            out FluidRuntimeData targetFluid))
+                    {
+                        return;
+                    }
+
+                    if (targetFluid.Type != state.Type)
+                    {
+                        return;
+                    }
+
+                    if (target.State >= level)
+                    {
+                        return;
+                    }
+                }
             }
-
-            byte level =
-                FluidPropagation.CalculateVerticalLevel(
-                    state.Level,
-                    fluid.VerticalFlowDecay
-                );
-
-            if (level == 0)
-                return;
 
             WriteChange(
                 sourceIndex,
@@ -263,7 +273,24 @@ namespace WildEarth.Voxel
                     Voxels[targetIndex];
 
                 if (!target.IsAir)
-                    return;
+                {
+                    if (!TryGetFluid(
+                            target.BlockId,
+                            out FluidRuntimeData targetFluid))
+                    {
+                        return;
+                    }
+
+                    if (targetFluid.Type != state.Type)
+                    {
+                        return;
+                    }
+
+                    if (target.State >= level)
+                    {
+                        return;
+                    }
+                }
             }
 
             WriteChange(

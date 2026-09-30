@@ -341,9 +341,21 @@ namespace WildEarth.Voxel
         private void ProcessUpdate(
             FluidPendingUpdate update)
         {
-            updateSystem.TryApply(
-                update.ToChange(),
-                out FluidChangeResult result
+            bool applied =
+                updateSystem.TryApply(
+                    update.ToChange(),
+                    out FluidChangeResult result
+                );
+
+            UnityEngine.Debug.Log(
+                $"[FluidDebug] " +
+                $"Target={update.Chunk} " +
+                $"XYZ=({update.X},{update.Y},{update.Z}) " +
+                $"Level={update.State.Level} " +
+                $"Applied={applied} " +
+                $"ResultApplied={result.Applied} " +
+                $"Loaded={result.TargetChunkLoaded} " +
+                $"Air={result.TargetWasAir}"
             );
 
             if (!result.TargetChunkLoaded)
@@ -362,6 +374,13 @@ namespace WildEarth.Voxel
             ActivateChunk(
                 result.Change.TargetChunk
             );
+
+            if (changedChunkKeys.Add(update.Chunk))
+            {
+                changedChunks.Enqueue(
+                    update.Chunk
+                );
+            }
 
             if (changedChunkKeys.Add(
                     result.Change.TargetChunk))
@@ -538,6 +557,7 @@ namespace WildEarth.Voxel
             private readonly int x;
             private readonly int y;
             private readonly int z;
+            private readonly byte level;
 
             public FluidUpdateKey(
                 FluidPendingUpdate update)
@@ -546,15 +566,17 @@ namespace WildEarth.Voxel
                 x = update.X;
                 y = update.Y;
                 z = update.Z;
+                level = update.State.Level;
             }
 
             public bool Equals(
                 FluidUpdateKey other)
             {
                 return chunk == other.chunk &&
-                       x == other.x &&
-                       y == other.y &&
-                       z == other.z;
+                    x == other.x &&
+                    y == other.y &&
+                    z == other.z &&
+                    level == other.level;
             }
 
             public override bool Equals(
@@ -570,7 +592,8 @@ namespace WildEarth.Voxel
                     chunk,
                     x,
                     y,
-                    z
+                    z,
+                    level
                 );
             }
         }
