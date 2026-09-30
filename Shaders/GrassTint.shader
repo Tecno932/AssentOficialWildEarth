@@ -57,3 +57,8 @@ Greedy/Binary Greedy adicional.
 Jobs/Burst.
 Memoria.
 Generación y meshing en paralelo.
+
+
+
+
+antes de empezar tengo una duda, es posible reducir las texturas para aumentar los fps, ademas de que solo se vicibilicen las caras de los chunk que puedo ver, si nose ve mas abajo que no se renderice

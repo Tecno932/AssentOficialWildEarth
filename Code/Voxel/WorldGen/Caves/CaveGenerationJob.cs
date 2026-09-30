@@ -15,6 +15,7 @@ namespace WildEarth.Voxel
 
         [ReadOnly]
         public NativeArray<BlockRuntimeData> BlockDatabase;
+
         [ReadOnly]
         public NativeArray<BiomeId> Biomes;
 
@@ -42,38 +43,62 @@ namespace WildEarth.Voxel
                 CaveNoise.CreateSeedOffset(
                     baseSeed + 1954);
 
-            for (int y = 0;
-                 y < chunkSize;
-                 y++)
+            int minimumY =
+                math.max(
+                    Settings.MinimumY,
+                    VoxelConstants.MinVoxelY);
+
+            int maximumY =
+                math.min(
+                    Settings.MaximumY,
+                    VoxelConstants.MaxVoxelY);
+
+            for (int z = 0;
+                 z < chunkSize;
+                 z++)
             {
-                int worldY =
-                    Context.WorldOrigin.y + y;
-
-                if (worldY < Settings.MinimumY ||
-                    worldY > Settings.MaximumY)
+                for (int x = 0;
+                     x < chunkSize;
+                     x++)
                 {
-                    continue;
-                }
+                    int worldX =
+                        Context.WorldOrigin.x +
+                        x;
 
-                for (int z = 0;
-                     z < chunkSize;
-                     z++)
-                {
-                    for (int x = 0;
-                         x < chunkSize;
-                         x++)
+                    int worldZ =
+                        Context.WorldOrigin.z +
+                        z;
+
+                    int columnIndex =
+                        x +
+                        z * chunkSize;
+
+                    BiomeId biomeId =
+                        Biomes[columnIndex];
+
+                    float biomeMultiplier =
+                        GetBiomeCaveMultiplier(
+                            biomeId);
+
+                    for (int y = 0;
+                         y < chunkSize;
+                         y++)
                     {
+                        int worldY =
+                            Context.WorldOrigin.y +
+                            y;
+
+                        if (worldY < minimumY ||
+                            worldY > maximumY)
+                        {
+                            continue;
+                        }
+
                         int index =
                             VoxelIndex.ToIndex(
                                 x,
                                 y,
                                 z);
-
-                        int columnIndex =
-                            x + z * chunkSize;
-
-                        BiomeId biomeId =
-                            Biomes[columnIndex];
 
                         Voxel voxel =
                             Voxels[index];
@@ -89,12 +114,6 @@ namespace WildEarth.Voxel
                         {
                             continue;
                         }
-
-                        int worldX =
-                            Context.WorldOrigin.x + x;
-
-                        int worldZ =
-                            Context.WorldOrigin.z + z;
 
                         float3 position =
                             new float3(
@@ -113,15 +132,9 @@ namespace WildEarth.Voxel
                                 seedOffset1,
                                 seedOffset2);
 
-                        float biomeMultiplier =
-                            GetBiomeCaveMultiplier(
-                                biomeId
-                            );
-
                         float depthMultiplier =
                             GetDepthMultiplier(
-                                worldY
-                            );
+                                worldY);
 
                         float effectiveThreshold =
                             Settings.Threshold +
@@ -187,13 +200,6 @@ namespace WildEarth.Voxel
                     )
                 );
 
-            /*
-            * Cerca de la superficie:
-            * pocas cuevas.
-            *
-            * En profundidad:
-            * máxima actividad.
-            */
             return math.lerp(
                 0.35f,
                 1.15f,

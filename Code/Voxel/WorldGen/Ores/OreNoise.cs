@@ -47,7 +47,8 @@ namespace WildEarth.Voxel
             float amplitude = 1f;
             float normalization = 0f;
 
-            float currentFrequency = frequency;
+            float currentFrequency =
+                frequency;
 
             for (int octave = 0;
                  octave < octaves;
@@ -59,11 +60,18 @@ namespace WildEarth.Voxel
                         currentFrequency,
                         seed + octave * 1297);
 
-                total += value * amplitude;
-                normalization += amplitude;
+                total +=
+                    value *
+                    amplitude;
 
-                currentFrequency *= lacunarity;
-                amplitude *= persistence;
+                normalization +=
+                    amplitude;
+
+                currentFrequency *=
+                    lacunarity;
+
+                amplitude *=
+                    persistence;
             }
 
             if (normalization <= 0f)
@@ -85,62 +93,94 @@ namespace WildEarth.Voxel
             if (octaves <= 0)
                 return 0.5f;
 
-            float total = 0f;
-            float amplitude = 1f;
-            float normalization = 0f;
-
-            float currentFrequency = frequency;
-
-            for (int octave = 0;
-                 octave < octaves;
-                 octave++)
+            if (octaves == 1)
             {
-                float3 seedOffset;
-
-                switch (octave)
-                {
-                    case 0:
-                        seedOffset = seedOffset0;
-                        break;
-
-                    case 1:
-                        seedOffset = seedOffset1;
-                        break;
-
-                    case 2:
-                        seedOffset = seedOffset2;
-                        break;
-
-                    default:
-                        return Fractal01(
-                            position,
-                            frequency,
-                            octaves,
-                            lacunarity,
-                            persistence,
-                            0);
-                }
-
                 float value =
                     SampleWithSeedOffset(
                         position,
-                        currentFrequency,
-                        seedOffset);
+                        frequency,
+                        seedOffset0);
 
-                value =
+                return
                     (value + 1f) * 0.5f;
-
-                total += value * amplitude;
-                normalization += amplitude;
-
-                currentFrequency *= lacunarity;
-                amplitude *= persistence;
             }
 
-            if (normalization <= 0f)
-                return 0.5f;
+            float amplitude0 = 1f;
+            float amplitude1 =
+                persistence;
 
-            return total / normalization;
+            float value0 =
+                SampleWithSeedOffset(
+                    position,
+                    frequency,
+                    seedOffset0);
+
+            float value1 =
+                SampleWithSeedOffset(
+                    position,
+                    frequency * lacunarity,
+                    seedOffset1);
+
+            value0 =
+                (value0 + 1f) * 0.5f;
+
+            value1 =
+                (value1 + 1f) * 0.5f;
+
+            if (octaves == 2)
+            {
+                float total =
+                    value0 * amplitude0 +
+                    value1 * amplitude1;
+
+                float normalization =
+                    amplitude0 +
+                    amplitude1;
+
+                return
+                    total /
+                    normalization;
+            }
+
+            float amplitude2 =
+                amplitude1 *
+                persistence;
+
+            float value2 =
+                SampleWithSeedOffset(
+                    position,
+                    frequency *
+                    lacunarity *
+                    lacunarity,
+                    seedOffset2);
+
+            value2 =
+                (value2 + 1f) * 0.5f;
+
+            if (octaves == 3)
+            {
+                float total =
+                    value0 * amplitude0 +
+                    value1 * amplitude1 +
+                    value2 * amplitude2;
+
+                float normalization =
+                    amplitude0 +
+                    amplitude1 +
+                    amplitude2;
+
+                return
+                    total /
+                    normalization;
+            }
+
+            return Fractal01(
+                position,
+                frequency,
+                octaves,
+                lacunarity,
+                persistence,
+                0);
         }
 
         public static float3 CreateSeedOffset(
@@ -173,10 +213,12 @@ namespace WildEarth.Voxel
             float3 seedOffset)
         {
             float3 samplePosition =
-                position * frequency;
+                position *
+                frequency;
 
             return noise.snoise(
-                samplePosition + seedOffset);
+                samplePosition +
+                seedOffset);
         }
     }
 }

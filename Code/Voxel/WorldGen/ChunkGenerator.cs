@@ -6,7 +6,7 @@ namespace WildEarth.Voxel
 {
     public sealed class ChunkGenerator : IDisposable, IChunkGenerator
     {
-        private const int MaxConcurrentGenerationJobs = 8;
+        private const int MaxConcurrentGenerationJobs = 4;
 
         private readonly ChunkGenerationSettings settings;
         private readonly ChunkGenerationPipeline pipeline;

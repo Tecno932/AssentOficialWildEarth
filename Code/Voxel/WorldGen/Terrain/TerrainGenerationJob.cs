@@ -63,6 +63,22 @@ namespace WildEarth.Voxel
                 TerrainNoise.CreateSeedOffset(
                     Context.Seed + 4000);
 
+            float2 temperatureSeedOffset =
+                new float2(
+                    Context.Seed * 0.371f,
+                    Context.Seed * 0.619f
+                );
+
+            int moistureSeed =
+                Context.Seed +
+                BiomeSettings.BiomeSeedOffset;
+
+            float2 moistureSeedOffset =
+                new float2(
+                    moistureSeed * 0.271f,
+                    moistureSeed * 0.733f
+                );
+
             for (int z = 0;
                  z < chunkSize;
                  z++)
@@ -72,7 +88,8 @@ namespace WildEarth.Voxel
                      x++)
                 {
                     int columnIndex =
-                        x + z * chunkSize;
+                        x +
+                        z * chunkSize;
 
                     BiomeId biomeId =
                         Biomes[columnIndex];
@@ -81,38 +98,34 @@ namespace WildEarth.Voxel
                         GetBiomeData(biomeId);
 
                     int worldX =
-                        Context.WorldOrigin.x + x;
+                        Context.WorldOrigin.x +
+                        x;
 
                     int worldZ =
-                        Context.WorldOrigin.z + z;
+                        Context.WorldOrigin.z +
+                        z;
 
                     float temperature =
                         CalculateTemperature(
                             worldX,
-                            worldZ
+                            worldZ,
+                            temperatureSeedOffset
                         );
 
                     float moisture =
                         CalculateMoisture(
                             worldX,
-                            worldZ
+                            worldZ,
+                            moistureSeedOffset
                         );
-
-                    GetTerrainBiomeBlend(
-                        temperature,
-                        moisture,
-                        biome,
-                        out BiomeRuntimeData secondaryBiome,
-                        out float secondaryWeight
-                    );
 
                     int terrainHeight =
                         CalculateTerrainHeight(
                             worldX,
                             worldZ,
                             biome,
-                            secondaryBiome,
-                            secondaryWeight,
+                            temperature,
+                            moisture,
                             continentalSeedOffset,
                             erosionSeedOffset0,
                             erosionSeedOffset1,
@@ -132,7 +145,8 @@ namespace WildEarth.Voxel
                          y++)
                     {
                         int worldY =
-                            Context.WorldOrigin.y + y;
+                            Context.WorldOrigin.y +
+                            y;
 
                         ushort blockId =
                             ResolveBlock(
@@ -157,14 +171,9 @@ namespace WildEarth.Voxel
 
         private float CalculateTemperature(
             int worldX,
-            int worldZ)
+            int worldZ,
+            float2 seedOffset)
         {
-            float2 seedOffset =
-                new float2(
-                    Context.Seed * 0.371f,
-                    Context.Seed * 0.619f
-                );
-
             float2 position =
                 new float2(
                     worldX,
@@ -186,18 +195,9 @@ namespace WildEarth.Voxel
 
         private float CalculateMoisture(
             int worldX,
-            int worldZ)
+            int worldZ,
+            float2 seedOffset)
         {
-            int moistureSeed =
-                Context.Seed +
-                BiomeSettings.BiomeSeedOffset;
-
-            float2 seedOffset =
-                new float2(
-                    moistureSeed * 0.271f,
-                    moistureSeed * 0.733f
-                );
-
             float2 position =
                 new float2(
                     worldX,
@@ -216,170 +216,6 @@ namespace WildEarth.Voxel
             return
                 (value + 1f) * 0.5f;
         }
-
-private void GetTerrainBiomeBlend(
-    float temperature,
-    float moisture,
-    BiomeRuntimeData primaryBiome,
-    out BiomeRuntimeData secondaryBiome,
-    out float secondaryWeight)
-{
-    secondaryBiome =
-        primaryBiome;
-
-    secondaryWeight =
-        0f;
-
-    float primaryDistance =
-        CalculateClimateDistance(
-            primaryBiome,
-            temperature,
-            moisture
-        );
-
-    float bestSecondaryDistance =
-        float.MaxValue;
-
-    for (int i = 0;
-         i < BiomeDatabase.Length;
-         i++)
-    {
-        BiomeRuntimeData candidate =
-            BiomeDatabase[i];
-
-        if (candidate.Id ==
-            primaryBiome.Id)
-        {
-            continue;
-        }
-
-        float distance =
-            CalculateClimateDistance(
-                candidate,
-                temperature,
-                moisture
-            );
-
-        if (distance >=
-            bestSecondaryDistance)
-        {
-            continue;
-        }
-
-        bestSecondaryDistance =
-            distance;
-
-        secondaryBiome =
-            candidate;
-    }
-
-    if (bestSecondaryDistance ==
-        float.MaxValue)
-    {
-        return;
-    }
-
-    float distanceDifference =
-        math.abs(
-            bestSecondaryDistance -
-            primaryDistance
-        );
-
-    const float blendRange =
-        0.20f;
-
-    float normalized =
-        math.saturate(
-            1f -
-            distanceDifference /
-            blendRange
-        );
-
-    secondaryWeight =
-        normalized *
-        normalized *
-        (3f -
-         2f * normalized);
-}
-
-        private float CalculateBiomeScore(
-            BiomeRuntimeData biome,
-            float temperature,
-            float moisture)
-        {
-            float temperatureCenter =
-                (
-                    biome.TemperatureMin +
-                    biome.TemperatureMax
-                ) * 0.5f;
-
-            float moistureCenter =
-                (
-                    biome.MoistureMin +
-                    biome.MoistureMax
-                ) * 0.5f;
-
-            float temperatureDistance =
-                temperature -
-                temperatureCenter;
-
-            float moistureDistance =
-                moisture -
-                moistureCenter;
-
-            return
-                temperatureDistance *
-                temperatureDistance +
-                moistureDistance *
-                moistureDistance;
-        }
-
-private float CalculateClimateDistance(
-    BiomeRuntimeData biome,
-    float temperature,
-    float moisture)
-{
-    float temperatureDistance = 0f;
-
-    if (temperature <
-        biome.TemperatureMin)
-    {
-        temperatureDistance =
-            biome.TemperatureMin -
-            temperature;
-    }
-    else if (temperature >
-             biome.TemperatureMax)
-    {
-        temperatureDistance =
-            temperature -
-            biome.TemperatureMax;
-    }
-
-    float moistureDistance = 0f;
-
-    if (moisture <
-        biome.MoistureMin)
-    {
-        moistureDistance =
-            biome.MoistureMin -
-            moisture;
-    }
-    else if (moisture >
-             biome.MoistureMax)
-    {
-        moistureDistance =
-            moisture -
-            biome.MoistureMax;
-    }
-
-    return math.sqrt(
-        temperatureDistance *
-        temperatureDistance +
-        moistureDistance *
-        moistureDistance
-    );
-}
 
         private BiomeRuntimeData GetBiomeData(
             BiomeId biomeId)
@@ -424,223 +260,201 @@ private float CalculateClimateDistance(
             };
         }
 
-private int CalculateTerrainHeight(
-    int worldX,
-    int worldZ,
-    BiomeRuntimeData biome,
-    BiomeRuntimeData secondaryBiome,
-    float secondaryWeight,
-    float2 continentalSeedOffset,
-    float2 erosionSeedOffset0,
-    float2 erosionSeedOffset1,
-    float2 erosionSeedOffset2,
-    float2 peaksSeedOffset0,
-    float2 peaksSeedOffset1,
-    float2 peaksSeedOffset2,
-    float2 peaksSeedOffset3,
-    float2 detailSeedOffset)
-{
-    float2 position =
-        new float2(
-            worldX,
-            worldZ
-        );
+        private int CalculateTerrainHeight(
+            int worldX,
+            int worldZ,
+            BiomeRuntimeData biome,
+            float temperature,
+            float moisture,
+            float2 continentalSeedOffset,
+            float2 erosionSeedOffset0,
+            float2 erosionSeedOffset1,
+            float2 erosionSeedOffset2,
+            float2 peaksSeedOffset0,
+            float2 peaksSeedOffset1,
+            float2 peaksSeedOffset2,
+            float2 peaksSeedOffset3,
+            float2 detailSeedOffset)
+        {
+            float2 position =
+                new float2(
+                    worldX,
+                    worldZ
+                );
 
-    float continentalness =
-        TerrainNoise.Sample01(
-            position,
-            Settings.ContinentalFrequency,
-            Context.Seed + 1000
-        );
+            float continentalness =
+                TerrainNoise.Sample01(
+                    position,
+                    Settings.ContinentalFrequency,
+                    Context.Seed + 1000
+                );
 
-    float continentalShape =
-        continentalness * 2f - 1f;
+            float continentalShape =
+                continentalness * 2f - 1f;
 
-    float height =
-        Settings.BaseHeight;
+            float height =
+                Settings.BaseHeight;
 
-    height +=
-        continentalShape *
-        Settings.ContinentalAmplitude;
+            height +=
+                continentalShape *
+                Settings.ContinentalAmplitude;
 
-    float erosion =
-        TerrainNoise.Fractal01Cached(
-            position,
-            Settings.ErosionFrequency,
-            3,
-            2f,
-            0.5f,
-            erosionSeedOffset0,
-            erosionSeedOffset1,
-            erosionSeedOffset2,
-            erosionSeedOffset2
-        );
+            float erosion =
+                TerrainNoise.Fractal01Cached(
+                    position,
+                    Settings.ErosionFrequency,
+                    3,
+                    2f,
+                    0.5f,
+                    erosionSeedOffset0,
+                    erosionSeedOffset1,
+                    erosionSeedOffset2,
+                    erosionSeedOffset2
+                );
 
-    float erosionShape =
-        erosion * 2f - 1f;
+            float erosionShape =
+                erosion * 2f - 1f;
 
-    height +=
-        erosionShape *
-        Settings.ErosionAmplitude;
+            height +=
+                erosionShape *
+                Settings.ErosionAmplitude;
 
-    float peaks =
-        TerrainNoise.Fractal01Cached(
-            position,
-            Settings.PeaksFrequency,
-            4,
-            2f,
-            0.5f,
-            peaksSeedOffset0,
-            peaksSeedOffset1,
-            peaksSeedOffset2,
-            peaksSeedOffset3
-        );
+            float peaks =
+                TerrainNoise.Fractal01Cached(
+                    position,
+                    Settings.PeaksFrequency,
+                    4,
+                    2f,
+                    0.5f,
+                    peaksSeedOffset0,
+                    peaksSeedOffset1,
+                    peaksSeedOffset2,
+                    peaksSeedOffset3
+                );
 
-    float peaksShape =
-        math.pow(
-            peaks,
-            1.75f
-        );
+            float peaksShape =
+                math.pow(
+                    peaks,
+                    1.75f
+                );
 
-    height +=
-        peaksShape *
-        Settings.PeaksAmplitude;
+            height +=
+                peaksShape *
+                Settings.PeaksAmplitude;
 
-    float detail =
-        TerrainNoise.Sample(
-            position,
-            Settings.DetailFrequency,
-            Context.Seed + 4000
-        );
+            float detail =
+                TerrainNoise.SampleWithSeedOffsetPublic(
+                    position,
+                    Settings.DetailFrequency,
+                    detailSeedOffset
+                );
 
-    height +=
-        detail *
-        Settings.DetailAmplitude;
+            height +=
+                detail *
+                Settings.DetailAmplitude;
 
-    /*
-     * La altura ya no depende del bioma seleccionado.
-     *
-     * Calculamos una influencia continua de todos los biomas
-     * usando distancia a sus centros climáticos.
-     *
-     * Esto evita saltos cuando BiomeSelector cambia de un bioma
-     * a otro en una columna vecina.
-     */
-    float continuousMultiplier =
-        CalculateContinuousTerrainMultiplier(
-            worldX,
-            worldZ
-        );
+            float continuousMultiplier =
+                CalculateContinuousTerrainMultiplier(
+                    temperature,
+                    moisture
+                );
 
-    float terrainOffset =
-        height -
-        Settings.BaseHeight;
+            float terrainOffset =
+                height -
+                Settings.BaseHeight;
 
-    /*
-     * El multiplicador afecta de forma continua al relieve.
-     * No se aplica ningún offset discreto del bioma.
-     */
-    height =
-        Settings.BaseHeight +
-        terrainOffset *
-        continuousMultiplier;
+            height =
+                Settings.BaseHeight +
+                terrainOffset *
+                continuousMultiplier;
 
-    height =
-        math.clamp(
-            height,
-            VoxelConstants.MinVoxelY,
-            VoxelConstants.MaxVoxelY
-        );
+            height =
+                math.clamp(
+                    height,
+                    VoxelConstants.MinVoxelY,
+                    VoxelConstants.MaxVoxelY
+                );
 
-    return
-        (int)math.round(height);
-}
+            return
+                (int)math.round(height);
+        }
 
-private float CalculateContinuousTerrainMultiplier(
-    int worldX,
-    int worldZ)
-{
-    float temperature =
-        CalculateTemperature(
-            worldX,
-            worldZ
-        );
+        private float CalculateContinuousTerrainMultiplier(
+            float temperature,
+            float moisture)
+        {
+            float weightedMultiplier = 0f;
+            float totalWeight = 0f;
 
-    float moisture =
-        CalculateMoisture(
-            worldX,
-            worldZ
-        );
+            const float climateRadius = 0.28f;
 
-    float weightedMultiplier = 0f;
-    float totalWeight = 0f;
-
-    /* Paredes de las montañas */
-    const float climateRadius = 0.28f;
-
-    for (int i = 0;
-         i < BiomeDatabase.Length;
-         i++)
-    {
-        BiomeRuntimeData biome =
-            BiomeDatabase[i];
-
-        float temperatureCenter =
-            (
-                biome.TemperatureMin +
-                biome.TemperatureMax
-            ) * 0.5f;
-
-        float moistureCenter =
-            (
-                biome.MoistureMin +
-                biome.MoistureMax
-            ) * 0.5f;
-
-        float temperatureDistance =
-            temperature -
-            temperatureCenter;
-
-        float moistureDistance =
-            moisture -
-            moistureCenter;
-
-        float distanceSquared =
-            temperatureDistance *
-            temperatureDistance +
-            moistureDistance *
-            moistureDistance;
-
-        float weight =
-            math.exp(
-                -distanceSquared /
+            float inverseRadiusSquared =
+                1f /
                 (
                     climateRadius *
                     climateRadius
-                )
-            );
+                );
 
-        weightedMultiplier +=
-            biome.TerrainHeightMultiplier *
-            weight;
+            for (int i = 0;
+                 i < BiomeDatabase.Length;
+                 i++)
+            {
+                BiomeRuntimeData biome =
+                    BiomeDatabase[i];
 
-        totalWeight +=
-            weight;
-    }
+                float temperatureCenter =
+                    (
+                        biome.TemperatureMin +
+                        biome.TemperatureMax
+                    ) * 0.5f;
 
-    if (totalWeight <= 0.0001f)
-        return 1f;
+                float moistureCenter =
+                    (
+                        biome.MoistureMin +
+                        biome.MoistureMax
+                    ) * 0.5f;
 
-    float multiplier =
-        weightedMultiplier /
-        totalWeight;
+                float temperatureDistance =
+                    temperature -
+                    temperatureCenter;
 
-    return
-        math.max(
-            0.5f,
-            multiplier
-        );
-}
+                float moistureDistance =
+                    moisture -
+                    moistureCenter;
+
+                float distanceSquared =
+                    temperatureDistance *
+                    temperatureDistance +
+                    moistureDistance *
+                    moistureDistance;
+
+                float weight =
+                    math.exp(
+                        -distanceSquared *
+                        inverseRadiusSquared
+                    );
+
+                weightedMultiplier +=
+                    biome.TerrainHeightMultiplier *
+                    weight;
+
+                totalWeight +=
+                    weight;
+            }
+
+            if (totalWeight <= 0.0001f)
+                return 1f;
+
+            float multiplier =
+                weightedMultiplier /
+                totalWeight;
+
+            return
+                math.max(
+                    0.5f,
+                    multiplier
+                );
+        }
 
         private ushort ResolveBlock(
             int worldY,

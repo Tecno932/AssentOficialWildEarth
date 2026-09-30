@@ -212,6 +212,18 @@ namespace WildEarth.Voxel
                 math.frac(y) * 10000f);
         }
 
+        public static float SampleWithSeedOffsetPublic(
+            float2 position,
+            float frequency,
+            float2 seedOffset)
+        {
+            return SampleWithSeedOffset(
+                position,
+                frequency,
+                seedOffset
+            );
+        }
+
         private static float SampleWithSeedOffset(
             float2 position,
             float frequency,

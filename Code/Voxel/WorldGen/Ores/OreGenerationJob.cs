@@ -82,8 +82,10 @@ namespace WildEarth.Voxel
                     1,
                     ore.MaxVeinSize);
 
-            if (ore.MaxY < chunkMinY - margin ||
-                ore.MinY > chunkMaxY + margin)
+            if (ore.MaxY <
+                    chunkMinY - margin ||
+                ore.MinY >
+                    chunkMaxY + margin)
             {
                 return;
             }
@@ -106,11 +108,21 @@ namespace WildEarth.Voxel
                 maxWorldY -
                 chunkMinY;
 
-            int minX = -margin;
-            int maxX = chunkSize + margin - 1;
+            int minX =
+                -margin;
 
-            int minZ = -margin;
-            int maxZ = chunkSize + margin - 1;
+            int maxX =
+                chunkSize +
+                margin -
+                1;
+
+            int minZ =
+                -margin;
+
+            int maxZ =
+                chunkSize +
+                margin -
+                1;
 
             int baseSeed =
                 Context.Seed +
@@ -129,24 +141,57 @@ namespace WildEarth.Voxel
                 OreNoise.CreateSeedOffset(
                     baseSeed + 2594);
 
+            float threshold =
+                1f -
+                ore.Rarity;
+
+            float frequency =
+                ore.Frequency;
+
+            int octaves =
+                Settings.Octaves;
+
+            float lacunarity =
+                Settings.Lacunarity;
+
+            float persistence =
+                Settings.Persistence;
+
             for (int localY = minLocalY;
                  localY <= maxLocalY;
                  localY++)
             {
+                int worldY =
+                    chunkMinY +
+                    localY;
+
                 for (int localZ = minZ;
                      localZ <= maxZ;
                      localZ++)
                 {
+                    int worldZ =
+                        chunkMinZ +
+                        localZ;
+
                     for (int localX = minX;
                          localX <= maxX;
                          localX++)
                     {
+                        int worldX =
+                            chunkMinX +
+                            localX;
+
                         TryCreateVein(
                             ore,
-                            localX,
-                            localY,
-                            localZ,
+                            worldX,
+                            worldY,
+                            worldZ,
                             baseSeed,
+                            threshold,
+                            frequency,
+                            octaves,
+                            lacunarity,
+                            persistence,
                             seedOffset0,
                             seedOffset1,
                             seedOffset2);
@@ -157,26 +202,19 @@ namespace WildEarth.Voxel
 
         private void TryCreateVein(
             OreRuntimeData ore,
-            int localX,
-            int localY,
-            int localZ,
+            int worldX,
+            int worldY,
+            int worldZ,
             int baseSeed,
+            float threshold,
+            float frequency,
+            int octaves,
+            float lacunarity,
+            float persistence,
             float3 seedOffset0,
             float3 seedOffset1,
             float3 seedOffset2)
         {
-            int worldX =
-                Context.WorldOrigin.x +
-                localX;
-
-            int worldY =
-                Context.WorldOrigin.y +
-                localY;
-
-            int worldZ =
-                Context.WorldOrigin.z +
-                localZ;
-
             if (worldY < ore.MinY ||
                 worldY > ore.MaxY)
             {
@@ -189,16 +227,13 @@ namespace WildEarth.Voxel
                         worldX,
                         worldY,
                         worldZ),
-                    ore.Frequency,
-                    Settings.Octaves,
-                    Settings.Lacunarity,
-                    Settings.Persistence,
+                    frequency,
+                    octaves,
+                    lacunarity,
+                    persistence,
                     seedOffset0,
                     seedOffset1,
                     seedOffset2);
-
-            float threshold =
-                1f - ore.Rarity;
 
             if (density < threshold)
                 return;
@@ -405,12 +440,26 @@ namespace WildEarth.Voxel
             uint h =
                 (uint)seed;
 
-            h ^= (uint)x * 374761393u;
-            h ^= (uint)y * 668265263u;
-            h ^= (uint)z * 2147483647u;
-            h ^= h >> 13;
-            h *= 1274126177u;
-            h ^= h >> 16;
+            h ^=
+                (uint)x *
+                374761393u;
+
+            h ^=
+                (uint)y *
+                668265263u;
+
+            h ^=
+                (uint)z *
+                2147483647u;
+
+            h ^=
+                h >> 13;
+
+            h *=
+                1274126177u;
+
+            h ^=
+                h >> 16;
 
             return h;
         }
