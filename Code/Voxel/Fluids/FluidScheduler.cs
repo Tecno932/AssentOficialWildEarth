@@ -177,6 +177,8 @@ namespace WildEarth.Voxel
                 processed++;
             }
 
+            updateSystem.FlushDirtyChunks();
+
             CleanupInactiveChunks();
 
             return processed;
@@ -346,17 +348,6 @@ namespace WildEarth.Voxel
                     update.ToChange(),
                     out FluidChangeResult result
                 );
-
-            UnityEngine.Debug.Log(
-                $"[FluidDebug] " +
-                $"Target={update.Chunk} " +
-                $"XYZ=({update.X},{update.Y},{update.Z}) " +
-                $"Level={update.State.Level} " +
-                $"Applied={applied} " +
-                $"ResultApplied={result.Applied} " +
-                $"Loaded={result.TargetChunkLoaded} " +
-                $"Air={result.TargetWasAir}"
-            );
 
             if (!result.TargetChunkLoaded)
             {

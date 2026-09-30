@@ -253,6 +253,46 @@ namespace WildEarth.Voxel
                 chunk.SetLoadedFromDisk();
                 chunk.MarkNeedsMesh();
 
+                int air = 0;
+                int solid = 0;
+                int fluid = 0;
+
+                for (int i = 0; i < chunk.Data.Voxels.Length; i++)
+                {
+                    Voxel voxel = chunk.Data.Voxels[i];
+
+                    if (voxel.BlockId == BlockIds.Air)
+                    {
+                        air++;
+                        continue;
+                    }
+
+                    if (blockDatabase.TryGet(
+                            voxel.BlockId,
+                            out BlockRuntimeData block))
+                    {
+                        if (block.IsFluid &&
+                            voxel.State > 0)
+                        {
+                            fluid++;
+                        }
+                        else
+                        {
+                            solid++;
+                        }
+                    }
+                    else
+                    {
+                        solid++;
+                    }
+                }
+
+                Debug.Log(
+                    $"[VoxelLoad] Chunk cargado desde disco: {coordinate} | " +
+                    $"Air={air} | Solid={solid} | Fluid={fluid} | " +
+                    $"State={chunk.State} | NeedsMesh={chunk.NeedsMesh}"
+                );
+
                 MarkNeighborChunksForRemesh(
                     chunk
                 );
@@ -493,37 +533,37 @@ namespace WildEarth.Voxel
             );
         }
 
-private void MarkNeighborForRemesh(
-    int x,
-    int y,
-    int z)
-{
-    ChunkCoordinate coordinate =
-        new ChunkCoordinate(
-            x,
-            y,
-            z
-        );
+        private void MarkNeighborForRemesh(
+            int x,
+            int y,
+            int z)
+        {
+            ChunkCoordinate coordinate =
+                new ChunkCoordinate(
+                    x,
+                    y,
+                    z
+                );
 
-    if (!chunkStorage.TryGet(
-            coordinate,
-            out Chunk neighbor))
-    {
-        return;
-    }
+            if (!chunkStorage.TryGet(
+                    coordinate,
+                    out Chunk neighbor))
+            {
+                return;
+            }
 
-    if (neighbor == null)
-    {
-        return;
-    }
+            if (neighbor == null)
+            {
+                return;
+            }
 
-    if (!neighbor.Data.IsCreated)
-    {
-        return;
-    }
+            if (!neighbor.Data.IsCreated)
+            {
+                return;
+            }
 
-    neighbor.MarkNeedsMesh();
-}
+            neighbor.MarkNeedsMesh();
+        }
 
         private void TryMarkNeighborForRemesh(
             ChunkCoordinate coordinate)
@@ -639,8 +679,9 @@ private void MarkNeighborForRemesh(
 
             chunk.MarkVoxelDataChanged();
 
-            RequestFluidSimulationAround(
-                coordinate
+            fluidSimulationCoordinator.RequestChunkSimulation(
+                coordinate,
+                fluidDatabase
             );
 
             if (localX == 0)
@@ -695,69 +736,6 @@ private void MarkNeighborForRemesh(
             }
 
             return true;
-        }
-
-        private void RequestFluidSimulationAround(
-            ChunkCoordinate coordinate)
-        {
-            fluidSimulationCoordinator.RequestChunkSimulation(
-                coordinate,
-                fluidDatabase
-            );
-
-            fluidSimulationCoordinator.RequestChunkSimulation(
-                new ChunkCoordinate(
-                    coordinate.X - 1,
-                    coordinate.Y,
-                    coordinate.Z
-                ),
-                fluidDatabase
-            );
-
-            fluidSimulationCoordinator.RequestChunkSimulation(
-                new ChunkCoordinate(
-                    coordinate.X + 1,
-                    coordinate.Y,
-                    coordinate.Z
-                ),
-                fluidDatabase
-            );
-
-            fluidSimulationCoordinator.RequestChunkSimulation(
-                new ChunkCoordinate(
-                    coordinate.X,
-                    coordinate.Y - 1,
-                    coordinate.Z
-                ),
-                fluidDatabase
-            );
-
-            fluidSimulationCoordinator.RequestChunkSimulation(
-                new ChunkCoordinate(
-                    coordinate.X,
-                    coordinate.Y + 1,
-                    coordinate.Z
-                ),
-                fluidDatabase
-            );
-
-            fluidSimulationCoordinator.RequestChunkSimulation(
-                new ChunkCoordinate(
-                    coordinate.X,
-                    coordinate.Y,
-                    coordinate.Z - 1
-                ),
-                fluidDatabase
-            );
-
-            fluidSimulationCoordinator.RequestChunkSimulation(
-                new ChunkCoordinate(
-                    coordinate.X,
-                    coordinate.Y,
-                    coordinate.Z + 1
-                ),
-                fluidDatabase
-            );
         }
 
         public bool TryGetBiomeAt(

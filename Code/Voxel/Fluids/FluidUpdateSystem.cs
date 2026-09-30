@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace WildEarth.Voxel
 {
@@ -7,6 +8,10 @@ namespace WildEarth.Voxel
         private readonly ChunkStorage chunkStorage;
         private readonly FluidRuntimeDatabase fluidDatabase;
         private readonly FluidSimulationSettings settings;
+
+        private readonly HashSet<ChunkCoordinate>
+            dirtyChunks;
+
         public FluidRuntimeDatabase FluidDatabase =>
             fluidDatabase;
 
@@ -28,14 +33,16 @@ namespace WildEarth.Voxel
                 );
 
             this.settings = settings;
+
+            dirtyChunks =
+                new HashSet<ChunkCoordinate>();
         }
 
         public bool TryApply(
             FluidChange change,
             out FluidChangeResult result)
         {
-            result =
-                default;
+            result = default;
 
             if (!chunkStorage.TryGet(
                     change.TargetChunk,
@@ -56,7 +63,7 @@ namespace WildEarth.Voxel
             if (targetChunk == null ||
                 !targetChunk.Data.IsCreated ||
                 (targetChunk.State != ChunkState.Generated &&
-                targetChunk.State != ChunkState.Ready))
+                 targetChunk.State != ChunkState.Ready))
             {
                 result =
                     new FluidChangeResult(
@@ -95,24 +102,12 @@ namespace WildEarth.Voxel
             bool targetWasAir =
                 current.IsAir;
 
-            UnityEngine.Debug.Log(
-                $"[FluidTargetDebug] " +
-                $"Chunk={change.TargetChunk} " +
-                $"XYZ=({change.X},{change.Y},{change.Z}) " +
-                $"BlockId={current.BlockId} " +
-                $"State={current.State} " +
-                $"IsAir={current.IsAir} " +
-                $"IsFluid={fluidDatabase.TryGetByBlockId(current.BlockId, out FluidRuntimeData targetFluid)} " +
-                $"TargetFluidType={(targetFluid.IsValid ? targetFluid.Type.ToString() : "None")} " +
-                $"TargetFluidLevel={(targetFluid.IsValid ? current.State.ToString() : "0")}"
-            );
-
             /*
-            * Empty significa eliminar el fluido existente.
-            *
-            * Nunca elimina bloques sólidos ni otros tipos
-            * de fluidos.
-            */
+             * Empty significa eliminar el fluido existente.
+             *
+             * Nunca elimina bloques sólidos ni otros tipos
+             * de fluidos.
+             */
             if (change.State.IsEmpty)
             {
                 if (!TryGetFluidState(
@@ -146,7 +141,7 @@ namespace WildEarth.Voxel
                     air
                 );
 
-                MarkChunkDirty(
+                RegisterDirtyChunk(
                     targetChunk
                 );
 
@@ -186,7 +181,7 @@ namespace WildEarth.Voxel
                     fluid
                 );
 
-                MarkChunkDirty(
+                RegisterDirtyChunk(
                     targetChunk
                 );
 
@@ -243,7 +238,7 @@ namespace WildEarth.Voxel
                     fluid
                 );
 
-                MarkChunkDirty(
+                RegisterDirtyChunk(
                     targetChunk
                 );
 
@@ -269,6 +264,47 @@ namespace WildEarth.Voxel
                 );
 
             return false;
+        }
+
+        public void FlushDirtyChunks()
+        {
+            if (dirtyChunks.Count == 0)
+                return;
+
+            foreach (
+                ChunkCoordinate coordinate
+                in dirtyChunks)
+            {
+                if (!chunkStorage.TryGet(
+                        coordinate,
+                        out Chunk chunk))
+                {
+                    continue;
+                }
+
+                if (chunk == null ||
+                    !chunk.Data.IsCreated)
+                {
+                    continue;
+                }
+
+                chunk.MarkVoxelDataChanged();
+            }
+
+            dirtyChunks.Clear();
+        }
+
+        public void ClearDirtyChunks()
+        {
+            dirtyChunks.Clear();
+        }
+
+        private void RegisterDirtyChunk(
+            Chunk chunk)
+        {
+            dirtyChunks.Add(
+                chunk.Coordinate
+            );
         }
 
         private bool TryGetFluidState(
@@ -311,12 +347,6 @@ namespace WildEarth.Voxel
                 change.Z,
                 voxel
             );
-        }
-
-        private static void MarkChunkDirty(
-            Chunk chunk)
-        {
-            chunk.MarkVoxelDataChanged();
         }
     }
 }

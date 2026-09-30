@@ -66,18 +66,15 @@ namespace WildEarth.Voxel
                     6
                 );
 
-            ushort[] voxelIds =
+            bool containsFluid;
+
+            Voxel[] voxelCache =
                 BuildVoxelCache(
                     chunk,
-                    storage
+                    storage,
+                    out containsFluid
                 );
 
-            /*
-             * Los bloques cúbicos continúan utilizando
-             * Binary Greedy Meshing.
-             *
-             * Los fluidos NO pasan por este sistema.
-             */
             for (
                 int face = 0;
                 face < 6;
@@ -85,41 +82,44 @@ namespace WildEarth.Voxel
             {
                 BuildBinaryGreedyDirection(
                     mesh,
-                    voxelIds,
+                    voxelCache,
                     chunk,
                     (VoxelFace)face
                 );
             }
 
-            /*
-             * Los fluidos utilizan geometría propia porque
-             * su altura depende de Voxel.State.
-             */
-            BuildFluidGeometry(
-                mesh,
-                chunk,
-                storage
-            );
+            if (containsFluid)
+            {
+                BuildFluidGeometry(
+                    mesh,
+                    chunk,
+                    storage,
+                    voxelCache
+                );
+            }
 
             return mesh;
         }
 
-        private ushort[] BuildVoxelCache(
+        private Voxel[] BuildVoxelCache(
             Chunk chunk,
-            ChunkStorage storage)
+            ChunkStorage storage,
+            out bool containsFluid)
         {
             int chunkSize =
                 VoxelConstants.ChunkSize;
 
-            int size =
+            int cacheSize =
                 chunkSize + 2;
 
-            ushort[] cache =
-                new ushort[
-                    size *
-                    size *
-                    size
+            Voxel[] cache =
+                new Voxel[
+                    cacheSize *
+                    cacheSize *
+                    cacheSize
                 ];
+
+            containsFluid = false;
 
             for (
                 int y = 0;
@@ -137,131 +137,199 @@ namespace WildEarth.Voxel
                         x++)
                     {
                         Voxel voxel =
-                            ChunkDataAccess.GetVoxel(
-                                chunk.Data,
-                                x,
-                                y,
-                                z
-                            );
+                            chunk.Data.Voxels[
+                                VoxelIndex.ToIndex(
+                                    x,
+                                    y,
+                                    z
+                                )
+                            ];
 
                         cache[
                             CacheIndex(
                                 x + 1,
                                 y + 1,
                                 z + 1,
-                                size
+                                cacheSize
                             )
-                        ] =
-                            voxel.BlockId;
+                        ] = voxel;
+
+                        if (voxel.BlockId != BlockIds.Air &&
+                            blockDatabase.TryGet(
+                                voxel.BlockId,
+                                out BlockRuntimeData block))
+                        {
+                            if (block.MeshType ==
+                                    BlockMeshType.Fluid &&
+                                block.IsFluid &&
+                                voxel.State > 0)
+                            {
+                                containsFluid = true;
+                            }
+                        }
                     }
                 }
             }
 
-            for (
-                int i = 0;
-                i < chunkSize;
-                i++)
+            // Borde X-
+            for (int y = 0; y < chunkSize; y++)
             {
-                for (
-                    int j = 0;
-                    j < chunkSize;
-                    j++)
+                for (int z = 0; z < chunkSize; z++)
                 {
-                    cache[
-                        CacheIndex(
-                            0,
-                            j + 1,
-                            i + 1,
-                            size
-                        )
-                    ] =
-                        GetNeighborBlockId(
+                    Voxel voxel;
+
+                    if (ChunkNeighborAccess.TryGetVoxel(
                             storage,
-                            chunk,
+                            chunk.Coordinate,
                             -1,
-                            j,
-                            i
-                        );
+                            y,
+                            z,
+                            out voxel))
+                    {
+                        cache[
+                            CacheIndex(
+                                0,
+                                y + 1,
+                                z + 1,
+                                cacheSize
+                            )
+                        ] = voxel;
+                    }
+                }
+            }
 
-                    cache[
-                        CacheIndex(
-                            chunkSize + 1,
-                            j + 1,
-                            i + 1,
-                            size
-                        )
-                    ] =
-                        GetNeighborBlockId(
+            // Borde X+
+            for (int y = 0; y < chunkSize; y++)
+            {
+                for (int z = 0; z < chunkSize; z++)
+                {
+                    Voxel voxel;
+
+                    if (ChunkNeighborAccess.TryGetVoxel(
                             storage,
-                            chunk,
+                            chunk.Coordinate,
                             chunkSize,
-                            j,
-                            i
-                        );
+                            y,
+                            z,
+                            out voxel))
+                    {
+                        cache[
+                            CacheIndex(
+                                chunkSize + 1,
+                                y + 1,
+                                z + 1,
+                                cacheSize
+                            )
+                        ] = voxel;
+                    }
+                }
+            }
 
-                    cache[
-                        CacheIndex(
-                            i + 1,
-                            0,
-                            j + 1,
-                            size
-                        )
-                    ] =
-                        GetNeighborBlockId(
+            // Borde Y-
+            for (int x = 0; x < chunkSize; x++)
+            {
+                for (int z = 0; z < chunkSize; z++)
+                {
+                    Voxel voxel;
+
+                    if (ChunkNeighborAccess.TryGetVoxel(
                             storage,
-                            chunk,
-                            i,
+                            chunk.Coordinate,
+                            x,
                             -1,
-                            j
-                        );
+                            z,
+                            out voxel))
+                    {
+                        cache[
+                            CacheIndex(
+                                x + 1,
+                                0,
+                                z + 1,
+                                cacheSize
+                            )
+                        ] = voxel;
+                    }
+                }
+            }
 
-                    cache[
-                        CacheIndex(
-                            i + 1,
-                            chunkSize + 1,
-                            j + 1,
-                            size
-                        )
-                    ] =
-                        GetNeighborBlockId(
+            // Borde Y+
+            for (int x = 0; x < chunkSize; x++)
+            {
+                for (int z = 0; z < chunkSize; z++)
+                {
+                    Voxel voxel;
+
+                    if (ChunkNeighborAccess.TryGetVoxel(
                             storage,
-                            chunk,
-                            i,
+                            chunk.Coordinate,
+                            x,
                             chunkSize,
-                            j
-                        );
+                            z,
+                            out voxel))
+                    {
+                        cache[
+                            CacheIndex(
+                                x + 1,
+                                chunkSize + 1,
+                                z + 1,
+                                cacheSize
+                            )
+                        ] = voxel;
+                    }
+                }
+            }
 
-                    cache[
-                        CacheIndex(
-                            i + 1,
-                            j + 1,
-                            0,
-                            size
-                        )
-                    ] =
-                        GetNeighborBlockId(
-                            storage,
-                            chunk,
-                            i,
-                            j,
-                            -1
-                        );
+            // Borde Z-
+            for (int x = 0; x < chunkSize; x++)
+            {
+                for (int y = 0; y < chunkSize; y++)
+                {
+                    Voxel voxel;
 
-                    cache[
-                        CacheIndex(
-                            i + 1,
-                            j + 1,
-                            chunkSize + 1,
-                            size
-                        )
-                    ] =
-                        GetNeighborBlockId(
+                    if (ChunkNeighborAccess.TryGetVoxel(
                             storage,
-                            chunk,
-                            i,
-                            j,
-                            chunkSize
-                        );
+                            chunk.Coordinate,
+                            x,
+                            y,
+                            -1,
+                            out voxel))
+                    {
+                        cache[
+                            CacheIndex(
+                                x + 1,
+                                y + 1,
+                                0,
+                                cacheSize
+                            )
+                        ] = voxel;
+                    }
+                }
+            }
+
+            // Borde Z+
+            for (int x = 0; x < chunkSize; x++)
+            {
+                for (int y = 0; y < chunkSize; y++)
+                {
+                    Voxel voxel;
+
+                    if (ChunkNeighborAccess.TryGetVoxel(
+                            storage,
+                            chunk.Coordinate,
+                            x,
+                            y,
+                            chunkSize,
+                            out voxel))
+                    {
+                        cache[
+                            CacheIndex(
+                                x + 1,
+                                y + 1,
+                                chunkSize + 1,
+                                cacheSize
+                            )
+                        ] = voxel;
+                    }
                 }
             }
 
@@ -292,7 +360,7 @@ namespace WildEarth.Voxel
 
         private void BuildBinaryGreedyDirection(
             ChunkMeshData mesh,
-            ushort[] voxelIds,
+            Voxel[] voxelCache,
             Chunk chunk,
             VoxelFace face)
         {
@@ -356,7 +424,7 @@ namespace WildEarth.Voxel
                     keys,
                     blockIds,
                     biomeIds,
-                    voxelIds,
+                    voxelCache,
                     chunk,
                     face,
                     slice,
@@ -380,7 +448,7 @@ namespace WildEarth.Voxel
             int[] keys,
             ushort[] blockIds,
             byte[] biomeIds,
-            ushort[] voxelIds,
+            Voxel[] voxelCache,
             Chunk chunk,
             VoxelFace face,
             int slice,
@@ -413,7 +481,7 @@ namespace WildEarth.Voxel
 
                     ushort blockId =
                         GetCachedBlockId(
-                            voxelIds,
+                            voxelCache,
                             x,
                             y,
                             z,
@@ -483,7 +551,7 @@ namespace WildEarth.Voxel
 
                     ushort neighborId =
                         GetCachedBlockId(
-                            voxelIds,
+                            voxelCache,
                             neighborX,
                             neighborY,
                             neighborZ,
@@ -691,57 +759,143 @@ namespace WildEarth.Voxel
          * No utilizamos greedy meshing aquí porque dos voxels
          * contiguos pueden tener alturas diferentes.
          */
-
         private void BuildFluidGeometry(
             ChunkMeshData mesh,
             Chunk chunk,
-            ChunkStorage storage)
+            ChunkStorage storage,
+            Voxel[] voxelCache)
+        {
+            BuildFluidHorizontalFaces(
+                mesh,
+                chunk,
+                storage,
+                voxelCache,
+                true
+            );
+
+            BuildFluidHorizontalFaces(
+                mesh,
+                chunk,
+                storage,
+                voxelCache,
+                false
+            );
+
+            BuildFluidSideFaces(
+                mesh,
+                chunk,
+                storage,
+                voxelCache,
+                VoxelFace.North
+            );
+
+            BuildFluidSideFaces(
+                mesh,
+                chunk,
+                storage,
+                voxelCache,
+                VoxelFace.South
+            );
+
+            BuildFluidSideFaces(
+                mesh,
+                chunk,
+                storage,
+                voxelCache,
+                VoxelFace.East
+            );
+
+            BuildFluidSideFaces(
+                mesh,
+                chunk,
+                storage,
+                voxelCache,
+                VoxelFace.West
+            );
+        }
+
+        private void BuildFluidHorizontalFaces(
+            ChunkMeshData mesh,
+            Chunk chunk,
+            ChunkStorage storage,
+            Voxel[] voxelCache,
+            bool top)
         {
             int chunkSize =
                 VoxelConstants.ChunkSize;
 
-            for (
-                int y = 0;
-                y < chunkSize;
-                y++)
+            int cellCount =
+                chunkSize * chunkSize;
+
+            bool[] visible =
+                new bool[cellCount];
+
+            ushort[] blockIds =
+                new ushort[cellCount];
+
+            byte[] biomeIds =
+                new byte[cellCount];
+
+            int[] textureKeys =
+                new int[cellCount];
+
+            float[] heights =
+                new float[cellCount];
+
+            for (int y = 0; y < chunkSize; y++)
             {
-                for (
-                    int z = 0;
-                    z < chunkSize;
-                    z++)
+                Array.Clear(
+                    visible,
+                    0,
+                    visible.Length
+                );
+
+                Array.Clear(
+                    blockIds,
+                    0,
+                    blockIds.Length
+                );
+
+                Array.Clear(
+                    biomeIds,
+                    0,
+                    biomeIds.Length
+                );
+
+                Array.Clear(
+                    textureKeys,
+                    0,
+                    textureKeys.Length
+                );
+
+                Array.Clear(
+                    heights,
+                    0,
+                    heights.Length
+                );
+
+                for (int z = 0; z < chunkSize; z++)
                 {
-                    for (
-                        int x = 0;
-                        x < chunkSize;
-                        x++)
+                    for (int x = 0; x < chunkSize; x++)
                     {
+                        int index =
+                            x +
+                            z * chunkSize;
+
                         Voxel voxel =
-                            ChunkDataAccess.GetVoxel(
-                                chunk.Data,
+                            GetCachedVoxel(
+                                voxelCache,
                                 x,
                                 y,
                                 z
                             );
 
-                        if (voxel.BlockId == BlockIds.Air)
-                            continue;
-
-                        if (!blockDatabase.TryGet(
-                                voxel.BlockId,
+                        if (!TryGetFluidBlock(
+                                voxel,
                                 out BlockRuntimeData block))
                         {
-                            throw new InvalidOperationException(
-                                $"VoxelMeshBuilder encontró un BlockId inválido " +
-                                $"durante el procesamiento de fluidos. " +
-                                $"BlockId={voxel.BlockId}."
-                            );
+                            continue;
                         }
-
-                        if (block.MeshType != BlockMeshType.Fluid)
-                            continue;
-
-                        if (!block.IsFluid)
-                            continue;
 
                         float height =
                             GetFluidHeight(
@@ -751,110 +905,1106 @@ namespace WildEarth.Voxel
                         if (height <= 0f)
                             continue;
 
-                        Color32 tint =
-                            Color.white;
+                        bool faceVisible =
+                            top
+                                ? IsFluidTopFaceVisible(
+                                    voxelCache,
+                                    chunk,
+                                    storage,
+                                    x,
+                                    y,
+                                    z,
+                                    voxel
+                                )
+                                : IsFluidBottomFaceVisible(
+                                    voxelCache,
+                                    chunk,
+                                    storage,
+                                    x,
+                                    y,
+                                    z,
+                                    voxel
+                                );
 
-                        /*
-                         * TOP
-                         */
-                        BuildFluidTopFace(
-                            mesh,
-                            chunk,
-                            storage,
-                            x,
-                            y,
-                            z,
-                            voxel,
-                            block,
-                            height,
-                            tint
-                        );
+                        if (!faceVisible)
+                            continue;
 
-                        /*
-                         * BOTTOM
-                         */
-                        BuildFluidBottomFace(
-                            mesh,
-                            chunk,
-                            storage,
-                            x,
-                            y,
-                            z,
-                            voxel,
-                            block,
-                            height,
-                            tint
-                        );
+                        VoxelFace face =
+                            top
+                                ? VoxelFace.Top
+                                : VoxelFace.Bottom;
 
-                        /*
-                         * NORTH
-                         */
-                        BuildFluidSideFace(
-                            mesh,
-                            chunk,
-                            storage,
-                            x,
-                            y,
-                            z,
-                            voxel,
-                            block,
-                            height,
-                            VoxelFace.North,
-                            tint
-                        );
+                        BiomeId biomeId =
+                            GetFluidBiomeId(
+                                chunk,
+                                x,
+                                z
+                            );
 
-                        /*
-                         * SOUTH
-                         */
-                        BuildFluidSideFace(
-                            mesh,
-                            chunk,
-                            storage,
-                            x,
-                            y,
-                            z,
-                            voxel,
-                            block,
-                            height,
-                            VoxelFace.South,
-                            tint
-                        );
+                        visible[index] = true;
 
-                        /*
-                         * EAST
-                         */
-                        BuildFluidSideFace(
-                            mesh,
-                            chunk,
-                            storage,
-                            x,
-                            y,
-                            z,
-                            voxel,
-                            block,
-                            height,
-                            VoxelFace.East,
-                            tint
-                        );
+                        blockIds[index] =
+                            voxel.BlockId;
 
-                        /*
-                         * WEST
-                         */
-                        BuildFluidSideFace(
-                            mesh,
-                            chunk,
-                            storage,
-                            x,
-                            y,
-                            z,
-                            voxel,
-                            block,
-                            height,
-                            VoxelFace.West,
-                            tint
-                        );
+                        biomeIds[index] =
+                            (byte)biomeId;
+
+                        textureKeys[index] =
+                            GetTextureKey(
+                                block,
+                                face
+                            );
+
+                        heights[index] =
+                            height;
                     }
                 }
+
+                BinaryGreedyMergeFluidHorizontal(
+                    mesh,
+                    visible,
+                    blockIds,
+                    biomeIds,
+                    textureKeys,
+                    heights,
+                    y,
+                    top
+                );
+            }
+        }
+
+        private void BinaryGreedyMergeFluidHorizontal(
+            ChunkMeshData mesh,
+            bool[] visible,
+            ushort[] blockIds,
+            byte[] biomeIds,
+            int[] textureKeys,
+            float[] heights,
+            int y,
+            bool top)
+        {
+            int chunkSize =
+                VoxelConstants.ChunkSize;
+
+            bool[] consumed =
+                new bool[
+                    chunkSize * chunkSize
+                ];
+
+            for (int z = 0; z < chunkSize; z++)
+            {
+                for (int x = 0; x < chunkSize; x++)
+                {
+                    int index =
+                        x +
+                        z * chunkSize;
+
+                    if (consumed[index] ||
+                        !visible[index])
+                    {
+                        continue;
+                    }
+
+                    ushort blockId =
+                        blockIds[index];
+
+                    byte biomeId =
+                        biomeIds[index];
+
+                    int textureKey =
+                        textureKeys[index];
+
+                    float height =
+                        heights[index];
+
+                    int width = 1;
+
+                    while (
+                        x + width < chunkSize)
+                    {
+                        int next =
+                            (x + width) +
+                            z * chunkSize;
+
+                        if (consumed[next] ||
+                            !visible[next])
+                        {
+                            break;
+                        }
+
+                        if (blockIds[next] != blockId ||
+                            biomeIds[next] != biomeId ||
+                            textureKeys[next] != textureKey ||
+                            !Mathf.Approximately(
+                                heights[next],
+                                height
+                            ))
+                        {
+                            break;
+                        }
+
+                        width++;
+                    }
+
+                    int depth = 1;
+
+                    bool canExpand = true;
+
+                    while (
+                        z + depth < chunkSize &&
+                        canExpand)
+                    {
+                        for (
+                            int dx = 0;
+                            dx < width;
+                            dx++)
+                        {
+                            int test =
+                                (x + dx) +
+                                (z + depth) * chunkSize;
+
+                            if (consumed[test] ||
+                                !visible[test])
+                            {
+                                canExpand = false;
+                                break;
+                            }
+
+                            if (blockIds[test] != blockId ||
+                                biomeIds[test] != biomeId ||
+                                textureKeys[test] != textureKey ||
+                                !Mathf.Approximately(
+                                    heights[test],
+                                    height
+                                ))
+                            {
+                                canExpand = false;
+                                break;
+                            }
+                        }
+
+                        if (canExpand)
+                            depth++;
+                    }
+
+                    for (
+                        int dz = 0;
+                        dz < depth;
+                        dz++)
+                    {
+                        for (
+                            int dx = 0;
+                            dx < width;
+                            dx++)
+                        {
+                            consumed[
+                                (x + dx) +
+                                (z + dz) * chunkSize
+                            ] = true;
+                        }
+                    }
+
+                    if (!blockDatabase.TryGet(
+                            blockId,
+                            out BlockRuntimeData block))
+                    {
+                        throw new InvalidOperationException(
+                            $"VoxelMeshBuilder no encontró " +
+                            $"el BlockRuntimeData del fluido. " +
+                            $"BlockId={blockId}."
+                        );
+                    }
+
+                    BiomeId biome =
+                        (BiomeId)biomeId;
+
+                    AtlasTileCoordinate texture =
+                        GetTexture(
+                            block,
+                            top
+                                ? VoxelFace.Top
+                                : VoxelFace.Bottom
+                        );
+
+                    Color32 tint =
+                        GetBlockTint(
+                            blockId,
+                            biome
+                        );
+
+                    AddFluidHorizontalGreedyFace(
+                        mesh,
+                        x,
+                        z,
+                        y,
+                        width,
+                        depth,
+                        height,
+                        texture,
+                        tint,
+                        top
+                    );
+                }
+            }
+        }
+
+        private bool IsFluidTopFaceVisible(
+            Voxel[] voxelCache,
+            Chunk chunk,
+            ChunkStorage storage,
+            int x,
+            int y,
+            int z,
+            Voxel voxel)
+        {
+            if (!TryGetVoxel(
+                    voxelCache,
+                    storage,
+                    chunk,
+                    x,
+                    y + 1,
+                    z,
+                    out Voxel above))
+            {
+                return true;
+            }
+
+            if (above.BlockId == voxel.BlockId &&
+                above.State > 0)
+            {
+                return false;
+            }
+
+            if (above.BlockId != BlockIds.Air)
+            {
+                if (!blockDatabase.TryGet(
+                        above.BlockId,
+                        out BlockRuntimeData aboveBlock))
+                {
+                    throw new InvalidOperationException(
+                        $"VoxelMeshBuilder encontró un BlockId inválido " +
+                        $"al comprobar la cara superior de un fluido. " +
+                        $"BlockId={above.BlockId}."
+                    );
+                }
+
+                if (aboveBlock.OccludesFaces)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private bool IsFluidBottomFaceVisible(
+            Voxel[] voxelCache,
+            Chunk chunk,
+            ChunkStorage storage,
+            int x,
+            int y,
+            int z,
+            Voxel voxel)
+        {
+            if (!TryGetVoxel(
+                    voxelCache,
+                    storage,
+                    chunk,
+                    x,
+                    y - 1,
+                    z,
+                    out Voxel below))
+            {
+                return true;
+            }
+
+            if (below.BlockId == voxel.BlockId &&
+                below.State > 0)
+            {
+                return false;
+            }
+
+            if (below.BlockId != BlockIds.Air)
+            {
+                if (!blockDatabase.TryGet(
+                        below.BlockId,
+                        out BlockRuntimeData belowBlock))
+                {
+                    throw new InvalidOperationException(
+                        $"VoxelMeshBuilder encontró un BlockId inválido " +
+                        $"al comprobar la cara inferior de un fluido. " +
+                        $"BlockId={below.BlockId}."
+                    );
+                }
+
+                if (belowBlock.OccludesFaces)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private void AddFluidHorizontalGreedyFace(
+            ChunkMeshData mesh,
+            int x,
+            int z,
+            int y,
+            int width,
+            int depth,
+            float height,
+            AtlasTileCoordinate texture,
+            Color32 tint,
+            bool top)
+        {
+            float2 atlasTileMin =
+                GetAtlasTileMin(texture);
+
+            float2 uv0 =
+                new float2(
+                    0f,
+                    0f
+                );
+
+            float2 uv1 =
+                new float2(
+                    width,
+                    0f
+                );
+
+            float2 uv2 =
+                new float2(
+                    width,
+                    depth
+                );
+
+            float2 uv3 =
+                new float2(
+                    0f,
+                    depth
+                );
+
+            if (top)
+            {
+                float faceY =
+                    y + height;
+
+                mesh.AddTiledQuad(
+                    new float3(
+                        x,
+                        faceY,
+                        z + depth
+                    ),
+                    new float3(
+                        x + width,
+                        faceY,
+                        z + depth
+                    ),
+                    new float3(
+                        x + width,
+                        faceY,
+                        z
+                    ),
+                    new float3(
+                        x,
+                        faceY,
+                        z
+                    ),
+                    atlasTileMin,
+                    uv0,
+                    uv1,
+                    uv2,
+                    uv3,
+                    tint
+                );
+
+                return;
+            }
+
+            mesh.AddTiledQuad(
+                new float3(
+                    x,
+                    y,
+                    z
+                ),
+                new float3(
+                    x + width,
+                    y,
+                    z
+                ),
+                new float3(
+                    x + width,
+                    y,
+                    z + depth
+                ),
+                new float3(
+                    x,
+                    y,
+                    z + depth
+                ),
+                atlasTileMin,
+                uv0,
+                uv1,
+                uv2,
+                uv3,
+                tint
+            );
+        }
+
+        private bool TryGetFluidBlock(
+            Voxel voxel,
+            out BlockRuntimeData block)
+        {
+            if (voxel.BlockId == BlockIds.Air)
+            {
+                block = default;
+                return false;
+            }
+
+            if (!blockDatabase.TryGet(
+                    voxel.BlockId,
+                    out block))
+            {
+                throw new InvalidOperationException(
+                    $"VoxelMeshBuilder encontró un BlockId inválido " +
+                    $"durante el procesamiento de fluidos. " +
+                    $"BlockId={voxel.BlockId}."
+                );
+            }
+
+            return block.MeshType == BlockMeshType.Fluid &&
+                block.IsFluid &&
+                voxel.State > 0;
+        }
+
+        private BiomeId GetFluidBiomeId(
+            Chunk chunk,
+            int x,
+            int z)
+        {
+            int chunkSize =
+                VoxelConstants.ChunkSize;
+
+            int index =
+                x +
+                z * chunkSize;
+
+            return chunk.BiomeData.Biomes[index];
+        }
+
+        private void BuildFluidSideFaces(
+            ChunkMeshData mesh,
+            Chunk chunk,
+            ChunkStorage storage,
+            Voxel[] voxelCache,
+            VoxelFace face)
+        {
+            int chunkSize =
+                VoxelConstants.ChunkSize;
+
+            int cellCount =
+                chunkSize * chunkSize;
+
+            bool[] visible =
+                new bool[cellCount];
+
+            ushort[] blockIds =
+                new ushort[cellCount];
+
+            byte[] biomeIds =
+                new byte[cellCount];
+
+            int[] textureKeys =
+                new int[cellCount];
+
+            float[] heights =
+                new float[cellCount];
+
+            float[] bottomHeights =
+                new float[cellCount];
+
+            for (int y = 0; y < chunkSize; y++)
+            {
+                Array.Clear(
+                    visible,
+                    0,
+                    visible.Length
+                );
+
+                Array.Clear(
+                    blockIds,
+                    0,
+                    blockIds.Length
+                );
+
+                Array.Clear(
+                    biomeIds,
+                    0,
+                    biomeIds.Length
+                );
+
+                Array.Clear(
+                    textureKeys,
+                    0,
+                    textureKeys.Length
+                );
+
+                Array.Clear(
+                    heights,
+                    0,
+                    heights.Length
+                );
+
+                Array.Clear(
+                    bottomHeights,
+                    0,
+                    bottomHeights.Length
+                );
+
+                for (int v = 0; v < chunkSize; v++)
+                {
+                    for (int u = 0; u < chunkSize; u++)
+                    {
+                        GetFluidSideCoordinate(
+                            face,
+                            u,
+                            y,
+                            v,
+                            out int x,
+                            out int voxelY,
+                            out int z
+                        );
+
+                        Voxel voxel =
+                            GetCachedVoxel(
+                                voxelCache,
+                                x,
+                                voxelY,
+                                z
+                            );
+
+                        if (!TryGetFluidBlock(
+                                voxel,
+                                out BlockRuntimeData block))
+                        {
+                            continue;
+                        }
+
+                        float height =
+                            GetFluidHeight(voxel);
+
+                        if (height <= 0f)
+                            continue;
+
+                        GetFluidSideNeighbor(
+                            face,
+                            x,
+                            voxelY,
+                            z,
+                            out int neighborX,
+                            out int neighborY,
+                            out int neighborZ
+                        );
+
+                        float neighborHeight = 0f;
+                        bool sameFluid = false;
+                        bool blocked = false;
+
+                        if (TryGetVoxel(
+                                voxelCache,
+                                storage,
+                                chunk,
+                                neighborX,
+                                neighborY,
+                                neighborZ,
+                                out Voxel neighbor))
+                        {
+                            if (neighbor.BlockId != BlockIds.Air)
+                            {
+                                if (blockDatabase.TryGet(
+                                        neighbor.BlockId,
+                                        out BlockRuntimeData neighborBlock))
+                                {
+                                    if (neighborBlock.MeshType ==
+                                            BlockMeshType.Fluid &&
+                                        neighborBlock.IsFluid &&
+                                        neighbor.BlockId == voxel.BlockId &&
+                                        neighbor.State > 0)
+                                    {
+                                        sameFluid = true;
+
+                                        neighborHeight =
+                                            GetFluidHeight(
+                                                neighbor
+                                            );
+                                    }
+                                    else if (neighborBlock.OccludesFaces)
+                                    {
+                                        blocked = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (blocked)
+                            continue;
+
+                        if (sameFluid &&
+                            neighborHeight >= height)
+                        {
+                            continue;
+                        }
+
+                        float bottomHeight =
+                            sameFluid
+                                ? neighborHeight
+                                : 0f;
+
+                        if (bottomHeight >= height)
+                            continue;
+
+                        BiomeId biomeId =
+                            GetFluidBiomeId(
+                                chunk,
+                                x,
+                                z
+                            );
+
+                        int index =
+                            u + v * chunkSize;
+
+                        visible[index] = true;
+
+                        blockIds[index] =
+                            voxel.BlockId;
+
+                        biomeIds[index] =
+                            (byte)biomeId;
+
+                        textureKeys[index] =
+                            GetTextureKey(
+                                block,
+                                face
+                            );
+
+                        heights[index] =
+                            height;
+
+                        bottomHeights[index] =
+                            bottomHeight;
+                    }
+                }
+
+                MergeFluidSideRow(
+                    mesh,
+                    face,
+                    y,
+                    visible,
+                    blockIds,
+                    biomeIds,
+                    textureKeys,
+                    heights,
+                    bottomHeights
+                );
+            }
+        }
+
+        private void GetFluidSideCoordinate(
+            VoxelFace face,
+            int u,
+            int y,
+            int v,
+            out int x,
+            out int voxelY,
+            out int z)
+        {
+            switch (face)
+            {
+                case VoxelFace.North:
+                case VoxelFace.South:
+                    x = u;
+                    voxelY = y;
+                    z = v;
+                    break;
+
+                case VoxelFace.East:
+                case VoxelFace.West:
+                    x = v;
+                    voxelY = y;
+                    z = u;
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(
+                        nameof(face)
+                    );
+            }
+        }
+
+        private void GetFluidSideNeighbor(
+            VoxelFace face,
+            int x,
+            int y,
+            int z,
+            out int neighborX,
+            out int neighborY,
+            out int neighborZ)
+        {
+            neighborX = x;
+            neighborY = y;
+            neighborZ = z;
+
+            switch (face)
+            {
+                case VoxelFace.North:
+                    neighborZ++;
+                    break;
+
+                case VoxelFace.South:
+                    neighborZ--;
+                    break;
+
+                case VoxelFace.East:
+                    neighborX++;
+                    break;
+
+                case VoxelFace.West:
+                    neighborX--;
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(
+                        nameof(face)
+                    );
+            }
+        }
+
+        private void MergeFluidSideRow(
+            ChunkMeshData mesh,
+            VoxelFace face,
+            int y,
+            bool[] visible,
+            ushort[] blockIds,
+            byte[] biomeIds,
+            int[] textureKeys,
+            float[] heights,
+            float[] bottomHeights)
+        {
+            int chunkSize =
+                VoxelConstants.ChunkSize;
+
+            for (int v = 0; v < chunkSize; v++)
+            {
+                int u = 0;
+
+                while (u < chunkSize)
+                {
+                    int index =
+                        u + v * chunkSize;
+
+                    if (!visible[index])
+                    {
+                        u++;
+                        continue;
+                    }
+
+                    ushort blockId =
+                        blockIds[index];
+
+                    byte biomeId =
+                        biomeIds[index];
+
+                    int textureKey =
+                        textureKeys[index];
+
+                    float height =
+                        heights[index];
+
+                    float bottomHeight =
+                        bottomHeights[index];
+
+                    int width = 1;
+
+                    while (u + width < chunkSize)
+                    {
+                        int nextIndex =
+                            (u + width) + v * chunkSize;
+
+                        if (!visible[nextIndex])
+                            break;
+
+                        if (blockIds[nextIndex] != blockId ||
+                            biomeIds[nextIndex] != biomeId ||
+                            textureKeys[nextIndex] != textureKey ||
+                            !Mathf.Approximately(
+                                heights[nextIndex],
+                                height
+                            ) ||
+                            !Mathf.Approximately(
+                                bottomHeights[nextIndex],
+                                bottomHeight
+                            ))
+                        {
+                            break;
+                        }
+
+                        width++;
+                    }
+
+                    BiomeId biome =
+                        (BiomeId)biomeId;
+
+                    Color32 tint =
+                        GetBlockTint(
+                            blockId,
+                            biome
+                        );
+
+                    AtlasTileCoordinate texture;
+
+                    if (!blockDatabase.TryGet(
+                            blockId,
+                            out BlockRuntimeData block))
+                    {
+                        throw new InvalidOperationException(
+                            $"VoxelMeshBuilder no encontró " +
+                            $"el BlockRuntimeData del fluido. " +
+                            $"BlockId={blockId}."
+                        );
+                    }
+
+                    texture =
+                        GetTexture(
+                            block,
+                            face
+                        );
+
+                    AddFluidSideGreedyFace(
+                        mesh,
+                        face,
+                        y,
+                        u,
+                        v,
+                        width,
+                        bottomHeight,
+                        height,
+                        texture,
+                        tint
+                    );
+
+                    for (int i = 0; i < width; i++)
+                    {
+                        visible[
+                            (u + i) + v * chunkSize
+                        ] = false;
+                    }
+
+                    u += width;
+                }
+            }
+        }
+
+private void AddFluidSideGreedyFace(
+    ChunkMeshData mesh,
+    VoxelFace face,
+    int y,
+    int u,
+    int v,
+    int width,
+    float bottomHeight,
+    float height,
+    AtlasTileCoordinate texture,
+    Color32 tint)
+{
+    float2 atlasTileMin =
+        GetAtlasTileMin(texture);
+
+    float2 uv0 =
+        new float2(
+            0f,
+            bottomHeight
+        );
+
+    float2 uv1 =
+        new float2(
+            width,
+            bottomHeight
+        );
+
+    float2 uv2 =
+        new float2(
+            width,
+            height
+        );
+
+    float2 uv3 =
+        new float2(
+            0f,
+            height
+        );
+
+    switch (face)
+    {
+        case VoxelFace.North:
+            mesh.AddTiledQuad(
+                new float3(
+                    u,
+                    y + bottomHeight,
+                    v + 1
+                ),
+                new float3(
+                    u + width,
+                    y + bottomHeight,
+                    v + 1
+                ),
+                new float3(
+                    u + width,
+                    y + height,
+                    v + 1
+                ),
+                new float3(
+                    u,
+                    y + height,
+                    v + 1
+                ),
+                atlasTileMin,
+                uv0,
+                uv1,
+                uv2,
+                uv3,
+                tint
+            );
+            break;
+
+        case VoxelFace.South:
+            mesh.AddTiledQuad(
+                new float3(
+                    u + width,
+                    y + bottomHeight,
+                    v
+                ),
+                new float3(
+                    u,
+                    y + bottomHeight,
+                    v
+                ),
+                new float3(
+                    u,
+                    y + height,
+                    v
+                ),
+                new float3(
+                    u + width,
+                    y + height,
+                    v
+                ),
+                atlasTileMin,
+                uv0,
+                uv1,
+                uv2,
+                uv3,
+                tint
+            );
+            break;
+
+        case VoxelFace.East:
+            mesh.AddTiledQuad(
+                new float3(
+                    v + 1,
+                    y + bottomHeight,
+                    u + width
+                ),
+                new float3(
+                    v + 1,
+                    y + bottomHeight,
+                    u
+                ),
+                new float3(
+                    v + 1,
+                    y + height,
+                    u
+                ),
+                new float3(
+                    v + 1,
+                    y + height,
+                    u + width
+                ),
+                atlasTileMin,
+                uv0,
+                uv1,
+                uv2,
+                uv3,
+                tint
+            );
+            break;
+
+        case VoxelFace.West:
+            mesh.AddTiledQuad(
+                new float3(
+                    v,
+                    y + bottomHeight,
+                    u
+                ),
+                new float3(
+                    v,
+                    y + bottomHeight,
+                    u + width
+                ),
+                new float3(
+                    v,
+                    y + height,
+                    u + width
+                ),
+                new float3(
+                    v,
+                    y + height,
+                    u
+                ),
+                atlasTileMin,
+                uv0,
+                uv1,
+                uv2,
+                uv3,
+                tint
+            );
+            break;
+
+        default:
+            throw new ArgumentOutOfRangeException(
+                nameof(face)
+            );
+    }
+}
+
+        private int GetFluidMergeKey(
+            int textureKey,
+            ushort blockId,
+            BiomeId biomeId,
+            float height)
+        {
+            int heightKey =
+                (int)(height * 255f);
+
+            unchecked
+            {
+                int hash = 17;
+
+                hash =
+                    hash * 31 +
+                    textureKey;
+
+                hash =
+                    hash * 31 +
+                    blockId;
+
+                hash =
+                    hash * 31 +
+                    (int)biomeId;
+
+                hash =
+                    hash * 31 +
+                    heightKey;
+
+                return hash == 0
+                    ? 1
+                    : hash;
             }
         }
 
@@ -871,6 +2021,7 @@ namespace WildEarth.Voxel
             ChunkMeshData mesh,
             Chunk chunk,
             ChunkStorage storage,
+            Voxel[] voxelCache,
             int x,
             int y,
             int z,
@@ -880,6 +2031,7 @@ namespace WildEarth.Voxel
             Color32 tint)
         {
             if (TryGetVoxel(
+                    voxelCache,
                     storage,
                     chunk,
                     x,
@@ -950,6 +2102,7 @@ namespace WildEarth.Voxel
             ChunkMeshData mesh,
             Chunk chunk,
             ChunkStorage storage,
+            Voxel[] voxelCache,
             int x,
             int y,
             int z,
@@ -959,6 +2112,7 @@ namespace WildEarth.Voxel
             Color32 tint)
         {
             if (TryGetVoxel(
+                    voxelCache,
                     storage,
                     chunk,
                     x,
@@ -1025,6 +2179,7 @@ namespace WildEarth.Voxel
             ChunkMeshData mesh,
             Chunk chunk,
             ChunkStorage storage,
+            Voxel[] voxelCache,
             int x,
             int y,
             int z,
@@ -1067,6 +2222,7 @@ namespace WildEarth.Voxel
             bool blocked = false;
 
             if (TryGetVoxel(
+                    voxelCache,
                     storage,
                     chunk,
                     neighborX,
@@ -1164,10 +2320,10 @@ namespace WildEarth.Voxel
                             z + 1
                         ),
                         atlasTileMin,
-                        new float2(0f, 0f),
-                        new float2(1f, 0f),
-                        new float2(1f, 1f),
-                        new float2(0f, 1f),
+                        new float2(0f, bottomHeight),
+                        new float2(1f, bottomHeight),
+                        new float2(1f, height),
+                        new float2(0f, height),
                         tint
                     );
                     break;
@@ -1195,10 +2351,10 @@ namespace WildEarth.Voxel
                             z
                         ),
                         atlasTileMin,
-                        new float2(0f, 0f),
-                        new float2(1f, 0f),
-                        new float2(1f, 1f),
-                        new float2(0f, 1f),
+                        new float2(0f, bottomHeight),
+                        new float2(1f, bottomHeight),
+                        new float2(1f, height),
+                        new float2(0f, height),
                         tint
                     );
                     break;
@@ -1226,10 +2382,10 @@ namespace WildEarth.Voxel
                             z + 1
                         ),
                         atlasTileMin,
-                        new float2(0f, 0f),
-                        new float2(1f, 0f),
-                        new float2(1f, 1f),
-                        new float2(0f, 1f),
+                        new float2(0f, bottomHeight),
+                        new float2(1f, bottomHeight),
+                        new float2(1f, height),
+                        new float2(0f, height),
                         tint
                     );
                     break;
@@ -1257,10 +2413,10 @@ namespace WildEarth.Voxel
                             z
                         ),
                         atlasTileMin,
-                        new float2(0f, 0f),
-                        new float2(1f, 0f),
-                        new float2(1f, 1f),
-                        new float2(0f, 1f),
+                        new float2(0f, bottomHeight),
+                        new float2(1f, bottomHeight),
+                        new float2(1f, height),
+                        new float2(0f, height),
                         tint
                     );
                     break;
@@ -1273,6 +2429,7 @@ namespace WildEarth.Voxel
         }
 
         private bool TryGetVoxel(
+            Voxel[] voxelCache,
             ChunkStorage storage,
             Chunk chunk,
             int x,
@@ -1280,16 +2437,16 @@ namespace WildEarth.Voxel
             int z,
             out Voxel voxel)
         {
-            if (x >= 0 &&
-                x < VoxelConstants.ChunkSize &&
-                y >= 0 &&
-                y < VoxelConstants.ChunkSize &&
-                z >= 0 &&
-                z < VoxelConstants.ChunkSize)
+            if (x >= -1 &&
+                x <= VoxelConstants.ChunkSize &&
+                y >= -1 &&
+                y <= VoxelConstants.ChunkSize &&
+                z >= -1 &&
+                z <= VoxelConstants.ChunkSize)
             {
                 voxel =
-                    ChunkDataAccess.GetVoxel(
-                        chunk.Data,
+                    GetCachedVoxel(
+                        voxelCache,
                         x,
                         y,
                         z
@@ -1655,12 +2812,31 @@ namespace WildEarth.Voxel
         }
 
         private ushort GetCachedBlockId(
-            ushort[] cache,
+            Voxel[] cache,
             int x,
             int y,
             int z,
             int cacheSize)
         {
+            return cache[
+                CacheIndex(
+                    x + 1,
+                    y + 1,
+                    z + 1,
+                    cacheSize
+                )
+            ].BlockId;
+        }
+
+        private Voxel GetCachedVoxel(
+            Voxel[] cache,
+            int x,
+            int y,
+            int z)
+        {
+            int cacheSize =
+                VoxelConstants.ChunkSize + 2;
+
             return cache[
                 CacheIndex(
                     x + 1,
