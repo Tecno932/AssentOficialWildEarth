@@ -6,6 +6,8 @@ namespace WildEarth.Voxel
 {
     public sealed class VoxelWorldRenderer : MonoBehaviour
     {
+        private const int MaxColliderUpdatesPerFrame = 4;
+
         [SerializeField]
         private Material defaultMaterial;
 
@@ -13,6 +15,15 @@ namespace WildEarth.Voxel
             ChunkCoordinate,
             ChunkMeshRenderer
         > renderers = new();
+
+        private readonly List<ChunkCoordinate> coordinatesBuffer =
+            new List<ChunkCoordinate>();
+
+        private readonly Queue<ChunkCoordinate> colliderQueue =
+            new Queue<ChunkCoordinate>();
+
+        private readonly HashSet<ChunkCoordinate> pendingColliders =
+            new HashSet<ChunkCoordinate>();
 
         private VoxelWorld world;
         private VoxelMeshBuilder meshBuilder;
@@ -67,6 +78,7 @@ namespace WildEarth.Voxel
             }
 
             RenderChunksNeedingMesh();
+            ProcessPendingColliders();
         }
 
         private void RenderChunksNeedingMesh()
@@ -108,19 +120,19 @@ namespace WildEarth.Voxel
                 RenderChunk(chunk);
             }
 
-            List<ChunkCoordinate> coordinates =
-                new List<ChunkCoordinate>();
+            coordinatesBuffer.Clear();
 
             world.Chunks.GetCoordinates(
-                coordinates
+                coordinatesBuffer
             );
 
-            for (int i = 0;
-                i < coordinates.Count;
+            for (
+                int i = 0;
+                i < coordinatesBuffer.Count;
                 i++)
             {
                 ChunkCoordinate coordinate =
-                    coordinates[i];
+                    coordinatesBuffer[i];
 
                 if (renderers.ContainsKey(coordinate))
                     continue;
@@ -209,6 +221,10 @@ namespace WildEarth.Voxel
                     defaultMaterial
                 );
 
+                QueueColliderUpdate(
+                    chunk.Coordinate
+                );
+
                 chunk.ClearNeedsMesh();
 
                 chunk.SetState(
@@ -218,6 +234,71 @@ namespace WildEarth.Voxel
             finally
             {
                 meshData.Dispose();
+            }
+        }
+
+        private void QueueColliderUpdate(
+            ChunkCoordinate coordinate)
+        {
+            if (!pendingColliders.Add(
+                    coordinate))
+            {
+                return;
+            }
+
+            colliderQueue.Enqueue(
+                coordinate
+            );
+        }
+
+        private void ProcessPendingColliders()
+        {
+            int processed = 0;
+
+            while (
+                processed < MaxColliderUpdatesPerFrame &&
+                colliderQueue.Count > 0)
+            {
+                ChunkCoordinate coordinate =
+                    colliderQueue.Dequeue();
+
+                pendingColliders.Remove(
+                    coordinate
+                );
+
+                if (!renderers.TryGetValue(
+                        coordinate,
+                        out ChunkMeshRenderer renderer))
+                {
+                    processed++;
+                    continue;
+                }
+
+                if (renderer == null)
+                {
+                    processed++;
+                    continue;
+                }
+
+                if (!world.Chunks.TryGet(
+                        coordinate,
+                        out Chunk chunk))
+                {
+                    renderer.ClearCollider();
+                    processed++;
+                    continue;
+                }
+
+                if (chunk == null)
+                {
+                    renderer.ClearCollider();
+                    processed++;
+                    continue;
+                }
+
+                renderer.ApplyCollider();
+
+                processed++;
             }
         }
 
@@ -259,10 +340,6 @@ namespace WildEarth.Voxel
                 return false;
             }
 
-            /*
-            * Los límites verticales del mundo no tienen
-            * un subchunk vecino.
-            */
             if (coordinate.Y > 0)
             {
                 if (!IsNeighborReady(
@@ -308,11 +385,6 @@ namespace WildEarth.Voxel
                     coordinate,
                     out Chunk neighbor))
             {
-                /*
-                * Si no existe porque está fuera de la zona
-                * cargada, el mesh puede considerar ese borde
-                * como vacío.
-                */
                 return true;
             }
 
@@ -327,6 +399,10 @@ namespace WildEarth.Voxel
         public void RemoveChunk(
             ChunkCoordinate coordinate)
         {
+            pendingColliders.Remove(
+                coordinate
+            );
+
             if (!renderers.TryGetValue(
                     coordinate,
                     out ChunkMeshRenderer renderer))
@@ -336,6 +412,8 @@ namespace WildEarth.Voxel
 
             if (renderer != null)
             {
+                renderer.ClearCollider();
+
                 Destroy(
                     renderer.gameObject
                 );
@@ -348,12 +426,17 @@ namespace WildEarth.Voxel
 
         public void Clear()
         {
+            colliderQueue.Clear();
+            pendingColliders.Clear();
+
             foreach (
                 ChunkMeshRenderer renderer
                 in renderers.Values)
             {
                 if (renderer != null)
                 {
+                    renderer.ClearCollider();
+
                     Destroy(
                         renderer.gameObject
                     );
@@ -361,6 +444,7 @@ namespace WildEarth.Voxel
             }
 
             renderers.Clear();
+            coordinatesBuffer.Clear();
         }
 
         private ChunkMeshRenderer GetOrCreateRenderer(

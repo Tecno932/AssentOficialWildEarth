@@ -41,7 +41,9 @@ namespace WildEarth.Voxel
 
             meshFilter.sharedMesh = mesh;
 
-            meshCollider.sharedMesh = mesh;
+            // El collider se asigna únicamente cuando
+            // VoxelWorldRenderer lo solicita.
+            meshCollider.sharedMesh = null;
         }
 
         public void Apply(
@@ -143,14 +145,29 @@ namespace WildEarth.Voxel
 
             meshRenderer.sharedMaterial =
                 material;
+        }
+
+        public void ApplyCollider()
+        {
+            EnsureMesh();
 
             meshCollider.sharedMesh = null;
 
-            if (meshData.VertexCount > 0)
+            if (mesh.vertexCount > 0)
             {
-                meshCollider.sharedMesh =
-                    mesh;
+                meshCollider.sharedMesh = mesh;
             }
+        }
+
+        public void ClearCollider()
+        {
+            if (meshCollider == null)
+            {
+                meshCollider =
+                    GetComponent<MeshCollider>();
+            }
+
+            meshCollider.sharedMesh = null;
         }
 
         public void Clear()
@@ -247,7 +264,7 @@ namespace WildEarth.Voxel
 
             meshFilter.sharedMesh = mesh;
 
-            meshCollider.sharedMesh = mesh;
+            meshCollider.sharedMesh = null;
         }
 
         private void OnDestroy()

@@ -34,6 +34,8 @@ namespace WildEarth.Voxel
 
         private bool hasGenerationPriorityCenter;
 
+        private bool pendingRequestsNeedSort;
+
         private bool disposed;
 
         public int ActiveJobCount =>
@@ -84,11 +86,17 @@ namespace WildEarth.Voxel
         {
             ThrowIfDisposed();
 
-            generationPriorityCenter =
-                center;
+            if (!hasGenerationPriorityCenter ||
+                generationPriorityCenter != center)
+            {
+                generationPriorityCenter =
+                    center;
 
-            hasGenerationPriorityCenter =
-                true;
+                hasGenerationPriorityCenter =
+                    true;
+
+                pendingRequestsNeedSort = true;
+            }
         }
 
         public JobHandle Schedule(
@@ -125,6 +133,7 @@ namespace WildEarth.Voxel
             );
 
             pendingChunks.Add(chunk);
+            pendingRequestsNeedSort = true;
 
             /*
              * La generación se inicia desde Update().
@@ -292,20 +301,35 @@ namespace WildEarth.Voxel
 
         private void SchedulePendingRequests()
         {
+            int availableSlots =
+                MaxConcurrentGenerationJobs -
+                activeTasks.Count;
+
+            if (availableSlots <= 0 ||
+                pendingRequests.Count == 0)
+            {
+                return;
+            }
+
+            if (hasGenerationPriorityCenter &&
+                pendingRequestsNeedSort)
+            {
+                pendingRequests.Sort(
+                    CompareGenerationRequests
+                );
+
+                pendingRequestsNeedSort = false;
+            }
+
             while (
                 activeTasks.Count <
                     MaxConcurrentGenerationJobs &&
                 pendingRequests.Count > 0)
             {
-                int bestIndex =
-                    FindBestPendingRequestIndex();
-
                 GenerationRequest request =
-                    pendingRequests[bestIndex];
+                    pendingRequests[0];
 
-                pendingRequests.RemoveAt(
-                    bestIndex
-                );
+                pendingRequests.RemoveAt(0);
 
                 pendingChunks.Remove(
                     request.Chunk
@@ -327,53 +351,27 @@ namespace WildEarth.Voxel
             }
         }
 
-        private int FindBestPendingRequestIndex()
+        private int CompareGenerationRequests(
+            GenerationRequest a,
+            GenerationRequest b)
         {
-            int bestIndex = 0;
+            Chunk chunkA = a.Chunk;
+            Chunk chunkB = b.Chunk;
 
-            GenerationRequest bestRequest =
-                pendingRequests[0];
-
-            for (int i = 1;
-                 i < pendingRequests.Count;
-                 i++)
-            {
-                GenerationRequest candidate =
-                    pendingRequests[i];
-
-                if (CompareGenerationPriority(
-                        candidate.Chunk,
-                        bestRequest.Chunk) < 0)
-                {
-                    bestIndex = i;
-                    bestRequest = candidate;
-                }
-            }
-
-            return bestIndex;
-        }
-
-        private int CompareGenerationPriority(
-            Chunk a,
-            Chunk b)
-        {
-            if (a == null)
+            if (chunkA == null)
                 return 1;
 
-            if (b == null)
+            if (chunkB == null)
                 return -1;
-
-            if (!hasGenerationPriorityCenter)
-                return 0;
 
             ChunkCoordinate center =
                 generationPriorityCenter;
 
             ChunkCoordinate coordinateA =
-                a.Coordinate;
+                chunkA.Coordinate;
 
             ChunkCoordinate coordinateB =
-                b.Coordinate;
+                chunkB.Coordinate;
 
             int ringA =
                 Math.Max(
