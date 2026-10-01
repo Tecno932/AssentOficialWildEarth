@@ -55,8 +55,7 @@ namespace WildEarth.Voxel
 
         private void Awake()
         {
-            characterController =
-                GetComponent<CharacterController>();
+            EnsureCharacterController();
 
             characterController.height =
                 standingHeight;
@@ -69,6 +68,8 @@ namespace WildEarth.Voxel
         public void SetMode(
             VoxelPlayerMode newMode)
         {
+            EnsureCharacterController();
+
             mode = newMode;
 
             switch (mode)
@@ -91,6 +92,8 @@ namespace WildEarth.Voxel
 
         public void Tick()
         {
+            EnsureCharacterController();
+
             if (Keyboard.current == null)
                 return;
 
@@ -300,12 +303,33 @@ namespace WildEarth.Voxel
 
         private void EnableCollision()
         {
+            EnsureCharacterController();
+
             characterController.enabled = true;
         }
 
         private void DisableCollision()
         {
+            EnsureCharacterController();
+
             characterController.enabled = false;
+        }
+
+        private void EnsureCharacterController()
+        {
+            if (characterController != null)
+                return;
+
+            characterController =
+                GetComponent<CharacterController>();
+
+            if (characterController == null)
+            {
+                throw new MissingComponentException(
+                    "VoxelPlayerMovement requiere " +
+                    "un CharacterController."
+                );
+            }
         }
     }
 }

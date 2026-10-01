@@ -5,6 +5,7 @@ using UnityEngine.InputSystem;
 namespace WildEarth.Voxel
 {
     [RequireComponent(typeof(VoxelPlayerMovement))]
+    [RequireComponent(typeof(VoxelPlayerInteraction))]
     [RequireComponent(typeof(CharacterController))]
     public sealed class VoxelPlayerController : MonoBehaviour
     {
@@ -19,19 +20,13 @@ namespace WildEarth.Voxel
         [SerializeField]
         private float mouseSensitivity = 0.1f;
 
-        [Header("Voxel Interaction")]
-        [SerializeField]
-        private float interactionDistance = 6f;
-
-        [SerializeField]
-        private ushort placeBlockId = 2;
-
         [Header("Mode")]
         [SerializeField]
         private VoxelPlayerMode startMode =
             VoxelPlayerMode.Survival;
 
         private VoxelPlayerMovement movement;
+        private VoxelPlayerInteraction interaction;
 
         private float cameraPitch;
 
@@ -56,7 +51,14 @@ namespace WildEarth.Voxel
             movement =
                 GetComponent<VoxelPlayerMovement>();
 
+            interaction =
+                GetComponent<VoxelPlayerInteraction>();
+
             movement.SetMode(
+                startMode
+            );
+
+            interaction.SetMode(
                 startMode
             );
         }
@@ -72,8 +74,8 @@ namespace WildEarth.Voxel
             HandleLook();
 
             movement.Tick();
+            interaction.Tick();
 
-            HandleVoxelInteraction();
             HandleCursorInput();
         }
 
@@ -108,6 +110,7 @@ namespace WildEarth.Voxel
             VoxelPlayerMode mode)
         {
             movement.SetMode(mode);
+            interaction.SetMode(mode);
         }
 
         private void HandleLook()
@@ -154,75 +157,6 @@ namespace WildEarth.Voxel
                 );
         }
 
-        private void HandleVoxelInteraction()
-        {
-            if (Cursor.lockState !=
-                CursorLockMode.Locked)
-            {
-                return;
-            }
-
-            if (Mouse.current == null)
-                return;
-
-            if (!Physics.Raycast(
-                    playerCamera.transform.position,
-                    playerCamera.transform.forward,
-                    out RaycastHit hit,
-                    interactionDistance))
-            {
-                return;
-            }
-
-            if (Mouse.current.leftButton
-                    .wasPressedThisFrame)
-            {
-                BreakVoxel(hit);
-            }
-
-            if (Mouse.current.rightButton
-                    .wasPressedThisFrame)
-            {
-                PlaceVoxel(hit);
-            }
-        }
-
-        private void BreakVoxel(
-            RaycastHit hit)
-        {
-            Vector3 point =
-                hit.point -
-                hit.normal * 0.001f;
-
-            WorldVoxelCoordinate voxel =
-                ToVoxelCoordinate(point);
-
-            worldRuntime.World.TrySetVoxel(
-                voxel.X,
-                voxel.Y,
-                voxel.Z,
-                0
-            );
-        }
-
-        private void PlaceVoxel(
-            RaycastHit hit)
-        {
-            Vector3 point =
-                hit.point +
-                hit.normal * 0.001f;
-
-            WorldVoxelCoordinate voxel =
-                ToVoxelCoordinate(point);
-
-            worldRuntime.World.TrySetVoxel(
-                voxel.X,
-                voxel.Y,
-                voxel.Z,
-                placeBlockId
-            );
-        }
-
         private void HandleCursorInput()
         {
             if (Keyboard.current != null &&
@@ -254,23 +188,6 @@ namespace WildEarth.Voxel
                 CursorLockMode.None;
 
             Cursor.visible = true;
-        }
-
-        private static WorldVoxelCoordinate
-            ToVoxelCoordinate(
-                Vector3 worldPosition)
-        {
-            return new WorldVoxelCoordinate(
-                Mathf.FloorToInt(
-                    worldPosition.x
-                ),
-                Mathf.FloorToInt(
-                    worldPosition.y
-                ),
-                Mathf.FloorToInt(
-                    worldPosition.z
-                )
-            );
         }
     }
 }
