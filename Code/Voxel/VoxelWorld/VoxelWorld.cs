@@ -607,6 +607,88 @@ namespace WildEarth.Voxel
             neighbor.MarkNeedsMesh();
         }
 
+        public bool TryGetVoxel(
+            int worldX,
+            int worldY,
+            int worldZ,
+            out Voxel voxel)
+        {
+            ThrowIfNotInitialized();
+
+            voxel = default;
+
+            if (worldY < VoxelConstants.MinVoxelY ||
+                worldY > VoxelConstants.MaxVoxelY)
+            {
+                return false;
+            }
+
+            ChunkCoordinate coordinate =
+                new ChunkCoordinate(
+                    FloorDiv(
+                        worldX,
+                        VoxelConstants.ChunkSize
+                    ),
+                    FloorDiv(
+                        worldY,
+                        VoxelConstants.ChunkSize
+                    ),
+                    FloorDiv(
+                        worldZ,
+                        VoxelConstants.ChunkSize
+                    )
+                );
+
+            if (!chunkStorage.TryGet(
+                    coordinate,
+                    out Chunk chunk))
+            {
+                return false;
+            }
+
+            if (chunk == null ||
+                !chunk.Data.IsCreated)
+            {
+                return false;
+            }
+
+            if (chunk.State != ChunkState.Generated &&
+                chunk.State != ChunkState.Ready)
+            {
+                return false;
+            }
+
+            int localX =
+                Mod(
+                    worldX,
+                    VoxelConstants.ChunkSize
+                );
+
+            int localY =
+                Mod(
+                    worldY,
+                    VoxelConstants.ChunkSize
+                );
+
+            int localZ =
+                Mod(
+                    worldZ,
+                    VoxelConstants.ChunkSize
+                );
+
+            int index =
+                VoxelIndex.ToIndex(
+                    localX,
+                    localY,
+                    localZ
+                );
+
+            voxel =
+                chunk.Data.Voxels[index];
+
+            return true;
+        }
+
         public bool TrySetVoxel(
             int worldX,
             int worldY,

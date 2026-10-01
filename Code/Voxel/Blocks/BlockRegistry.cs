@@ -53,21 +53,11 @@ namespace WildEarth.Voxel
 
                 if (definition.Id == BlockIds.Air)
                 {
-                    Debug.LogError(
-                        "BlockRegistry: ID 0 está reservado para Air."
-                    );
-
                     continue;
                 }
 
                 if (definitionLookup.ContainsKey(definition.Id))
                 {
-                    Debug.LogError(
-                        $"BlockRegistry: ID duplicado " +
-                        $"{definition.Id} " +
-                        $"({definition.BlockName})."
-                    );
-
                     continue;
                 }
 

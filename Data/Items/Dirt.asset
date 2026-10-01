@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag\:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ead2dd2b70dd630498445038c82629c4, type: 3}
+  m_Name: Dirt
+  m_EditorClassIdentifier: WildEarth.Voxel::WildEarth.Voxel.ItemDefinition
+  id: 2
+  itemName: Dirt
+  itemType: 1
+  blockId: 2
+  maxStackSize: 64
+  toolType: 0
+  toolLevel: 0
+  toolSpeedMultiplier: 1
+  hasDurability: 0
+  maxDurability: 0
+  icon:
+    Column: 0
+    Row: 0

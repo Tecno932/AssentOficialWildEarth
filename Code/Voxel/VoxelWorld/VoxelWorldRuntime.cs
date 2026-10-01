@@ -13,6 +13,9 @@ namespace WildEarth.Voxel
         private BlockRegistry blockRegistry;
 
         [SerializeField]
+        private ItemRegistry itemRegistry;
+
+        [SerializeField]
         private VoxelAtlasSettings atlasSettings;
 
         [SerializeField]
@@ -47,6 +50,15 @@ namespace WildEarth.Voxel
         public VoxelWorld World =>
             world;
 
+        public BlockRegistry BlockRegistry =>
+            blockRegistry;
+
+        public ItemRegistry ItemRegistry =>
+            itemRegistry;
+
+        public VoxelAtlasSettings AtlasSettings =>
+            atlasSettings;
+
         private void Awake()
         {
             if (biomeRegistryAsset == null)
@@ -57,6 +69,11 @@ namespace WildEarth.Voxel
             if (blockRegistry == null)
                 throw new InvalidOperationException(
                     "VoxelWorldRuntime: falta BlockRegistry."
+                );
+
+            if (itemRegistry == null)
+                throw new InvalidOperationException(
+                    "VoxelWorldRuntime: falta ItemRegistry."
                 );
 
             if (atlasSettings == null)
