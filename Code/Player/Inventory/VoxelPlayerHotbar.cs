@@ -24,8 +24,11 @@ namespace WildEarth.Voxel
             0, 0, 0, 0, 0, 0, 0, 0, 0
         };
 
-        private readonly ushort[] itemSlots =
-            new ushort[SlotCount];
+        [SerializeField]
+        private ushort initialItemQuantity = 64;
+
+        private readonly ItemStack[] itemSlots =
+            new ItemStack[SlotCount];
 
         private readonly ushort[] lastInitialItemIds =
             new ushort[SlotCount];
@@ -37,12 +40,18 @@ namespace WildEarth.Voxel
             selectedSlot;
 
         public VoxelHotbarSlotType SelectedSlotType =>
-            itemSlots[selectedSlot] != 0
-                ? VoxelHotbarSlotType.Item
-                : VoxelHotbarSlotType.Empty;
+            itemSlots[selectedSlot].IsEmpty
+                ? VoxelHotbarSlotType.Empty
+                : VoxelHotbarSlotType.Item;
 
         public ushort SelectedItemId =>
-            itemSlots[selectedSlot];
+            itemSlots[selectedSlot].ItemId;
+
+        public ushort SelectedItemQuantity =>
+            itemSlots[selectedSlot].Quantity;
+
+        public ushort SelectedItemDurability =>
+            itemSlots[selectedSlot].Durability;
 
         public int ConfigurationVersion =>
             configurationVersion;
@@ -56,17 +65,54 @@ namespace WildEarth.Voxel
                 return VoxelHotbarSlotType.Empty;
             }
 
-            return itemSlots[slot] != 0
-                ? VoxelHotbarSlotType.Item
-                : VoxelHotbarSlotType.Empty;
+            return itemSlots[slot].IsEmpty
+                ? VoxelHotbarSlotType.Empty
+                : VoxelHotbarSlotType.Item;
         }
 
-        public ushort GetItemId(int slot)
+        public ushort GetItemId(
+            int slot)
         {
             if (slot < 0 ||
                 slot >= SlotCount)
             {
                 return 0;
+            }
+
+            return itemSlots[slot].ItemId;
+        }
+
+        public ushort GetItemQuantity(
+            int slot)
+        {
+            if (slot < 0 ||
+                slot >= SlotCount)
+            {
+                return 0;
+            }
+
+            return itemSlots[slot].Quantity;
+        }
+
+        public ushort GetItemDurability(
+            int slot)
+        {
+            if (slot < 0 ||
+                slot >= SlotCount)
+            {
+                return 0;
+            }
+
+            return itemSlots[slot].Durability;
+        }
+
+        public ItemStack GetItemStack(
+            int slot)
+        {
+            if (slot < 0 ||
+                slot >= SlotCount)
+            {
+                return default;
             }
 
             return itemSlots[slot];
@@ -101,6 +147,7 @@ namespace WildEarth.Voxel
                 SelectedItemId;
 
             if (itemId == 0 ||
+                SelectedItemQuantity == 0 ||
                 itemRegistry == null)
             {
                 return false;
@@ -129,6 +176,7 @@ namespace WildEarth.Voxel
             }
 
             blockId = data.BlockId;
+
             return true;
         }
 
@@ -158,8 +206,18 @@ namespace WildEarth.Voxel
                         i
                     );
 
+                ushort quantity =
+                    itemId == 0
+                        ? (ushort)0
+                        : GetInitialQuantity(
+                            itemId
+                        );
+
                 itemSlots[i] =
-                    itemId;
+                    CreateItemStack(
+                        itemId,
+                        quantity
+                    );
 
                 lastInitialItemIds[i] =
                     GetInitialItemId(i);
@@ -193,8 +251,18 @@ namespace WildEarth.Voxel
                         i
                     );
 
+                ushort quantity =
+                    itemId == 0
+                        ? (ushort)0
+                        : GetInitialQuantity(
+                            itemId
+                        );
+
                 itemSlots[i] =
-                    itemId;
+                    CreateItemStack(
+                        itemId,
+                        quantity
+                    );
 
                 changed = true;
             }
@@ -220,6 +288,74 @@ namespace WildEarth.Voxel
             }
 
             return initialItemIds[index];
+        }
+
+        private ushort GetInitialQuantity(
+            ushort itemId)
+        {
+            if (itemId == 0 ||
+                itemRegistry == null)
+            {
+                return 0;
+            }
+
+            if (!itemRegistry.TryGetRuntimeData(
+                    itemId,
+                    out ItemRuntimeData data))
+            {
+                return 0;
+            }
+
+            if (data.HasDurability)
+            {
+                return 1;
+            }
+
+            ushort maxStack =
+                data.MaxStackSize;
+
+            if (maxStack == 0)
+            {
+                return 0;
+            }
+
+            return (ushort)Mathf.Min(
+                initialItemQuantity,
+                maxStack
+            );
+        }
+
+        private ItemStack CreateItemStack(
+            ushort itemId,
+            ushort quantity)
+        {
+            if (itemId == 0 ||
+                quantity == 0 ||
+                itemRegistry == null)
+            {
+                return default;
+            }
+
+            if (!itemRegistry.TryGetRuntimeData(
+                    itemId,
+                    out ItemRuntimeData data))
+            {
+                return default;
+            }
+
+            if (data.HasDurability)
+            {
+                return new ItemStack(
+                    itemId,
+                    1,
+                    data.MaxDurability
+                );
+            }
+
+            return new ItemStack(
+                itemId,
+                quantity
+            );
         }
 
         private void HandleNumberKeys()
@@ -308,7 +444,8 @@ namespace WildEarth.Voxel
             }
         }
 
-        public void SelectSlot(int slot)
+        public void SelectSlot(
+            int slot)
         {
             if (slot < 0 ||
                 slot >= SlotCount)
@@ -343,8 +480,18 @@ namespace WildEarth.Voxel
                 return;
             }
 
+            ushort quantity =
+                itemId == 0
+                    ? (ushort)0
+                    : GetInitialQuantity(
+                        itemId
+                    );
+
             itemSlots[slot] =
-                itemId;
+                CreateItemStack(
+                    itemId,
+                    quantity
+                );
 
             SetInitialItemId(
                 slot,
@@ -354,7 +501,244 @@ namespace WildEarth.Voxel
             configurationVersion++;
         }
 
-        public void ClearSlot(int slot)
+        public bool TryAddItemForBlock(
+            ushort blockId,
+            ushort quantity)
+        {
+            if (itemRegistry == null ||
+                blockId == BlockIds.Air ||
+                quantity == 0)
+            {
+                return false;
+            }
+
+            if (!itemRegistry.TryGetItemIdForBlock(
+                    blockId,
+                    out ushort itemId))
+            {
+                Debug.LogWarning(
+                    $"VoxelPlayerHotbar: no existe un " +
+                    $"ItemDefinition para BlockID {blockId}.",
+                    this
+                );
+
+                return false;
+            }
+
+            return TryAddItem(
+                itemId,
+                quantity
+            );
+        }
+
+        public bool TryAddItem(
+            ushort itemId,
+            ushort quantity)
+        {
+            if (itemId == 0 ||
+                quantity == 0 ||
+                itemRegistry == null)
+            {
+                return false;
+            }
+
+            if (!itemRegistry.TryGetRuntimeData(
+                    itemId,
+                    out ItemRuntimeData data))
+            {
+                return false;
+            }
+
+            if (data.HasDurability)
+            {
+                for (int i = 0;
+                    i < SlotCount;
+                    i++)
+                {
+                    if (!itemSlots[i].IsEmpty)
+                    {
+                        continue;
+                    }
+
+                    itemSlots[i] =
+                        CreateItemStack(
+                            itemId,
+                            1
+                        );
+
+                    configurationVersion++;
+
+                    return quantity == 1;
+                }
+
+                return false;
+            }
+
+            ushort remaining =
+                quantity;
+
+            for (int i = 0;
+                i < SlotCount && remaining > 0;
+                i++)
+            {
+                if (itemSlots[i].ItemId != itemId)
+                {
+                    continue;
+                }
+
+                ushort maxStack =
+                    data.MaxStackSize;
+
+                if (itemSlots[i].Quantity >= maxStack)
+                {
+                    continue;
+                }
+
+                ushort available =
+                    (ushort)(
+                        maxStack -
+                        itemSlots[i].Quantity
+                    );
+
+                ushort amount =
+                    remaining < available
+                        ? remaining
+                        : available;
+
+                itemSlots[i].Quantity +=
+                    amount;
+
+                remaining -=
+                    amount;
+            }
+
+            for (int i = 0;
+                i < SlotCount && remaining > 0;
+                i++)
+            {
+                if (!itemSlots[i].IsEmpty)
+                {
+                    continue;
+                }
+
+                ushort maxStack =
+                    data.MaxStackSize;
+
+                ushort amount =
+                    remaining < maxStack
+                        ? remaining
+                        : maxStack;
+
+                itemSlots[i] =
+                    CreateItemStack(
+                        itemId,
+                        amount
+                    );
+
+                remaining -=
+                    amount;
+            }
+
+            if (remaining != quantity)
+            {
+                configurationVersion++;
+            }
+
+            return remaining == 0;
+        }
+
+        public bool TryDamageSelectedItem(
+            ushort amount = 1)
+        {
+            if (amount == 0)
+            {
+                return true;
+            }
+
+            ItemStack stack =
+                itemSlots[selectedSlot];
+
+            if (stack.IsEmpty ||
+                itemRegistry == null)
+            {
+                return false;
+            }
+
+            if (!itemRegistry.TryGetRuntimeData(
+                    stack.ItemId,
+                    out ItemRuntimeData data))
+            {
+                return false;
+            }
+
+            if (!data.HasDurability)
+            {
+                return true;
+            }
+
+            if (stack.Durability == 0)
+            {
+                stack.Clear();
+
+                itemSlots[selectedSlot] =
+                    stack;
+
+                configurationVersion++;
+
+                return true;
+            }
+
+            if (amount >= stack.Durability)
+            {
+                stack.Clear();
+            }
+            else
+            {
+                stack.Durability -= amount;
+            }
+
+            itemSlots[selectedSlot] =
+                stack;
+
+            configurationVersion++;
+
+            return true;
+        }
+
+        public bool TryConsumeSelectedItem(
+            ushort quantity = 1)
+        {
+            if (quantity == 0)
+            {
+                return true;
+            }
+
+            ItemStack stack =
+                itemSlots[selectedSlot];
+
+            if (stack.IsEmpty ||
+                stack.Quantity < quantity)
+            {
+                return false;
+            }
+
+            stack.Quantity -= quantity;
+
+            if (stack.Quantity == 0)
+            {
+                stack.Clear();
+            }
+
+            itemSlots[selectedSlot] =
+                stack;
+
+            configurationVersion++;
+
+            return true;
+        }
+
+        public void ClearSlot(
+            int slot)
         {
             if (slot < 0 ||
                 slot >= SlotCount)
@@ -362,12 +746,8 @@ namespace WildEarth.Voxel
                 return;
             }
 
-            itemSlots[slot] = 0;
-
-            SetInitialItemId(
-                slot,
-                0
-            );
+            itemSlots[slot] =
+                default;
 
             configurationVersion++;
         }

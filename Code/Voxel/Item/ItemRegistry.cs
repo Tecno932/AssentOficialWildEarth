@@ -17,6 +17,9 @@ namespace WildEarth.Voxel
         private Dictionary<ushort, ItemDefinition>
             definitionLookup;
 
+        private Dictionary<ushort, ushort>
+            blockToItemLookup;
+
         private ItemRuntimeData[] runtimeData;
 
         public int Count =>
@@ -26,9 +29,17 @@ namespace WildEarth.Voxel
             Definitions =>
             definitions;
 
+        private void OnEnable()
+        {
+            definitionLookup = null;
+            blockToItemLookup = null;
+            runtimeData = null;
+        }
+
         public void Initialize()
         {
             BuildLookup();
+            BuildBlockToItemLookup();
             BuildRuntimeData();
         }
 
@@ -49,18 +60,75 @@ namespace WildEarth.Voxel
 
                 if (definition.Id == 0)
                 {
+                    Debug.LogError(
+                        "ItemRegistry: ID 0 está reservado para None.",
+                        this
+                    );
+
                     continue;
                 }
 
                 if (definitionLookup.ContainsKey(
                     definition.Id))
                 {
+                    Debug.LogError(
+                        $"ItemRegistry: ID duplicado " +
+                        $"{definition.Id} " +
+                        $"({definition.ItemName}).",
+                        this
+                    );
+
                     continue;
                 }
 
                 definitionLookup.Add(
                     definition.Id,
                     definition
+                );
+            }
+        }
+
+        private void BuildBlockToItemLookup()
+        {
+            blockToItemLookup =
+                new Dictionary<ushort, ushort>();
+
+            foreach (ItemDefinition definition
+                     in definitions)
+            {
+                if (definition == null ||
+                    !definition.RepresentsBlock)
+                {
+                    continue;
+                }
+
+                ushort blockId =
+                    definition.BlockId;
+
+                ushort itemId =
+                    definition.Id;
+
+                if (blockId == BlockIds.Air)
+                {
+                    continue;
+                }
+
+                if (blockToItemLookup.ContainsKey(
+                    blockId))
+                {
+                    Debug.LogError(
+                        $"ItemRegistry: el BlockID " +
+                        $"{blockId} tiene más de un " +
+                        $"ItemDefinition asociado.",
+                        this
+                    );
+
+                    continue;
+                }
+
+                blockToItemLookup.Add(
+                    blockId,
+                    itemId
                 );
             }
         }
@@ -82,14 +150,8 @@ namespace WildEarth.Voxel
                     continue;
                 }
 
-                int id = definition.Id;
-
-                if (id < 0)
-                {
-                    throw new InvalidOperationException(
-                        $"ItemRegistry: ID inválido {id}."
-                    );
-                }
+                int id =
+                    definition.Id;
 
                 if (id > maxId)
                 {
@@ -119,39 +181,6 @@ namespace WildEarth.Voxel
                     continue;
                 }
 
-                ItemRuntimeData data =
-                    new ItemRuntimeData
-                    {
-                        Id = id,
-
-                        ItemType =
-                            definition.ItemType,
-
-                        BlockId =
-                            definition.BlockId,
-
-                        MaxStackSize =
-                            definition.MaxStackSize,
-
-                        ToolType =
-                            definition.ToolType,
-
-                        ToolLevel =
-                            definition.ToolLevel,
-
-                        ToolSpeedMultiplier =
-                            definition.ToolSpeedMultiplier,
-
-                        HasDurability =
-                            definition.HasDurability,
-
-                        MaxDurability =
-                            definition.MaxDurability,
-
-                        Icon =
-                            definition.Icon
-                    };
-
                 if (id >= runtimeData.Length)
                 {
                     throw new InvalidOperationException(
@@ -166,6 +195,45 @@ namespace WildEarth.Voxel
                         $"ItemRegistry: ID duplicado {id}."
                     );
                 }
+
+                ItemRuntimeData data =
+                    new ItemRuntimeData
+                    {
+                        Id = id,
+
+                        ItemType =
+                            definition.ItemType,
+
+                        BlockId =
+                            definition.BlockId,
+
+                        ToolType =
+                            definition.ToolType,
+
+                        ToolLevel =
+                            definition.ToolLevel,
+
+                        ToolSpeed =
+                            definition.ToolSpeed,
+
+                        Damage =
+                            definition.Damage,
+
+                        Sharpness =
+                            definition.Sharpness,
+
+                        WeaponType =
+                            definition.WeaponType,
+
+                        MaxDurability =
+                            definition.MaxDurability,
+
+                        MaxStackSize =
+                            definition.MaxStackSize,
+
+                        Icon =
+                            definition.Icon
+                    };
 
                 runtimeData[id] =
                     data;
@@ -279,6 +347,28 @@ namespace WildEarth.Voxel
             return true;
         }
 
+        public bool TryGetItemIdForBlock(
+            ushort blockId,
+            out ushort itemId)
+        {
+            itemId = 0;
+
+            if (blockId == BlockIds.Air)
+            {
+                return false;
+            }
+
+            if (blockToItemLookup == null)
+            {
+                Initialize();
+            }
+
+            return blockToItemLookup.TryGetValue(
+                blockId,
+                out itemId
+            );
+        }
+
         public NativeArray<ItemRuntimeData>
             CreateNativeRuntimeData(
                 Allocator allocator)
@@ -298,12 +388,19 @@ namespace WildEarth.Voxel
 
         private void OnValidate()
         {
+            definitionLookup = null;
+            blockToItemLookup = null;
+            runtimeData = null;
+
             ValidateDefinitions();
         }
 
         private void ValidateDefinitions()
         {
             HashSet<ushort> usedIds =
+                new HashSet<ushort>();
+
+            HashSet<ushort> usedBlockIds =
                 new HashSet<ushort>();
 
             foreach (ItemDefinition definition
@@ -324,11 +421,24 @@ namespace WildEarth.Voxel
                     );
                 }
 
-                if (!usedIds.Add(definition.Id))
+                if (!usedIds.Add(
+                    definition.Id))
                 {
                     Debug.LogError(
                         $"ItemRegistry contiene ID duplicado: " +
                         $"{definition.Id}.",
+                        this
+                    );
+                }
+
+                if (definition.RepresentsBlock &&
+                    !usedBlockIds.Add(
+                        definition.BlockId))
+                {
+                    Debug.LogError(
+                        $"ItemRegistry contiene más de un " +
+                        $"ItemDefinition para BlockID " +
+                        $"{definition.BlockId}.",
                         this
                     );
                 }

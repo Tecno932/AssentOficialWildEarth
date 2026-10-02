@@ -11,17 +11,21 @@ namespace WildEarth.Voxel
 
         public ushort BlockId;
 
-        public ushort MaxStackSize;
-
         public ToolType ToolType;
 
         public byte ToolLevel;
 
-        public float ToolSpeedMultiplier;
+        public float ToolSpeed;
 
-        public bool HasDurability;
+        public float Damage;
+
+        public float Sharpness;
+
+        public WeaponType WeaponType;
 
         public ushort MaxDurability;
+
+        public ushort MaxStackSize;
 
         public AtlasTileCoordinate Icon;
 
@@ -32,11 +36,21 @@ namespace WildEarth.Voxel
         public bool IsTool =>
             ItemType == ItemType.Tool;
 
+        public bool IsWeapon =>
+            ItemType == ItemType.Weapon;
+
+        public bool HasDurability =>
+            MaxDurability > 0;
+
         public bool IsStackable =>
             MaxStackSize > 1;
 
         public bool UsesToolType(ToolType type) =>
             IsTool &&
             ToolType == type;
+
+        public bool UsesWeaponType(WeaponType type) =>
+            IsWeapon &&
+            WeaponType == type;
     }
 }

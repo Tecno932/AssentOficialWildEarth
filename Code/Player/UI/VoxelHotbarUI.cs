@@ -35,9 +35,50 @@ namespace WildEarth.Voxel
         [SerializeField, Min(1f)]
         private float selectionBorder = 4f;
 
+        [Header("Quantity")]
+        [SerializeField, Min(1f)]
+        private float quantityFontSize = 20f;
+
+        [SerializeField]
+        private Color quantityColor = Color.white;
+
+        [Header("Durability")]
+        [SerializeField, Min(1f)]
+        private float durabilityBarHeight = 5f;
+
+        [SerializeField, Min(0f)]
+        private float durabilityBarHorizontalPadding = 5f;
+
+        [SerializeField, Min(0f)]
+        private float durabilityBarBottomPadding = 3f;
+
+        [SerializeField]
+        private Color durabilityBackgroundColor =
+            new Color(0f, 0f, 0f, 0.75f);
+
+        [SerializeField]
+        private Color durabilityFullColor =
+            new Color(0.2f, 0.9f, 0.2f, 1f);
+
+        [SerializeField]
+        private Color durabilityMediumColor =
+            new Color(1f, 0.8f, 0.1f, 1f);
+
+        [SerializeField]
+        private Color durabilityLowColor =
+            new Color(0.9f, 0.15f, 0.1f, 1f);
+
         private RectTransform hotbarRoot;
+
         private RawImage[] slotImages;
+
         private Image[] selectionImages;
+
+        private Text[] quantityTexts;
+
+        private Image[] durabilityBackgrounds;
+
+        private Image[] durabilityFills;
 
         private Texture2D generatedWhiteTexture;
 
@@ -77,6 +118,8 @@ namespace WildEarth.Voxel
             }
 
             UpdateSelection();
+            RefreshQuantities();
+            RefreshDurabilityBars();
         }
 
         private void ValidateReferences()
@@ -161,6 +204,21 @@ namespace WildEarth.Voxel
                     VoxelPlayerHotbar.SlotCount
                 ];
 
+            quantityTexts =
+                new Text[
+                    VoxelPlayerHotbar.SlotCount
+                ];
+
+            durabilityBackgrounds =
+                new Image[
+                    VoxelPlayerHotbar.SlotCount
+                ];
+
+            durabilityFills =
+                new Image[
+                    VoxelPlayerHotbar.SlotCount
+                ];
+
             for (int i = 0;
                  i < VoxelPlayerHotbar.SlotCount;
                  i++)
@@ -219,6 +277,14 @@ namespace WildEarth.Voxel
             slotImages[index] =
                 CreateBlockImage(slot);
 
+            quantityTexts[index] =
+                CreateQuantityText(slot);
+
+            CreateDurabilityBar(
+                slot,
+                index
+            );
+
             selectionImages[index] =
                 CreateSelectionBorder(slot);
 
@@ -273,6 +339,175 @@ namespace WildEarth.Voxel
                 false;
 
             return image;
+        }
+
+        private Text CreateQuantityText(
+            RectTransform slot)
+        {
+            GameObject objectInstance =
+                new GameObject(
+                    "Quantity",
+                    typeof(RectTransform),
+                    typeof(Text)
+                );
+
+            objectInstance.transform.SetParent(
+                slot,
+                false
+            );
+
+            RectTransform rect =
+                objectInstance.GetComponent<RectTransform>();
+
+            rect.anchorMin =
+                new Vector2(1f, 0f);
+
+            rect.anchorMax =
+                new Vector2(1f, 0f);
+
+            rect.pivot =
+                new Vector2(1f, 0f);
+
+            rect.anchoredPosition =
+                new Vector2(
+                    -4f,
+                    3f
+                );
+
+            rect.sizeDelta =
+                new Vector2(
+                    slotSize * 0.6f,
+                    slotSize * 0.45f
+                );
+
+            Text text =
+                objectInstance.GetComponent<Text>();
+
+            text.text =
+                string.Empty;
+
+            text.font =
+                Resources.GetBuiltinResource<Font>(
+                    "LegacyRuntime.ttf"
+                );
+
+            text.fontSize =
+                Mathf.RoundToInt(quantityFontSize);
+
+            text.fontStyle =
+                FontStyle.Bold;
+
+            text.alignment =
+                TextAnchor.LowerRight;
+
+            text.horizontalOverflow =
+                HorizontalWrapMode.Overflow;
+
+            text.verticalOverflow =
+                VerticalWrapMode.Overflow;
+
+            text.color =
+                quantityColor;
+
+            text.raycastTarget =
+                false;
+
+            return text;
+        }
+
+        private void CreateDurabilityBar(
+            RectTransform slot,
+            int index)
+        {
+            GameObject backgroundObject =
+                new GameObject(
+                    "DurabilityBackground",
+                    typeof(RectTransform),
+                    typeof(Image)
+                );
+
+            backgroundObject.transform.SetParent(
+                slot,
+                false
+            );
+
+            RectTransform backgroundRect =
+                backgroundObject.GetComponent<RectTransform>();
+
+            backgroundRect.anchorMin =
+                new Vector2(0f, 0f);
+
+            backgroundRect.anchorMax =
+                new Vector2(1f, 0f);
+
+            backgroundRect.pivot =
+                new Vector2(0.5f, 0f);
+
+            backgroundRect.anchoredPosition =
+                new Vector2(
+                    0f,
+                    durabilityBarBottomPadding
+                );
+
+            backgroundRect.sizeDelta =
+                new Vector2(
+                    -durabilityBarHorizontalPadding * 2f,
+                    durabilityBarHeight
+                );
+
+            Image background =
+                backgroundObject.GetComponent<Image>();
+
+            background.color =
+                durabilityBackgroundColor;
+
+            background.raycastTarget =
+                false;
+
+            durabilityBackgrounds[index] =
+                background;
+
+            GameObject fillObject =
+                new GameObject(
+                    "DurabilityFill",
+                    typeof(RectTransform),
+                    typeof(Image)
+                );
+
+            fillObject.transform.SetParent(
+                backgroundObject.transform,
+                false
+            );
+
+            RectTransform fillRect =
+                fillObject.GetComponent<RectTransform>();
+
+            fillRect.anchorMin =
+                new Vector2(0f, 0f);
+
+            fillRect.anchorMax =
+                new Vector2(0f, 1f);
+
+            fillRect.pivot =
+                new Vector2(0f, 0.5f);
+
+            fillRect.anchoredPosition =
+                Vector2.zero;
+
+            fillRect.sizeDelta =
+                Vector2.zero;
+
+            Image fill =
+                fillObject.GetComponent<Image>();
+
+            fill.color =
+                durabilityFullColor;
+
+            fill.raycastTarget =
+                false;
+
+            durabilityFills[index] =
+                fill;
         }
 
         private Image CreateSelectionBorder(
@@ -339,6 +574,9 @@ namespace WildEarth.Voxel
             ushort itemId =
                 hotbar.GetItemId(index);
 
+            RefreshQuantity(index);
+            RefreshDurabilityBar(index);
+
             RawImage image =
                 slotImages[index];
 
@@ -394,6 +632,157 @@ namespace WildEarth.Voxel
 
             image.color =
                 Color.white;
+        }
+
+        private void RefreshQuantities()
+        {
+            for (int i = 0;
+                 i < VoxelPlayerHotbar.SlotCount;
+                 i++)
+            {
+                RefreshQuantity(i);
+            }
+        }
+
+        private void RefreshQuantity(int index)
+        {
+            if (quantityTexts == null ||
+                quantityTexts[index] == null)
+            {
+                return;
+            }
+
+            ushort itemId =
+                hotbar.GetItemId(index);
+
+            ushort quantity =
+                hotbar.GetItemQuantity(index);
+
+            if (itemId == 0 ||
+                quantity <= 1)
+            {
+                quantityTexts[index].text =
+                    string.Empty;
+
+                return;
+            }
+
+            quantityTexts[index].text =
+                quantity.ToString();
+        }
+
+        private void RefreshDurabilityBars()
+        {
+            for (int i = 0;
+                 i < VoxelPlayerHotbar.SlotCount;
+                 i++)
+            {
+                RefreshDurabilityBar(i);
+            }
+        }
+
+        private void RefreshDurabilityBar(int index)
+        {
+            if (durabilityBackgrounds == null ||
+                durabilityFills == null ||
+                durabilityBackgrounds[index] == null ||
+                durabilityFills[index] == null)
+            {
+                return;
+            }
+
+            ushort itemId =
+                hotbar.GetItemId(index);
+
+            if (itemId == 0)
+            {
+                SetDurabilityBarVisible(
+                    index,
+                    false
+                );
+
+                return;
+            }
+
+            if (!itemRegistry.TryGetRuntimeData(
+                    itemId,
+                    out ItemRuntimeData itemData))
+            {
+                SetDurabilityBarVisible(
+                    index,
+                    false
+                );
+
+                return;
+            }
+
+            if (!itemData.HasDurability ||
+                itemData.MaxDurability == 0)
+            {
+                SetDurabilityBarVisible(
+                    index,
+                    false
+                );
+
+                return;
+            }
+
+            ushort durability =
+                hotbar.GetItemDurability(index);
+
+            float normalized =
+                Mathf.Clamp01(
+                    (float)durability /
+                    itemData.MaxDurability
+                );
+
+            SetDurabilityBarVisible(
+                index,
+                true
+            );
+
+            RectTransform fillRect =
+                durabilityFills[index]
+                    .rectTransform;
+
+            fillRect.anchorMax =
+                new Vector2(
+                    normalized,
+                    1f
+                );
+
+            fillRect.sizeDelta =
+                Vector2.zero;
+
+            durabilityFills[index].color =
+                GetDurabilityColor(normalized);
+        }
+
+        private void SetDurabilityBarVisible(
+            int index,
+            bool visible)
+        {
+            durabilityBackgrounds[index].gameObject
+                .SetActive(visible);
+
+            durabilityFills[index].gameObject
+                .SetActive(visible);
+        }
+
+        private Color GetDurabilityColor(
+            float normalized)
+        {
+            if (normalized <= 0.25f)
+            {
+                return durabilityLowColor;
+            }
+
+            if (normalized <= 0.5f)
+            {
+                return durabilityMediumColor;
+            }
+
+            return durabilityFullColor;
         }
 
         private void SetItemIcon(

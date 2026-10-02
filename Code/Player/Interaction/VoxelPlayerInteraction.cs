@@ -18,6 +18,9 @@ namespace WildEarth.Voxel
         [Header("Breaking")]
         [SerializeField] private float minimumBreakTime = 0.05f;
 
+        [Header("Tool Breaking")]
+        [SerializeField] private float defaultToolSpeedMultiplier = 1f;
+
         private VoxelPlayerMode mode =
             VoxelPlayerMode.Survival;
 
@@ -40,7 +43,8 @@ namespace WildEarth.Voxel
                 }
 
                 return Mathf.Clamp01(
-                    breakingProgress / breakingDuration
+                    breakingProgress /
+                    breakingDuration
                 );
             }
         }
@@ -94,7 +98,8 @@ namespace WildEarth.Voxel
 
         public void Tick()
         {
-            if (Cursor.lockState != CursorLockMode.Locked)
+            if (Cursor.lockState !=
+                CursorLockMode.Locked)
             {
                 ResetBreaking();
                 return;
@@ -102,7 +107,8 @@ namespace WildEarth.Voxel
 
             if (breakCooldownTimer > 0f)
             {
-                breakCooldownTimer -= Time.deltaTime;
+                breakCooldownTimer -=
+                    Time.deltaTime;
             }
 
             if (Mouse.current == null)
@@ -120,7 +126,8 @@ namespace WildEarth.Voxel
                 ResetBreaking();
             }
 
-            if (Mouse.current.rightButton.wasPressedThisFrame)
+            if (Mouse.current.rightButton
+                .wasPressedThisFrame)
             {
                 TryPlaceVoxel();
             }
@@ -129,7 +136,7 @@ namespace WildEarth.Voxel
         private void UpdateBreaking()
         {
             if (!TryGetVoxelHit(
-                out RaycastHit hit))
+                    out RaycastHit hit))
             {
                 ResetBreaking();
                 return;
@@ -143,10 +150,10 @@ namespace WildEarth.Voxel
                 ToVoxelCoordinate(point);
 
             if (!worldRuntime.World.TryGetVoxel(
-                voxel.X,
-                voxel.Y,
-                voxel.Z,
-                out Voxel currentVoxel))
+                    voxel.X,
+                    voxel.Y,
+                    voxel.Z,
+                    out Voxel currentVoxel))
             {
                 ResetBreaking();
                 return;
@@ -159,15 +166,17 @@ namespace WildEarth.Voxel
                 return;
             }
 
-            if (!worldRuntime.World.Blocks.TryGetDefinition(
-                currentVoxel.BlockId,
-                out BlockDefinition definition))
+            if (!worldRuntime.World.Blocks
+                .TryGetDefinition(
+                    currentVoxel.BlockId,
+                    out BlockDefinition definition))
             {
                 ResetBreaking();
                 return;
             }
 
-            if (mode == VoxelPlayerMode.Creative)
+            if (mode ==
+                VoxelPlayerMode.Creative)
             {
                 if (breakCooldownTimer > 0f)
                 {
@@ -183,6 +192,14 @@ namespace WildEarth.Voxel
                 return;
             }
 
+            if (!TryGetBreakingSpeed(
+                    definition,
+                    out float speedMultiplier))
+            {
+                ResetBreaking();
+                return;
+            }
+
             if (!isBreaking ||
                 !IsSameVoxel(
                     breakingVoxel,
@@ -190,7 +207,8 @@ namespace WildEarth.Voxel
             {
                 StartBreaking(
                     voxel,
-                    definition
+                    definition,
+                    speedMultiplier
                 );
             }
 
@@ -200,39 +218,180 @@ namespace WildEarth.Voxel
             if (breakingProgress >=
                 breakingDuration)
             {
-                BreakVoxel(
-                    voxel
-                );
+                BreakVoxel(voxel);
 
                 ResetBreaking();
             }
         }
 
+        private bool TryGetBreakingSpeed(
+            BlockDefinition definition,
+            out float speedMultiplier)
+        {
+            speedMultiplier =
+                Mathf.Max(
+                    0.01f,
+                    defaultToolSpeedMultiplier
+                );
+
+            if (definition.RequiredTool ==
+                ToolType.None)
+            {
+                if (hotbar.TryGetSelectedRuntimeItem(
+                        out ItemRuntimeData selectedItem) &&
+                    selectedItem.IsTool)
+                {
+                    speedMultiplier =
+                        CalculateToolSpeed(
+                            selectedItem
+                        );
+                }
+
+                return true;
+            }
+
+            if (!hotbar.TryGetSelectedRuntimeItem(
+                    out ItemRuntimeData item))
+            {
+                return false;
+            }
+
+            if (!item.IsTool)
+            {
+                return false;
+            }
+
+            if (item.ToolType !=
+                definition.RequiredTool)
+            {
+                return false;
+            }
+
+            if (item.ToolLevel <
+                definition.RequiredToolLevel)
+            {
+                return false;
+            }
+
+            speedMultiplier =
+                CalculateToolSpeed(
+                    item
+                );
+
+            return true;
+        }
+
+        private static float CalculateToolSpeed(
+            ItemRuntimeData item)
+        {
+            float sharpnessMultiplier =
+                Mathf.Max(
+                    0.01f,
+                    item.Sharpness / 50f
+                );
+
+            return Mathf.Max(
+                0.01f,
+                item.ToolSpeed *
+                sharpnessMultiplier
+            );
+        }
+
         private void StartBreaking(
             WorldVoxelCoordinate voxel,
-            BlockDefinition definition)
+            BlockDefinition definition,
+            float speedMultiplier)
         {
             breakingVoxel = voxel;
             breakingProgress = 0f;
 
-            breakingDuration =
+            float baseDuration =
                 Mathf.Max(
                     minimumBreakTime,
                     definition.Hardness
                 );
 
+            breakingDuration =
+                Mathf.Max(
+                    minimumBreakTime,
+                    baseDuration /
+                    speedMultiplier
+                );
+
             isBreaking = true;
+
+            Debug.Log(
+                $"[VoxelBreakStart] " +
+                $"ID={definition.Id} | " +
+                $"Name={definition.BlockName} | " +
+                $"Hardness={definition.Hardness} | " +
+                $"SpeedMultiplier={speedMultiplier} | " +
+                $"Duration={breakingDuration}s | " +
+                $"RequiredTool={definition.RequiredTool} | " +
+                $"RequiredToolLevel={definition.RequiredToolLevel}"
+            );
         }
 
         private void BreakVoxel(
             WorldVoxelCoordinate voxel)
         {
-            worldRuntime.World.TrySetVoxel(
-                voxel.X,
-                voxel.Y,
-                voxel.Z,
-                BlockIds.Air
-            );
+            if (!worldRuntime.World.TryGetVoxel(
+                    voxel.X,
+                    voxel.Y,
+                    voxel.Z,
+                    out Voxel currentVoxel))
+            {
+                return;
+            }
+
+            ushort blockId =
+                currentVoxel.BlockId;
+
+            if (blockId == BlockIds.Air)
+            {
+                return;
+            }
+
+            if (!hotbar.TryAddItemForBlock(
+                blockId,
+                1))
+            {
+                Debug.LogWarning(
+                    $"[VoxelBreak] No se pudo recoger " +
+                    $"el bloque {blockId}. " +
+                    $"El bloque no será destruido."
+                );
+
+                return;
+            }
+
+            bool removed =
+                worldRuntime.World.TrySetVoxel(
+                    voxel.X,
+                    voxel.Y,
+                    voxel.Z,
+                    BlockIds.Air
+                );
+
+            if (!removed)
+            {
+                Debug.LogWarning(
+                    $"[VoxelBreak] El bloque {blockId} " +
+                    $"fue agregado al inventario pero " +
+                    $"no pudo eliminarse del mundo."
+                );
+
+                return;
+            }
+
+            if (mode != VoxelPlayerMode.Creative &&
+                hotbar.TryGetSelectedRuntimeItem(
+                    out ItemRuntimeData selectedItem) &&
+                selectedItem.IsTool &&
+                selectedItem.HasDurability)
+            {
+                hotbar.TryDamageSelectedItem(1);
+            }
         }
 
         private void ResetBreaking()
@@ -253,21 +412,11 @@ namespace WildEarth.Voxel
 
         private void TryPlaceVoxel()
         {
-            if (!hotbar.TryGetSelectedRuntimeItem(
-                    out ItemRuntimeData item))
+            if (!hotbar.TryGetSelectedBlockId(
+                    out ushort blockId))
             {
-
                 return;
             }
-
-            if (!item.RepresentsBlock)
-            {
-
-                return;
-            }
-
-            ushort blockId =
-                item.BlockId;
 
             if (blockId == BlockIds.Air)
             {
@@ -277,7 +426,6 @@ namespace WildEarth.Voxel
             if (!TryGetVoxelHit(
                     out RaycastHit hit))
             {
-
                 return;
             }
 
@@ -293,13 +441,22 @@ namespace WildEarth.Voxel
                 return;
             }
 
-            bool placed =
-                worldRuntime.World.TrySetVoxel(
+            if (!worldRuntime.World.TrySetVoxel(
                     voxel.X,
                     voxel.Y,
                     voxel.Z,
-                    blockId
+                    blockId))
+            {
+                return;
+            }
+
+            if (!hotbar.TryConsumeSelectedItem())
+            {
+                Debug.LogError(
+                    "[VoxelPlace] El bloque fue colocado " +
+                    "pero no se pudo consumir el ItemStack."
                 );
+            }
         }
 
         private bool TryGetVoxelHit(
@@ -345,9 +502,15 @@ namespace WildEarth.Voxel
                 Vector3 worldPosition)
         {
             return new WorldVoxelCoordinate(
-                Mathf.FloorToInt(worldPosition.x),
-                Mathf.FloorToInt(worldPosition.y),
-                Mathf.FloorToInt(worldPosition.z)
+                Mathf.FloorToInt(
+                    worldPosition.x
+                ),
+                Mathf.FloorToInt(
+                    worldPosition.y
+                ),
+                Mathf.FloorToInt(
+                    worldPosition.z
+                )
             );
         }
     }

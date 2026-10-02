@@ -37,8 +37,19 @@ namespace WildEarth.Voxel
         Pickaxe = 2,
         Axe = 3,
         Shovel = 4,
-        Hoe = 5,
-        Sword = 6
+        Shears = 5,
+        Chisel = 6,
+        Hammer = 7,
+        Knife = 8,
+        Hoe = 9
+    }
+
+    public enum WeaponType : byte
+    {
+        None = 0,
+        Sword = 1,
+        Spear = 2,
+        Bow = 3
     }
 
     [Serializable]

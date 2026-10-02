@@ -36,11 +36,6 @@ namespace WildEarth.Voxel
         [SerializeField]
         private ushort blockId;
 
-        [Header("Stacking")]
-        [SerializeField]
-        [Min(1)]
-        private ushort maxStackSize = 64;
-
         [Header("Tool")]
         [SerializeField]
         private ToolType toolType =
@@ -52,15 +47,28 @@ namespace WildEarth.Voxel
 
         [SerializeField]
         [Min(0f)]
-        private float toolSpeedMultiplier = 1f;
+        private float toolSpeed = 1f;
+
+        [SerializeField]
+        [Min(0f)]
+        private float damage = 1f;
+
+        [SerializeField]
+        [Range(0f, 100f)]
+        private float sharpness = 100f;
+
+        [Header("Weapon")]
+        [SerializeField]
+        private WeaponType weaponType =
+            WeaponType.None;
 
         [Header("Durability")]
         [SerializeField]
-        private bool hasDurability;
-
-        [SerializeField]
-        [Min(0)]
         private ushort maxDurability;
+
+        [Header("Stacking")]
+        [SerializeField]
+        private ushort maxStackSize = 64;
 
         [Header("Visual")]
         [SerializeField]
@@ -78,23 +86,26 @@ namespace WildEarth.Voxel
             itemType == ItemType.Block &&
             blockId != BlockIds.Air;
 
-        public ushort MaxStackSize => maxStackSize;
-
         public ToolType ToolType => toolType;
 
         public byte ToolLevel => toolLevel;
 
-        public float ToolSpeedMultiplier =>
-            toolSpeedMultiplier;
+        public float ToolSpeed => toolSpeed;
+
+        public float Damage => damage;
+
+        public float Sharpness => sharpness;
+
+        public WeaponType WeaponType => weaponType;
+
+        public ushort MaxDurability => maxDurability;
 
         public bool HasDurability =>
-            hasDurability;
+            maxDurability > 0;
 
-        public ushort MaxDurability =>
-            maxDurability;
+        public ushort MaxStackSize => maxStackSize;
 
-        public AtlasTileCoordinate Icon =>
-            icon;
+        public AtlasTileCoordinate Icon => icon;
 
 #if UNITY_EDITOR
 
@@ -110,16 +121,22 @@ namespace WildEarth.Voxel
                 maxStackSize = 1;
             }
 
-            if (toolSpeedMultiplier < 0f)
+            if (toolSpeed < 0f)
             {
-                toolSpeedMultiplier = 0f;
+                toolSpeed = 0f;
             }
 
-            if (hasDurability &&
-                maxDurability == 0)
+            if (damage < 0f)
             {
-                maxDurability = 1;
+                damage = 0f;
             }
+
+            sharpness =
+                Mathf.Clamp(
+                    sharpness,
+                    0f,
+                    100f
+                );
 
             if (icon.Column < 0)
             {
@@ -140,9 +157,26 @@ namespace WildEarth.Voxel
             {
                 toolType = ToolType.None;
                 toolLevel = 0;
-                toolSpeedMultiplier = 1f;
-                hasDurability = false;
+                toolSpeed = 0f;
+            }
+
+            if (itemType != ItemType.Weapon)
+            {
+                weaponType = WeaponType.None;
+            }
+
+            if (itemType != ItemType.Tool &&
+                itemType != ItemType.Weapon)
+            {
+                damage = 0f;
+                sharpness = 0f;
                 maxDurability = 0;
+            }
+
+            if (itemType == ItemType.Tool &&
+                toolType == ToolType.None)
+            {
+                toolSpeed = 0f;
             }
         }
 

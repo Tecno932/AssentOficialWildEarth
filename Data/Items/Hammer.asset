@@ -10,18 +10,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ead2dd2b70dd630498445038c82629c4, type: 3}
-  m_Name: IronOre
+  m_Name: Hammer
   m_EditorClassIdentifier: WildEarth.Voxel::WildEarth.Voxel.ItemDefinition
-  id: 5
-  itemName: Iron Ore
-  itemType: 1
-  blockId: 5
-  maxStackSize: 64
+  id: 0
+  itemName: 
+  itemType: 7
+  blockId: 0
   toolType: 0
   toolLevel: 0
-  toolSpeedMultiplier: 1
-  hasDurability: 0
+  toolSpeed: 1
+  damage: 1
+  sharpness: 100
+  weaponType: 0
   maxDurability: 0
+  maxStackSize: 64
   icon:
     Column: 0
     Row: 0

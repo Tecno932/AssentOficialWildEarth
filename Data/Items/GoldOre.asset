@@ -1,5 +1,5 @@
 %YAML 1.1
-%TAG !u! tag\:unity3d.com,2011:
+%TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14,14 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: WildEarth.Voxel::WildEarth.Voxel.ItemDefinition
   id: 6
   itemName: Gold Ore
-  itemType: 1
-  blockId: 6
-  maxStackSize: 64
+  itemType: 4
+  blockId: 0
   toolType: 0
   toolLevel: 0
-  toolSpeedMultiplier: 1
-  hasDurability: 0
+  toolSpeed: 0
+  damage: 0
+  sharpness: 0
+  weaponType: 0
   maxDurability: 0
+  maxStackSize: 64
   icon:
     Column: 0
     Row: 0
