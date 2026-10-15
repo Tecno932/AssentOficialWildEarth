@@ -80,8 +80,6 @@ namespace WildEarth.Voxel
             }
 
             UpdateSelection();
-            RefreshQuantities();
-            RefreshDurabilityBars();
         }
 
         private void ValidateReferences()
@@ -498,6 +496,12 @@ namespace WildEarth.Voxel
             generatedWhiteTexture.Apply();
 
             return generatedWhiteTexture;
+        }
+
+        public void SetVisible(bool visible)
+        {
+            if (hotbarRoot != null)
+                hotbarRoot.gameObject.SetActive(visible);
         }
 
         private void OnDestroy()

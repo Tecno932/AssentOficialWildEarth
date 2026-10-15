@@ -12,6 +12,9 @@ namespace WildEarth.Voxel
     public sealed class VoxelPlayerHotbar : MonoBehaviour
     {
         public const int SlotCount = 9;
+        public const int InventorySlotCount = 27;
+        public const int TotalSlotCount =
+            SlotCount + InventorySlotCount;
 
         [Header("References")]
         [SerializeField]
@@ -28,7 +31,7 @@ namespace WildEarth.Voxel
         private ushort initialItemQuantity = 64;
 
         private readonly ItemStack[] itemSlots =
-            new ItemStack[SlotCount];
+            new ItemStack[TotalSlotCount];
 
         private readonly ushort[] lastInitialItemIds =
             new ushort[SlotCount];
@@ -116,6 +119,76 @@ namespace WildEarth.Voxel
             }
 
             return itemSlots[slot];
+        }
+
+        public ushort GetStorageItemId(int slot)
+        {
+            if (slot < 0 || slot >= TotalSlotCount)
+                return 0;
+
+            return itemSlots[slot].ItemId;
+        }
+
+        public ushort GetStorageItemQuantity(int slot)
+        {
+            if (slot < 0 || slot >= TotalSlotCount)
+                return 0;
+
+            return itemSlots[slot].Quantity;
+        }
+
+        public ushort GetStorageItemDurability(int slot)
+        {
+            if (slot < 0 || slot >= TotalSlotCount)
+                return 0;
+
+            return itemSlots[slot].Durability;
+        }
+
+        public ItemStack GetStorageItemStack(int slot)
+        {
+            if (slot < 0 || slot >= TotalSlotCount)
+                return default;
+
+            return itemSlots[slot];
+        }
+
+        public bool SwapStorageSlots(int first, int second)
+        {
+            if (first < 0 || first >= TotalSlotCount ||
+                second < 0 || second >= TotalSlotCount)
+            {
+                return false;
+            }
+
+            if (first == second)
+                return true;
+
+            ItemStack temporary = itemSlots[first];
+            itemSlots[first] = itemSlots[second];
+            itemSlots[second] = temporary;
+
+            SyncInitialIdsFromHotbar();
+            configurationVersion++;
+
+            return true;
+        }
+
+        private void SyncInitialIdsFromHotbar()
+        {
+            for (int i = 0; i < SlotCount; i++)
+            {
+                ushort itemId = itemSlots[i].ItemId;
+
+                if (initialItemIds == null ||
+                    initialItemIds.Length != SlotCount)
+                {
+                    initialItemIds = new ushort[SlotCount];
+                }
+
+                initialItemIds[i] = itemId;
+                lastInitialItemIds[i] = itemId;
+            }
         }
 
         public bool TryGetSelectedItem(
@@ -552,7 +625,7 @@ namespace WildEarth.Voxel
             if (data.HasDurability)
             {
                 for (int i = 0;
-                    i < SlotCount;
+                    i < TotalSlotCount;
                     i++)
                 {
                     if (!itemSlots[i].IsEmpty)
@@ -578,7 +651,7 @@ namespace WildEarth.Voxel
                 quantity;
 
             for (int i = 0;
-                i < SlotCount && remaining > 0;
+                i < TotalSlotCount && remaining > 0;
                 i++)
             {
                 if (itemSlots[i].ItemId != itemId)
@@ -613,7 +686,7 @@ namespace WildEarth.Voxel
             }
 
             for (int i = 0;
-                i < SlotCount && remaining > 0;
+                i < TotalSlotCount && remaining > 0;
                 i++)
             {
                 if (!itemSlots[i].IsEmpty)
@@ -645,6 +718,230 @@ namespace WildEarth.Voxel
             }
 
             return remaining == 0;
+        }
+
+        public bool TryQuickMoveStorageSlot(int sourceSlot)
+        {
+            if (sourceSlot < 0 || sourceSlot >= TotalSlotCount)
+                return false;
+
+            ItemStack source = itemSlots[sourceSlot];
+
+            if (source.IsEmpty || itemRegistry == null)
+                return false;
+
+            if (!itemRegistry.TryGetRuntimeData(source.ItemId, out ItemRuntimeData data))
+                return false;
+
+            int destinationStart = sourceSlot < SlotCount ? SlotCount : 0;
+            int destinationEnd = sourceSlot < SlotCount ? TotalSlotCount : SlotCount;
+
+            bool changed = false;
+
+            // Primero intenta completar pilas existentes.
+            if (!data.HasDurability)
+            {
+                for (int i = destinationStart; i < destinationEnd; i++)
+                {
+                    if (itemSlots[i].ItemId != source.ItemId)
+                        continue;
+
+                    ushort maxStack = data.MaxStackSize;
+
+                    if (itemSlots[i].Quantity >= maxStack)
+                        continue;
+
+                    ushort available = (ushort)(maxStack - itemSlots[i].Quantity);
+                    ushort amount = source.Quantity < available
+                        ? source.Quantity
+                        : available;
+
+                    ItemStack destination = itemSlots[i];
+                    destination.Quantity += amount;
+                    source.Quantity -= amount;
+
+                    itemSlots[i] = destination;
+                    changed = true;
+
+                    if (source.Quantity == 0)
+                        break;
+                }
+            }
+
+            // Después coloca lo restante en espacios vacíos.
+            if (source.Quantity > 0)
+            {
+                for (int i = destinationStart; i < destinationEnd; i++)
+                {
+                    if (!itemSlots[i].IsEmpty)
+                        continue;
+
+                    itemSlots[i] = source;
+                    source.Clear();
+                    changed = true;
+                    break;
+                }
+            }
+
+            if (!changed)
+                return false;
+
+            itemSlots[sourceSlot] = source;
+            SyncInitialIdsFromHotbar();
+            configurationVersion++;
+
+            return true;
+        }
+
+        public bool TryTakeFromStorageSlot(
+            int slot,
+            ushort amount,
+            out ItemStack taken)
+        {
+            taken = default;
+
+            if (slot < 0 ||
+                slot >= TotalSlotCount ||
+                amount == 0)
+                return false;
+
+            ItemStack source = itemSlots[slot];
+
+            if (source.IsEmpty ||
+                amount > source.Quantity)
+                return false;
+
+            if (itemRegistry == null ||
+                !itemRegistry.TryGetRuntimeData(
+                    source.ItemId,
+                    out ItemRuntimeData data))
+                return false;
+
+            // Las herramientas y los objetos con durabilidad
+            // no se pueden dividir en cantidades.
+            if (data.HasDurability &&
+                (amount != 1 || source.Quantity != 1))
+                return false;
+
+            taken = new ItemStack(
+                source.ItemId,
+                amount,
+                source.Durability
+            );
+
+            source.Quantity -= amount;
+
+            if (source.Quantity == 0)
+                source.Clear();
+
+            itemSlots[slot] = source;
+
+            SyncInitialIdsFromHotbar();
+            configurationVersion++;
+
+            return true;
+        }
+
+        public bool TryPutIntoStorageSlot(
+            int slot,
+            ref ItemStack carried,
+            bool oneOnly)
+        {
+            if (slot < 0 ||
+                slot >= TotalSlotCount ||
+                carried.IsEmpty ||
+                itemRegistry == null)
+                return false;
+
+            ItemStack destination = itemSlots[slot];
+
+            // Ranura vacía: coloca la pila o un solo objeto.
+            if (destination.IsEmpty)
+            {
+                if (!itemRegistry.TryGetRuntimeData(
+                        carried.ItemId,
+                        out ItemRuntimeData data))
+                    return false;
+
+                ushort amount = oneOnly
+                    ? (ushort)1
+                    : carried.Quantity;
+
+                if (data.HasDurability)
+                    amount = 1;
+
+                itemSlots[slot] = new ItemStack(
+                    carried.ItemId,
+                    amount,
+                    carried.Durability
+                );
+
+                carried.Quantity -= amount;
+
+                if (carried.Quantity == 0)
+                    carried.Clear();
+
+                SyncInitialIdsFromHotbar();
+                configurationVersion++;
+                return true;
+            }
+
+            // Solo combina objetos idénticos que se puedan apilar.
+            if (destination.ItemId != carried.ItemId)
+                return false;
+
+            if (!itemRegistry.TryGetRuntimeData(
+                    carried.ItemId,
+                    out ItemRuntimeData stackData) ||
+                stackData.HasDurability ||
+                stackData.MaxStackSize == 0)
+                return false;
+
+            ushort available = (ushort)(
+                stackData.MaxStackSize - destination.Quantity
+            );
+
+            if (available == 0)
+                return false;
+
+            ushort amountToMove = oneOnly
+                ? (ushort)1
+                : carried.Quantity;
+
+            amountToMove = (ushort)Mathf.Min(
+                amountToMove,
+                carried.Quantity,
+                available
+            );
+
+            destination.Quantity += amountToMove;
+            carried.Quantity -= amountToMove;
+
+            if (carried.Quantity == 0)
+                carried.Clear();
+
+            itemSlots[slot] = destination;
+
+            SyncInitialIdsFromHotbar();
+            configurationVersion++;
+            return true;
+        }
+
+        public bool TrySwapStorageSlotWithCarried(
+            int slot,
+            ref ItemStack carried)
+        {
+            if (slot < 0 || slot >= TotalSlotCount)
+                return false;
+
+            ItemStack destination = itemSlots[slot];
+
+            itemSlots[slot] = carried;
+            carried = destination;
+
+            SyncInitialIdsFromHotbar();
+            configurationVersion++;
+            return true;
         }
 
         public bool TryDamageSelectedItem(
