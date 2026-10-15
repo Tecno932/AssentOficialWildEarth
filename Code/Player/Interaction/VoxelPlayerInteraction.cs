@@ -483,18 +483,57 @@ namespace WildEarth.Voxel
             }
         }
 
-
-        private bool TryGetVoxelHit(
-            out RaycastHit hit)
+        private bool TryGetVoxelHit(out RaycastHit hit)
         {
-            bool detected = Physics.Raycast(
+            hit = default;
+
+            if (playerCamera == null)
+            {
+                return false;
+            }
+
+            return Physics.Raycast(
                 playerCamera.transform.position,
                 playerCamera.transform.forward,
                 out hit,
                 interactionDistance
             );
+        }
 
-            return detected;
+        public bool TryGetTargetBlock(
+            out WorldVoxelCoordinate voxel,
+            out BlockDefinition definition)
+        {
+            voxel = default;
+            definition = null;
+
+            if (worldRuntime == null ||
+                playerCamera == null ||
+                !TryGetVoxelHit(out RaycastHit hit))
+            {
+                return false;
+            }
+
+            Vector3 point = hit.point - hit.normal * 0.001f;
+            voxel = ToVoxelCoordinate(point);
+
+            if (!worldRuntime.World.TryGetVoxel(
+                    voxel.X,
+                    voxel.Y,
+                    voxel.Z,
+                    out Voxel currentVoxel))
+            {
+                return false;
+            }
+
+            if (currentVoxel.BlockId == BlockIds.Air)
+            {
+                return false;
+            }
+
+            return worldRuntime.World.Blocks.TryGetDefinition(
+                currentVoxel.BlockId,
+                out definition);
         }
 
         private bool WouldIntersectPlayer(
