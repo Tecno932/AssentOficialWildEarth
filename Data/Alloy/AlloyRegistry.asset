@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c17905383dce3d243a416002708c540d, type: 3}
+  m_Name: AlloyRegistry
+  m_EditorClassIdentifier: WildEarth.Voxel::WildEarth.Voxel.AlloyRegistry
+  definitions:
+  - {fileID: 0}
+  - {fileID: 11400000, guid: 5fb4b1082d24aae4a8abe10e7acdc663, type: 2}
+  materialRegistry: {fileID: 11400000, guid: 7553c8939d3a84b4da38313e06063673, type: 2}

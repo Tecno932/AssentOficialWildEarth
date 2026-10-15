@@ -11,23 +11,22 @@ namespace WildEarth.Voxel
     )]
     public sealed class ItemRegistry : ScriptableObject
     {
+        [Header("Definition Registries")]
+        [SerializeField] private ToolRegistry toolRegistry;
+        [SerializeField] private MaterialRegistry materialRegistry;
+        [SerializeField] private AlloyRegistry alloyRegistry;
+
+        [Header("Items")]
         [SerializeField]
         private List<ItemDefinition> definitions = new();
 
-        private Dictionary<ushort, ItemDefinition>
-            definitionLookup;
-
-        private Dictionary<ushort, ushort>
-            blockToItemLookup;
-
+        private Dictionary<ushort, ItemDefinition> definitionLookup;
+        private Dictionary<ushort, ushort> blockToItemLookup;
         private ItemRuntimeData[] runtimeData;
 
-        public int Count =>
-            runtimeData?.Length ?? 0;
+        public int Count => runtimeData?.Length ?? 0;
 
-        public IReadOnlyList<ItemDefinition>
-            Definitions =>
-            definitions;
+        public IReadOnlyList<ItemDefinition> Definitions => definitions;
 
         private void OnEnable()
         {
@@ -38,6 +37,15 @@ namespace WildEarth.Voxel
 
         public void Initialize()
         {
+            if (materialRegistry != null)
+                materialRegistry.Initialize();
+
+            if (alloyRegistry != null)
+                alloyRegistry.Initialize();
+
+            if (toolRegistry != null)
+                toolRegistry.Initialize();
+
             BuildLookup();
             BuildBlockToItemLookup();
             BuildRuntimeData();
@@ -50,13 +58,10 @@ namespace WildEarth.Voxel
                     definitions.Count
                 );
 
-            foreach (ItemDefinition definition
-                     in definitions)
+            foreach (ItemDefinition definition in definitions)
             {
                 if (definition == null)
-                {
                     continue;
-                }
 
                 if (definition.Id == 0)
                 {
@@ -64,37 +69,28 @@ namespace WildEarth.Voxel
                         "ItemRegistry: ID 0 está reservado para None.",
                         this
                     );
-
                     continue;
                 }
 
-                if (definitionLookup.ContainsKey(
-                    definition.Id))
+                if (definitionLookup.ContainsKey(definition.Id))
                 {
                     Debug.LogError(
                         $"ItemRegistry: ID duplicado " +
-                        $"{definition.Id} " +
-                        $"({definition.ItemName}).",
+                        $"{definition.Id} ({definition.ItemName}).",
                         this
                     );
-
                     continue;
                 }
 
-                definitionLookup.Add(
-                    definition.Id,
-                    definition
-                );
+                definitionLookup.Add(definition.Id, definition);
             }
         }
 
         private void BuildBlockToItemLookup()
         {
-            blockToItemLookup =
-                new Dictionary<ushort, ushort>();
+            blockToItemLookup = new Dictionary<ushort, ushort>();
 
-            foreach (ItemDefinition definition
-                     in definitions)
+            foreach (ItemDefinition definition in definitions)
             {
                 if (definition == null ||
                     !definition.RepresentsBlock)
@@ -102,92 +98,54 @@ namespace WildEarth.Voxel
                     continue;
                 }
 
-                ushort blockId =
-                    definition.BlockId;
-
-                ushort itemId =
-                    definition.Id;
+                ushort blockId = definition.BlockId;
+                ushort itemId = definition.Id;
 
                 if (blockId == BlockIds.Air)
-                {
                     continue;
-                }
 
-                if (blockToItemLookup.ContainsKey(
-                    blockId))
+                if (blockToItemLookup.ContainsKey(blockId))
                 {
                     Debug.LogError(
-                        $"ItemRegistry: el BlockID " +
-                        $"{blockId} tiene más de un " +
-                        $"ItemDefinition asociado.",
+                        $"ItemRegistry: el BlockID {blockId} " +
+                        "tiene más de un ItemDefinition asociado.",
                         this
                     );
-
                     continue;
                 }
 
-                blockToItemLookup.Add(
-                    blockId,
-                    itemId
-                );
+                blockToItemLookup.Add(blockId, itemId);
             }
         }
 
         private void BuildRuntimeData()
         {
             if (definitionLookup == null)
-            {
                 BuildLookup();
-            }
 
             int maxId = 0;
 
-            foreach (ItemDefinition definition
-                     in definitions)
+            foreach (ItemDefinition definition in definitions)
             {
                 if (definition == null)
-                {
                     continue;
-                }
 
-                int id =
-                    definition.Id;
-
-                if (id > maxId)
-                {
-                    maxId = id;
-                }
+                if (definition.Id > maxId)
+                    maxId = definition.Id;
             }
 
-            runtimeData =
-                new ItemRuntimeData[maxId + 1];
+            runtimeData = new ItemRuntimeData[maxId + 1];
+            runtimeData[0] = default;
 
-            runtimeData[0] =
-                default;
-
-            foreach (ItemDefinition definition
-                     in definitions)
+            foreach (ItemDefinition definition in definitions)
             {
                 if (definition == null)
-                {
                     continue;
-                }
 
-                ushort id =
-                    definition.Id;
+                ushort id = definition.Id;
 
                 if (id == 0)
-                {
                     continue;
-                }
-
-                if (id >= runtimeData.Length)
-                {
-                    throw new InvalidOperationException(
-                        $"ItemRegistry: ID {id} " +
-                        $"fuera del runtimeData."
-                    );
-                }
 
                 if (runtimeData[id].Id != 0)
                 {
@@ -196,79 +154,166 @@ namespace WildEarth.Voxel
                     );
                 }
 
-                ItemRuntimeData data =
-                    new ItemRuntimeData
-                    {
-                        Id = id,
+                ValidateDefinitionReference(definition);
 
-                        ItemType =
-                            definition.ItemType,
+                ItemRuntimeData data = new ItemRuntimeData
+                {
+                    Id = id,
+                    ItemType = definition.ItemType,
 
-                        BlockId =
-                            definition.BlockId,
+                    BlockId = definition.BlockId,
 
-                        ToolType =
-                            definition.ToolType,
+                    ToolDefinitionId =
+                        definition.ToolDefinition != null
+                            ? definition.ToolDefinition.Id
+                            : (ushort)0,
 
-                        ToolLevel =
-                            definition.ToolLevel,
+                    MaterialDefinitionId =
+                        definition.MaterialDefinition != null
+                            ? definition.MaterialDefinition.Id
+                            : (ushort)0,
 
-                        ToolSpeed =
-                            definition.ToolSpeed,
+                    AlloyDefinitionId =
+                        definition.AlloyDefinition != null
+                            ? definition.AlloyDefinition.Id
+                            : (ushort)0,
 
-                        Damage =
-                            definition.Damage,
+                    ToolType = definition.ToolType,
+                    ToolLevel = definition.ToolLevel,
+                    ToolSpeed = definition.ToolSpeed,
 
-                        Sharpness =
-                            definition.Sharpness,
+                    Damage = definition.Damage,
+                    Sharpness = definition.Sharpness,
+                    WeaponType = definition.WeaponType,
 
-                        WeaponType =
-                            definition.WeaponType,
+                    MaxDurability = definition.MaxDurability,
+                    MaxStackSize = definition.MaxStackSize,
 
-                        MaxDurability =
-                            definition.MaxDurability,
+                    Icon = definition.Icon
+                };
 
-                        MaxStackSize =
-                            definition.MaxStackSize,
-
-                        Icon =
-                            definition.Icon
-                    };
-
-                runtimeData[id] =
-                    data;
+                runtimeData[id] = data;
             }
 
-            for (int i = 1;
-                 i < runtimeData.Length;
-                 i++)
+            for (int i = 1; i < runtimeData.Length; i++)
             {
-                ItemRuntimeData data =
-                    runtimeData[i];
-
-                if (data.Id != i)
+                if (runtimeData[i].Id != i)
                 {
                     throw new InvalidOperationException(
-                        $"ItemRegistry: falta una " +
-                        $"definición para el ID {i}, " +
-                        $"o el runtime data está desalineado."
+                        $"ItemRegistry: falta una definición " +
+                        $"para el ID {i}, o el runtime data " +
+                        "está desalineado."
                     );
                 }
             }
         }
 
-        public ItemDefinition GetDefinition(
-            ushort itemId)
+        private void ValidateDefinitionReference(
+            ItemDefinition definition)
+        {
+            switch (definition.ItemType)
+            {
+                case ItemType.Block:
+                    if (!definition.RepresentsBlock)
+                    {
+                        Debug.LogError(
+                            $"[ItemRegistry] El ítem " +
+                            $"'{definition.ItemName}' debe tener " +
+                            "un BlockDefinition válido.",
+                            this
+                        );
+                    }
+                    break;
+
+                case ItemType.Tool:
+                    if (definition.ToolDefinition == null)
+                    {
+                        Debug.LogError(
+                            $"[ItemRegistry] El ítem " +
+                            $"'{definition.ItemName}' no tiene " +
+                            "ToolDefinition asignada.",
+                            this
+                        );
+                        break;
+                    }
+
+                    if (toolRegistry == null ||
+                        !toolRegistry.TryGetRuntimeData(
+                            definition.ToolDefinition.Id,
+                            out _))
+                    {
+                        Debug.LogError(
+                            $"[ItemRegistry] No se encuentra la " +
+                            $"herramienta ID " +
+                            $"{definition.ToolDefinition.Id} " +
+                            $"del ítem '{definition.ItemName}'.",
+                            this
+                        );
+                    }
+                    break;
+
+                case ItemType.Material:
+                {
+                    bool hasMaterial =
+                        definition.MaterialDefinition != null;
+
+                    bool hasAlloy =
+                        definition.AlloyDefinition != null;
+
+                    if (hasMaterial == hasAlloy)
+                    {
+                        Debug.LogError(
+                            $"[ItemRegistry] El ítem " +
+                            $"'{definition.ItemName}' debe tener " +
+                            "exactamente una referencia: " +
+                            "MaterialDefinition o AlloyDefinition.",
+                            this
+                        );
+                        break;
+                    }
+
+                    if (hasMaterial)
+                    {
+                        if (materialRegistry == null ||
+                            !materialRegistry.GetRuntimeData(
+                                definition.MaterialDefinition.Id
+                            ).IsValid)
+                        {
+                            Debug.LogError(
+                                $"[ItemRegistry] No se encuentra " +
+                                $"el material ID " +
+                                $"{definition.MaterialDefinition.Id}.",
+                                this
+                            );
+                        }
+                    }
+                    else
+                    {
+                        if (alloyRegistry == null ||
+                            !alloyRegistry.GetRuntimeData(
+                                definition.AlloyDefinition.Id
+                            ).IsValid)
+                        {
+                            Debug.LogError(
+                                $"[ItemRegistry] No se encuentra " +
+                                $"la aleación ID " +
+                                $"{definition.AlloyDefinition.Id}.",
+                                this
+                            );
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        public ItemDefinition GetDefinition(ushort itemId)
         {
             if (itemId == 0)
-            {
                 return null;
-            }
 
             if (definitionLookup == null)
-            {
                 Initialize();
-            }
 
             return definitionLookup.TryGetValue(
                 itemId,
@@ -289,9 +334,7 @@ namespace WildEarth.Voxel
             }
 
             if (definitionLookup == null)
-            {
                 Initialize();
-            }
 
             return definitionLookup.TryGetValue(
                 itemId,
@@ -299,23 +342,16 @@ namespace WildEarth.Voxel
             );
         }
 
-        public ItemRuntimeData GetRuntimeData(
-            ushort itemId)
+        public ItemRuntimeData GetRuntimeData(ushort itemId)
         {
             if (itemId == 0)
-            {
                 return default;
-            }
 
             if (runtimeData == null)
-            {
                 Initialize();
-            }
 
             if (itemId >= runtimeData.Length)
-            {
                 return default;
-            }
 
             return runtimeData[itemId];
         }
@@ -331,9 +367,7 @@ namespace WildEarth.Voxel
             }
 
             if (runtimeData == null)
-            {
                 Initialize();
-            }
 
             if (itemId >= runtimeData.Length)
             {
@@ -341,10 +375,8 @@ namespace WildEarth.Voxel
                 return false;
             }
 
-            data =
-                runtimeData[itemId];
-
-            return true;
+            data = runtimeData[itemId];
+            return data.Id != 0;
         }
 
         public bool TryGetItemIdForBlock(
@@ -354,14 +386,10 @@ namespace WildEarth.Voxel
             itemId = 0;
 
             if (blockId == BlockIds.Air)
-            {
                 return false;
-            }
 
             if (blockToItemLookup == null)
-            {
                 Initialize();
-            }
 
             return blockToItemLookup.TryGetValue(
                 blockId,
@@ -369,22 +397,17 @@ namespace WildEarth.Voxel
             );
         }
 
-        public NativeArray<ItemRuntimeData>
-            CreateNativeRuntimeData(
-                Allocator allocator)
+        public NativeArray<ItemRuntimeData> CreateNativeRuntimeData(
+            Allocator allocator)
         {
             if (runtimeData == null)
-            {
                 Initialize();
-            }
 
             return new NativeArray<ItemRuntimeData>(
                 runtimeData,
                 allocator
             );
         }
-
-#if UNITY_EDITOR
 
         private void OnValidate()
         {
@@ -397,32 +420,27 @@ namespace WildEarth.Voxel
 
         private void ValidateDefinitions()
         {
-            HashSet<ushort> usedIds =
-                new HashSet<ushort>();
+            HashSet<ushort> usedIds = new HashSet<ushort>();
+            HashSet<ushort> usedBlockIds = new HashSet<ushort>();
 
-            HashSet<ushort> usedBlockIds =
-                new HashSet<ushort>();
+            if (definitions == null)
+                return;
 
-            foreach (ItemDefinition definition
-                     in definitions)
+            foreach (ItemDefinition definition in definitions)
             {
                 if (definition == null)
-                {
                     continue;
-                }
 
                 if (definition.Id == 0)
                 {
                     Debug.LogError(
-                        $"Item '{definition.name}' " +
-                        "utiliza ID 0. " +
+                        $"Item '{definition.name}' utiliza ID 0. " +
                         "ID 0 está reservado para None.",
                         this
                     );
                 }
 
-                if (!usedIds.Add(
-                    definition.Id))
+                if (!usedIds.Add(definition.Id))
                 {
                     Debug.LogError(
                         $"ItemRegistry contiene ID duplicado: " +
@@ -432,8 +450,7 @@ namespace WildEarth.Voxel
                 }
 
                 if (definition.RepresentsBlock &&
-                    !usedBlockIds.Add(
-                        definition.BlockId))
+                    !usedBlockIds.Add(definition.BlockId))
                 {
                     Debug.LogError(
                         $"ItemRegistry contiene más de un " +
@@ -444,7 +461,5 @@ namespace WildEarth.Voxel
                 }
             }
         }
-
-#endif
     }
 }

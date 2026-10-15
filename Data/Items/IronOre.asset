@@ -15,13 +15,18 @@ MonoBehaviour:
   id: 5
   itemName: Iron Ore
   itemType: 1
-  blockId: 5
-  maxStackSize: 64
+  blockDefinition: {fileID: 11400000, guid: ebe10b62e1633794b85634874398c028, type: 2}
+  toolDefinition: {fileID: 0}
+  materialDefinition: {fileID: 0}
+  alloyDefinition: {fileID: 0}
   toolType: 0
   toolLevel: 0
-  toolSpeedMultiplier: 1
-  hasDurability: 0
+  toolSpeed: 0
+  damage: 0
+  sharpness: 0
+  weaponType: 0
   maxDurability: 0
+  maxStackSize: 64
   icon:
     Column: 0
     Row: 0

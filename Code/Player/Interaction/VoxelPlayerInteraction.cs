@@ -10,6 +10,7 @@ namespace WildEarth.Voxel
         [SerializeField] private Camera playerCamera;
         [SerializeField] private CharacterController playerController;
         [SerializeField] private VoxelPlayerHotbar hotbar;
+        [SerializeField] private ToolRegistry toolRegistry;
         [SerializeField] private float creativeBreakCooldown = 0.15f;
 
         [Header("Interaction")]
@@ -228,23 +229,21 @@ namespace WildEarth.Voxel
             BlockDefinition definition,
             out float speedMultiplier)
         {
-            speedMultiplier =
-                Mathf.Max(
-                    0.01f,
-                    defaultToolSpeedMultiplier
-                );
+            speedMultiplier = Mathf.Max(
+                0.01f,
+                defaultToolSpeedMultiplier
+            );
 
-            if (definition.RequiredTool ==
-                ToolType.None)
+            if (definition.RequiredTool == ToolType.None)
             {
                 if (hotbar.TryGetSelectedRuntimeItem(
                         out ItemRuntimeData selectedItem) &&
-                    selectedItem.IsTool)
+                    selectedItem.IsTool &&
+                    TryCalculateToolSpeed(
+                        selectedItem,
+                        out float selectedSpeed))
                 {
-                    speedMultiplier =
-                        CalculateToolSpeed(
-                            selectedItem
-                        );
+                    speedMultiplier = selectedSpeed;
                 }
 
                 return true;
@@ -256,27 +255,52 @@ namespace WildEarth.Voxel
                 return false;
             }
 
-            if (!item.IsTool)
+            if (!item.IsTool ||
+                item.ToolType != definition.RequiredTool)
             {
                 return false;
             }
 
-            if (item.ToolType !=
-                definition.RequiredTool)
+            if (item.ToolLevel < definition.RequiredToolLevel)
             {
                 return false;
             }
 
-            if (item.ToolLevel <
-                definition.RequiredToolLevel)
+            if (!TryCalculateToolSpeed(
+                    item,
+                    out speedMultiplier))
             {
                 return false;
             }
 
-            speedMultiplier =
-                CalculateToolSpeed(
-                    item
-                );
+            return true;
+        }
+
+        private bool TryCalculateToolSpeed(
+            ItemRuntimeData item,
+            out float speedMultiplier)
+        {
+            speedMultiplier = 0f;
+
+            if (toolRegistry == null ||
+                item.ToolDefinitionId == 0 ||
+                !toolRegistry.TryGetRuntimeData(
+                    item.ToolDefinitionId,
+                    out ToolRuntimeData toolData))
+            {
+                return false;
+            }
+
+            float totalReduction = Mathf.Clamp(
+                toolData.TotalSpeedReduction,
+                0f,
+                0.95f
+            );
+
+            speedMultiplier = Mathf.Max(
+                0.05f,
+                toolData.BaseSpeed * (1f - totalReduction)
+            );
 
             return true;
         }
@@ -459,15 +483,18 @@ namespace WildEarth.Voxel
             }
         }
 
+
         private bool TryGetVoxelHit(
             out RaycastHit hit)
         {
-            return Physics.Raycast(
+            bool detected = Physics.Raycast(
                 playerCamera.transform.position,
                 playerCamera.transform.forward,
                 out hit,
                 interactionDistance
             );
+
+            return detected;
         }
 
         private bool WouldIntersectPlayer(

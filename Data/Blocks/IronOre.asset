@@ -28,5 +28,5 @@ MonoBehaviour:
     Column: 2
     Row: 4
   requiredTool: 2
-  requiredToolLevel: 1
+  requiredToolLevel: 0
   material: {fileID: 0}

@@ -1,5 +1,5 @@
 %YAML 1.1
-%TAG !u! tag\:unity3d.com,2011:
+%TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15,13 +15,18 @@ MonoBehaviour:
   id: 1
   itemName: Stone
   itemType: 1
-  blockId: 1
-  maxStackSize: 64
+  blockDefinition: {fileID: 11400000, guid: f8a86ee787595d040aabc310b7bf7bb8, type: 2}
+  toolDefinition: {fileID: 0}
+  materialDefinition: {fileID: 0}
+  alloyDefinition: {fileID: 0}
   toolType: 0
   toolLevel: 0
-  toolSpeedMultiplier: 1
-  hasDurability: 0
+  toolSpeed: 0
+  damage: 0
+  sharpness: 0
+  weaponType: 0
   maxDurability: 0
+  maxStackSize: 64
   icon:
     Column: 0
     Row: 0

@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 836f83c33cf82614894aba01733f78c6, type: 3}
+  m_Name: MaterialRegistry
+  m_EditorClassIdentifier: WildEarth.Voxel::WildEarth.Voxel.MaterialRegistry
+  definitions:
+  - {fileID: 0}
+  - {fileID: 11400000, guid: f51a78b1bf42187458b1df7567c333ed, type: 2}
+  - {fileID: 11400000, guid: 15b3dff25b272524cbfd1cd363e46d88, type: 2}
+  - {fileID: 11400000, guid: 553d4deb620b686419a6c9b3c828ff16, type: 2}
+  - {fileID: 11400000, guid: b46a85f3ba118634fb49be779f0190da, type: 2}

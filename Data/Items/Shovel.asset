@@ -1,5 +1,5 @@
 %YAML 1.1
-%TAG !u! tag\:unity3d.com,2011:
+%TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15,16 +15,18 @@ MonoBehaviour:
   id: 10
   itemName: Shovel
   itemType: 2
-  blockId: 0
+  blockDefinition: {fileID: 0}
+  toolDefinition: {fileID: 11400000, guid: 92c624268b7338c4f857604b1ac0bf88, type: 2}
+  materialDefinition: {fileID: 0}
+  alloyDefinition: {fileID: 0}
   toolType: 4
   toolLevel: 0
   toolSpeed: 3
-  damage: 2
-  sharpness: 100
+  damage: 0
+  sharpness: 0
   weaponType: 0
   maxDurability: 250
   maxStackSize: 1
   icon:
     Column: 0
     Row: 0
-    

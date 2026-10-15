@@ -82,3 +82,14 @@ Acha de hierro = Dureza del mango, dureza de la hoja, filo
 todo eso dará un porcentaje del 100%, si la hoja tiene filo es mas rapida al picar su bloque y hace mas daño, la dureza de sus dos partes no afectan en nada, solo dice que parte se rompe primero, si se rompe la cabesa se da la cabeza con el valor de la cabesa de la erramienta completa mas un item de astillas, si se rompe la cabeza se rompe el item completo y se dan astillas mas un pico roto de su material correspondiente, si una erramienta, por ejemplo
 
 Pico de cobre = toolspeed 1, el uno es la velocidad, el porcentaje de filo es el bonus que se le da, 100% de filo toolspeed 2, 50% toolspeed 1, 0% se reduce a 0,01, sin importar la herramienta
+
+
+
+
+
+quiero que agregues estos datos a los bloques, minerales, herramientas y aleaciones
+para empezar, los bloques tienen que tener lo que ya tiene y tambien drop dependiendo la erramienta usada, tambien su porcentaje de drop
+los materiales tienen que tener Id, nombre, dureza, resistencia, tenacidad, temperatura de fusion, temperatura de trabajo, peso, retencion de filo, filo y creo que no me falta nada
+las herramientas tienen que tener Id, nombre, durabilidad del cabezal, durabilidad del mango, daño, velocidad, filo, peso, eficiensia, resistencia del cabesal, calidad
+las aleaciones tienen que eredar los valores de sus materiales
+las partes de las herramientas creo que las definiremos como materiales, por eso deje esos datos a los materiales, solo que los materiales heredan los datos de sus objetos usados

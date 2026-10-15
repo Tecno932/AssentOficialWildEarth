@@ -12,6 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9fbf88c3389e23947a2b62f3917e15e7, type: 3}
   m_Name: ItemRegistry
   m_EditorClassIdentifier: WildEarth.Voxel::WildEarth.Voxel.ItemRegistry
+  toolRegistry: {fileID: 11400000, guid: 00e90c7a35dea704bb48351b40af0c69, type: 2}
+  materialRegistry: {fileID: 11400000, guid: 7553c8939d3a84b4da38313e06063673, type: 2}
+  alloyRegistry: {fileID: 11400000, guid: be5f62911e482d4479c44c189240d192, type: 2}
   definitions:
   - {fileID: 0}
   - {fileID: 11400000, guid: fdb4928b6f446ae4694164b95341d57d, type: 2}

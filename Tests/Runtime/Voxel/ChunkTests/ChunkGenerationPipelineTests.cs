@@ -1068,126 +1068,126 @@ public void Pipeline_Focused_TerrainChunkThenWaterChunk_GeneratesWater()
     );
 }
 
-[Test]
-public void Pipeline_Focused_WaterChunk_InspectsTerrainAndFluid()
-{
-    ChunkGenerationSettings settings =
-        ChunkGenerationSettings.Default;
-
-    settings.Caves.Enabled = false;
-    settings.Ores.Enabled = false;
-    settings.Fluids.Enabled = true;
-    settings.Fluids.GenerateWater = true;
-
-    using VoxelWorld world =
-        CreateWorld(settings);
-
-    world.Initialize();
-
-    Chunk waterChunk =
-        world.LoadAndGenerateChunk(
-            new ChunkCoordinate(-8, 2, -3)
-        );
-
-    world.CompleteGeneration();
-
-    Debug.Log(
-        "[Focused Water Debug] " +
-        $"Chunk={waterChunk.Coordinate}, " +
-        $"State={waterChunk.State}, " +
-        $"WorldOriginY=" +
-        $"{waterChunk.Coordinate.Y * VoxelConstants.ChunkSize}"
-    );
-
-    int debugAir = 0;
-    int debugSolid = 0;
-    int debugWater = 0;
-    int debugOther = 0;
-
-    int debugFirstWaterIndex = -1;
-
-    for (int i = 0;
-        i < waterChunk.Data.Voxels.Length;
-        i++)
-    {
-        VoxelData voxel =
-            waterChunk.Data.Voxels[i];
-
-        if (voxel.BlockId == BlockIds.Air)
+        [Test]
+        public void Pipeline_Focused_WaterChunk_InspectsTerrainAndFluid()
         {
-            debugAir++;
-        }
-        else if (voxel.BlockId == 7)
-        {
-            debugWater++;
+            ChunkGenerationSettings settings =
+                ChunkGenerationSettings.Default;
 
-            if (debugFirstWaterIndex < 0)
+            settings.Caves.Enabled = false;
+            settings.Ores.Enabled = false;
+            settings.Fluids.Enabled = true;
+            settings.Fluids.GenerateWater = true;
+
+            using VoxelWorld world =
+                CreateWorld(settings);
+
+            world.Initialize();
+
+            Chunk waterChunk =
+                world.LoadAndGenerateChunk(
+                    new ChunkCoordinate(-8, 2, -3)
+                );
+
+            world.CompleteGeneration();
+
+            Debug.Log(
+                "[Focused Water Debug] " +
+                $"Chunk={waterChunk.Coordinate}, " +
+                $"State={waterChunk.State}, " +
+                $"WorldOriginY=" +
+                $"{waterChunk.Coordinate.Y * VoxelConstants.ChunkSize}"
+            );
+
+            int debugAir = 0;
+            int debugSolid = 0;
+            int debugWater = 0;
+            int debugOther = 0;
+
+            int debugFirstWaterIndex = -1;
+
+            for (int i = 0;
+                i < waterChunk.Data.Voxels.Length;
+                i++)
             {
-                debugFirstWaterIndex = i;
+                VoxelData voxel =
+                    waterChunk.Data.Voxels[i];
+
+                if (voxel.BlockId == BlockIds.Air)
+                {
+                    debugAir++;
+                }
+                else if (voxel.BlockId == 7)
+                {
+                    debugWater++;
+
+                    if (debugFirstWaterIndex < 0)
+                    {
+                        debugFirstWaterIndex = i;
+                    }
+                }
+                else if (
+                    voxel.BlockId == 1 ||
+                    voxel.BlockId == 2 ||
+                    voxel.BlockId == 3)
+                {
+                    debugSolid++;
+                }
+                else
+                {
+                    debugOther++;
+                }
             }
+
+            Debug.Log(
+                "[Focused Water Debug] " +
+                $"Air={debugAir}, " +
+                $"Solid={debugSolid}, " +
+                $"Water={debugWater}, " +
+                $"Other={debugOther}, " +
+                $"FirstWaterIndex={debugFirstWaterIndex}"
+            );
+
+            int airVoxels = 0;
+            int solidVoxels = 0;
+            int waterVoxels = 0;
+
+            for (int i = 0;
+                i < waterChunk.Data.Voxels.Length;
+                i++)
+            {
+                VoxelData voxel =
+                    waterChunk.Data.Voxels[i];
+
+                if (voxel.BlockId == BlockIds.Air)
+                {
+                    airVoxels++;
+                }
+                else if (voxel.BlockId == 7)
+                {
+                    waterVoxels++;
+                }
+                else
+                {
+                    solidVoxels++;
+                }
+            }
+
+            Assert.That(
+                waterChunk.State,
+                Is.EqualTo(ChunkState.Generated)
+            );
+
+            Assert.That(
+                solidVoxels,
+                Is.GreaterThan(0)
+            );
+
+            Assert.That(
+                waterVoxels,
+                Is.GreaterThan(0)
+            );
         }
-        else if (
-            voxel.BlockId == 1 ||
-            voxel.BlockId == 2 ||
-            voxel.BlockId == 3)
-        {
-            debugSolid++;
-        }
-        else
-        {
-            debugOther++;
-        }
-    }
-
-    Debug.Log(
-        "[Focused Water Debug] " +
-        $"Air={debugAir}, " +
-        $"Solid={debugSolid}, " +
-        $"Water={debugWater}, " +
-        $"Other={debugOther}, " +
-        $"FirstWaterIndex={debugFirstWaterIndex}"
-    );
-
-    int airVoxels = 0;
-    int solidVoxels = 0;
-    int waterVoxels = 0;
-
-    for (int i = 0;
-        i < waterChunk.Data.Voxels.Length;
-        i++)
-    {
-        VoxelData voxel =
-            waterChunk.Data.Voxels[i];
-
-        if (voxel.BlockId == BlockIds.Air)
-        {
-            airVoxels++;
-        }
-        else if (voxel.BlockId == 7)
-        {
-            waterVoxels++;
-        }
-        else
-        {
-            solidVoxels++;
-        }
-    }
-
-    Assert.That(
-        waterChunk.State,
-        Is.EqualTo(ChunkState.Generated)
-    );
-
-    Assert.That(
-        solidVoxels,
-        Is.GreaterThan(0)
-    );
-
-    Assert.That(
-        waterVoxels,
-        Is.GreaterThan(0)
-    );
-}
 
 [Test]
 public void Pipeline_Debug_SurfaceHeightIsSameAcrossVerticalChunks()

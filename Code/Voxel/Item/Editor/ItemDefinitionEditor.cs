@@ -1,5 +1,3 @@
-#if UNITY_EDITOR
-
 using UnityEditor;
 using UnityEngine;
 
@@ -12,20 +10,21 @@ namespace WildEarth.Voxel
         private SerializedProperty itemName;
         private SerializedProperty itemType;
 
-        private SerializedProperty blockId;
+        private SerializedProperty blockDefinition;
+        private SerializedProperty toolDefinition;
+        private SerializedProperty materialDefinition;
+        private SerializedProperty alloyDefinition;
 
         private SerializedProperty toolType;
         private SerializedProperty toolLevel;
         private SerializedProperty toolSpeed;
 
         private SerializedProperty weaponType;
-
         private SerializedProperty damage;
         private SerializedProperty sharpness;
 
         private SerializedProperty maxDurability;
         private SerializedProperty maxStackSize;
-
         private SerializedProperty icon;
 
         private void OnEnable()
@@ -34,14 +33,23 @@ namespace WildEarth.Voxel
             itemName = serializedObject.FindProperty("itemName");
             itemType = serializedObject.FindProperty("itemType");
 
-            blockId = serializedObject.FindProperty("blockId");
+            blockDefinition =
+                serializedObject.FindProperty("blockDefinition");
+
+            toolDefinition =
+                serializedObject.FindProperty("toolDefinition");
+
+            materialDefinition =
+                serializedObject.FindProperty("materialDefinition");
+
+            alloyDefinition =
+                serializedObject.FindProperty("alloyDefinition");
 
             toolType = serializedObject.FindProperty("toolType");
             toolLevel = serializedObject.FindProperty("toolLevel");
             toolSpeed = serializedObject.FindProperty("toolSpeed");
 
             weaponType = serializedObject.FindProperty("weaponType");
-
             damage = serializedObject.FindProperty("damage");
             sharpness = serializedObject.FindProperty("sharpness");
 
@@ -58,24 +66,38 @@ namespace WildEarth.Voxel
         {
             serializedObject.Update();
 
+            if (itemType == null)
+            {
+                EditorGUILayout.HelpBox(
+                    "No se encontró la propiedad itemType en ItemDefinition.",
+                    MessageType.Error
+                );
+
+                return;
+            }
+
             ItemType currentType =
                 (ItemType)itemType.enumValueIndex;
 
             DrawIdentity();
 
-            if (currentType == ItemType.Block)
+            switch (currentType)
             {
-                DrawBlock();
-            }
+                case ItemType.Block:
+                    DrawBlock();
+                    break;
 
-            if (currentType == ItemType.Tool)
-            {
-                DrawTool();
-            }
+                case ItemType.Tool:
+                    DrawTool();
+                    break;
 
-            if (currentType == ItemType.Weapon)
-            {
-                DrawWeapon();
+                case ItemType.Material:
+                    DrawMaterial();
+                    break;
+
+                case ItemType.Weapon:
+                    DrawWeapon();
+                    break;
             }
 
             if (currentType == ItemType.Tool ||
@@ -98,9 +120,9 @@ namespace WildEarth.Voxel
                 EditorStyles.boldLabel
             );
 
-            EditorGUILayout.PropertyField(id);
-            EditorGUILayout.PropertyField(itemName);
-            EditorGUILayout.PropertyField(itemType);
+            DrawProperty(id, "ID");
+            DrawProperty(itemName, "Item Name");
+            DrawProperty(itemType, "Item Type");
 
             EditorGUILayout.Space(8);
         }
@@ -112,9 +134,9 @@ namespace WildEarth.Voxel
                 EditorStyles.boldLabel
             );
 
-            EditorGUILayout.PropertyField(
-                blockId,
-                new GUIContent("Block ID")
+            DrawProperty(
+                blockDefinition,
+                "Block Definition"
             );
 
             EditorGUILayout.Space(8);
@@ -127,19 +149,33 @@ namespace WildEarth.Voxel
                 EditorStyles.boldLabel
             );
 
-            EditorGUILayout.PropertyField(
-                toolType,
-                new GUIContent("Tool Type")
+            DrawProperty(
+                toolDefinition,
+                "Tool Definition"
             );
 
-            EditorGUILayout.PropertyField(
-                toolLevel,
-                new GUIContent("Tool Level")
+            DrawProperty(toolType, "Tool Type");
+            DrawProperty(toolLevel, "Tool Level");
+            DrawProperty(toolSpeed, "Legacy Tool Speed");
+
+            EditorGUILayout.Space(8);
+        }
+
+        private void DrawMaterial()
+        {
+            EditorGUILayout.LabelField(
+                "Material",
+                EditorStyles.boldLabel
             );
 
-            EditorGUILayout.PropertyField(
-                toolSpeed,
-                new GUIContent("Tool Speed")
+            DrawProperty(
+                materialDefinition,
+                "Material Definition"
+            );
+
+            DrawProperty(
+                alloyDefinition,
+                "Alloy Definition"
             );
 
             EditorGUILayout.Space(8);
@@ -152,10 +188,7 @@ namespace WildEarth.Voxel
                 EditorStyles.boldLabel
             );
 
-            EditorGUILayout.PropertyField(
-                weaponType,
-                new GUIContent("Weapon Type")
-            );
+            DrawProperty(weaponType, "Weapon Type");
 
             EditorGUILayout.Space(8);
         }
@@ -163,19 +196,12 @@ namespace WildEarth.Voxel
         private void DrawCombatStats()
         {
             EditorGUILayout.LabelField(
-                "Combat",
+                "Legacy Combat Stats",
                 EditorStyles.boldLabel
             );
 
-            EditorGUILayout.PropertyField(
-                damage,
-                new GUIContent("Damage")
-            );
-
-            EditorGUILayout.PropertyField(
-                sharpness,
-                new GUIContent("Sharpness (%)")
-            );
+            DrawProperty(damage, "Damage");
+            DrawProperty(sharpness, "Sharpness (%)");
 
             EditorGUILayout.Space(8);
         }
@@ -187,10 +213,7 @@ namespace WildEarth.Voxel
                 EditorStyles.boldLabel
             );
 
-            EditorGUILayout.PropertyField(
-                maxDurability,
-                new GUIContent("Max Durability")
-            );
+            DrawProperty(maxDurability, "Max Durability");
 
             EditorGUILayout.Space(8);
         }
@@ -202,10 +225,7 @@ namespace WildEarth.Voxel
                 EditorStyles.boldLabel
             );
 
-            EditorGUILayout.PropertyField(
-                maxStackSize,
-                new GUIContent("Max Stack Size")
-            );
+            DrawProperty(maxStackSize, "Max Stack Size");
 
             EditorGUILayout.Space(8);
         }
@@ -217,12 +237,27 @@ namespace WildEarth.Voxel
                 EditorStyles.boldLabel
             );
 
+            DrawProperty(icon, "Icon");
+        }
+
+        private static void DrawProperty(
+            SerializedProperty property,
+            string label)
+        {
+            if (property == null)
+            {
+                EditorGUILayout.HelpBox(
+                    $"No se encontró la propiedad serializada '{label}'.",
+                    MessageType.Warning
+                );
+
+                return;
+            }
+
             EditorGUILayout.PropertyField(
-                icon,
-                new GUIContent("Icon")
+                property,
+                new GUIContent(label)
             );
         }
     }
 }
-
-#endif

@@ -14,8 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: WildEarth.Voxel::WildEarth.Voxel.ItemDefinition
   id: 6
   itemName: Gold Ore
-  itemType: 4
-  blockId: 0
+  itemType: 1
+  blockDefinition: {fileID: 11400000, guid: 0482432a12ec0f048b90bf8ca357dc0b, type: 2}
+  toolDefinition: {fileID: 0}
+  materialDefinition: {fileID: 0}
+  alloyDefinition: {fileID: 0}
   toolType: 0
   toolLevel: 0
   toolSpeed: 0

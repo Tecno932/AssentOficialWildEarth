@@ -6,25 +6,22 @@ namespace WildEarth.Voxel
     public struct ItemRuntimeData
     {
         public ushort Id;
-
         public ItemType ItemType;
 
         public ushort BlockId;
+        public ushort ToolDefinitionId;
+        public ushort MaterialDefinitionId;
+        public ushort AlloyDefinitionId;
 
         public ToolType ToolType;
-
         public byte ToolLevel;
-
         public float ToolSpeed;
 
         public float Damage;
-
         public float Sharpness;
-
         public WeaponType WeaponType;
 
         public ushort MaxDurability;
-
         public ushort MaxStackSize;
 
         public AtlasTileCoordinate Icon;
@@ -39,6 +36,9 @@ namespace WildEarth.Voxel
         public bool IsWeapon =>
             ItemType == ItemType.Weapon;
 
+        public bool IsMaterial =>
+            ItemType == ItemType.Material;
+
         public bool HasDurability =>
             MaxDurability > 0;
 
@@ -46,11 +46,18 @@ namespace WildEarth.Voxel
             MaxStackSize > 1;
 
         public bool UsesToolType(ToolType type) =>
-            IsTool &&
-            ToolType == type;
+            IsTool && ToolType == type;
 
         public bool UsesWeaponType(WeaponType type) =>
-            IsWeapon &&
-            WeaponType == type;
+            IsWeapon && WeaponType == type;
+
+        public bool HasToolDefinition =>
+            ToolDefinitionId != 0;
+
+        public bool HasMaterialDefinition =>
+            MaterialDefinitionId != 0;
+
+        public bool HasAlloyDefinition =>
+            AlloyDefinitionId != 0;
     }
 }
