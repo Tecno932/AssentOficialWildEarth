@@ -1,4 +1,3 @@
-
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -11,6 +10,7 @@ namespace WildEarth.Voxel
         private const int PixelsPerSlot = 256;
         private const float SlotSpacing = 1.6f;
 
+        private readonly int previewSlotCount;
         private readonly GameObject root;
         private readonly Camera previewCamera;
         private readonly RenderTexture renderTexture;
@@ -21,10 +21,19 @@ namespace WildEarth.Voxel
         public Texture Texture => renderTexture;
 
         public VoxelHotbarBlockPreview(Texture2D atlasTexture)
+            : this(atlasTexture, VoxelPlayerHotbar.SlotCount)
+        {
+        }
+
+        public VoxelHotbarBlockPreview(Texture2D atlasTexture, int slotCount)
         {
             if (atlasTexture == null)
-                throw new System.ArgumentNullException(
-                    nameof(atlasTexture));
+                throw new System.ArgumentNullException(nameof(atlasTexture));
+
+            if (slotCount < 1)
+                throw new System.ArgumentOutOfRangeException(nameof(slotCount));
+
+            previewSlotCount = slotCount;
 
             Shader shader = Shader.Find("WildEarth/VoxelAtlasBlock");
 
@@ -33,7 +42,14 @@ namespace WildEarth.Voxel
                     "No se encontró el shader WildEarth/VoxelAtlasBlock.");
 
             root = new GameObject("VoxelHotbar3DPreview");
-            root.transform.position = new Vector3(0f, 10000f, 0f);
+
+            // Mantiene cada vista aislada, con coordenadas moderadas.
+            int previewId = System.Guid.NewGuid().GetHashCode() & 0x7FFF;
+            root.transform.position = new Vector3(
+                previewId * 25f,
+                10000f,
+                0f
+            );
 
             previewMaterial = new Material(shader);
             previewMaterial.name = "VoxelHotbar3DPreviewMaterial";
@@ -41,18 +57,20 @@ namespace WildEarth.Voxel
             previewMaterial.SetColor("_BaseColor", Color.white);
 
             renderTexture = new RenderTexture(
-                VoxelPlayerHotbar.SlotCount * PixelsPerSlot,
+                previewSlotCount * PixelsPerSlot,
                 PixelsPerSlot,
                 24,
-                RenderTextureFormat.ARGB32);
+                RenderTextureFormat.ARGB32,
+                RenderTextureReadWrite.Default
+            );
 
             renderTexture.name = "VoxelHotbar3DPreviewTexture";
             renderTexture.filterMode = FilterMode.Point;
             renderTexture.wrapMode = TextureWrapMode.Clamp;
             renderTexture.Create();
 
-            meshFilters = new MeshFilter[VoxelPlayerHotbar.SlotCount];
-            meshes = new Mesh[VoxelPlayerHotbar.SlotCount];
+            meshFilters = new MeshFilter[previewSlotCount];
+            meshes = new Mesh[previewSlotCount];
 
             for (int i = 0; i < meshFilters.Length; i++)
             {
@@ -101,6 +119,7 @@ namespace WildEarth.Voxel
             previewCamera.backgroundColor = new Color(0f, 0f, 0f, 0f);
             previewCamera.cullingMask = 1 << PreviewLayer;
             previewCamera.targetTexture = renderTexture;
+            previewCamera.aspect = previewSlotCount;
             previewCamera.allowHDR = false;
             previewCamera.allowMSAA = false;
 
@@ -109,8 +128,10 @@ namespace WildEarth.Voxel
 
         public Rect GetUVRect(int slot)
         {
-            float width = 1f / VoxelPlayerHotbar.SlotCount;
+            if (slot < 0 || slot >= previewSlotCount)
+                return new Rect(0f, 0f, 0f, 0f);
 
+            float width = 1f / previewSlotCount;
             return new Rect(slot * width, 0f, width, 1f);
         }
 

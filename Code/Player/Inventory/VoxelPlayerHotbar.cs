@@ -191,6 +191,81 @@ namespace WildEarth.Voxel
             }
         }
 
+        public void CopyInventoryTo(ItemStack[] destination)
+        {
+            if (destination == null ||
+                destination.Length < TotalSlotCount)
+            {
+                return;
+            }
+
+            for (int i = 0; i < TotalSlotCount; i++)
+                destination[i] = itemSlots[i];
+        }
+
+        public bool RestoreInventory(
+            ItemStack[] savedSlots,
+            int savedSelectedSlot)
+        {
+            if (savedSlots == null ||
+                savedSlots.Length != TotalSlotCount ||
+                itemRegistry == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < TotalSlotCount; i++)
+            {
+                ItemStack stack = savedSlots[i];
+
+                if (stack.IsEmpty ||
+                    !itemRegistry.TryGetRuntimeData(
+                        stack.ItemId,
+                        out ItemRuntimeData data))
+                {
+                    itemSlots[i] = default;
+                    continue;
+                }
+
+                if (data.HasDurability)
+                {
+                    if (stack.Quantity != 1)
+                    {
+                        itemSlots[i] = default;
+                        continue;
+                    }
+                }
+                else
+                {
+                    if (data.MaxStackSize == 0)
+                    {
+                        itemSlots[i] = default;
+                        continue;
+                    }
+
+                    stack.Quantity = (ushort)Mathf.Min(
+                        stack.Quantity,
+                        data.MaxStackSize
+                    );
+                }
+
+                itemSlots[i] = stack;
+            }
+
+            selectedSlot = Mathf.Clamp(
+                savedSelectedSlot,
+                0,
+                SlotCount - 1
+            );
+
+            // Evita que SyncInitialSlots sobrescriba
+            // los objetos restaurados al siguiente Update.
+            SyncInitialIdsFromHotbar();
+
+            configurationVersion++;
+            return true;
+        }
+
         public bool TryGetSelectedItem(
             out ItemDefinition definition)
         {

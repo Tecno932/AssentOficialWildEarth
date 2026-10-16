@@ -1,2 +1,14 @@
 fileFormatVersion: 2
 guid: 77bbdc86f94efa94d92f50d0b0efa9ca
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - interaction: {instanceID: 0}
+  - atlasSettings: {fileID: 11400000, guid: 253d2a79a289d624286a22cb85de9d2b, type: 2}
+  - atlasTexture: {fileID: 2800000, guid: 83180c83a45b9194993bbfb6e9d304c7, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

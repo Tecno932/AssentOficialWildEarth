@@ -28,6 +28,8 @@ namespace WildEarth.Voxel
         private bool inventoryOpen;
 
         public bool InventoryOpen => inventoryOpen;
+        public VoxelPlayerMode CurrentMode =>
+            movement != null ? movement.Mode : startMode;
 
         private void Awake()
         {
